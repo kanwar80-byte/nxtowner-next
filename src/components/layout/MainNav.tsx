@@ -15,7 +15,12 @@ export function MainNav() {
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-700">
           <Link href="/">Home</Link>
           <Link href="/browse">Browse Listings</Link>
-          <Link href="/sell">Sell a Business</Link>
+          <Link
+            href="/create-listing"
+            className="text-sm font-medium text-gray-700 hover:text-gray-900"
+          >
+            Sell a Business
+          </Link>
           <Link href="/pricing">Pricing</Link>
         </div>
 

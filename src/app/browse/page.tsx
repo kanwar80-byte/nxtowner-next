@@ -1,4 +1,58 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+
+type Listing = {
+  id: string;
+  title: string;
+  asset_type: string;
+  location: string;
+  asking_price: number | null;
+  summary: string | null;
+};
+
 export default function BrowsePage() {
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchListings() {
+      setLoading(true);
+      setError(null);
+
+      const { data, error: fetchError } = await supabase
+        .from("listings")
+        .select("id, title, asset_type, location, asking_price, summary")
+        .order("created_at", { ascending: false });
+
+      if (fetchError) {
+        setError(fetchError.message);
+      } else {
+        setListings(data || []);
+      }
+
+      setLoading(false);
+    }
+
+    fetchListings();
+  }, []);
+
+  const truncateSummary = (text: string | null, maxLength = 120) => {
+    if (!text) return "";
+    return text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
+  };
+
+  const formatPrice = (price: number | null) => {
+    if (price === null) return "Price on request";
+    return price.toLocaleString("en-CA", {
+      style: "currency",
+      currency: "CAD",
+      maximumFractionDigits: 0,
+    });
+  };
+
   return (
     <main className="py-16 max-w-6xl mx-auto px-4">
       <header className="mb-10">
@@ -33,42 +87,47 @@ export default function BrowsePage() {
         </select>
       </section>
 
-      {/* Placeholder listing cards */}
+      {/* Listings Section */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white shadow rounded-lg p-5">
-          <h3 className="font-semibold text-lg text-nxt-primary">
-            Petro-Canada Gas Station &amp; C-Store
-          </h3>
-          <p className="text-gray-600 text-sm mt-1">Ontario • Fuel + C-Store</p>
-          <p className="mt-3 font-semibold">$3.2M Asking</p>
-          <p className="text-gray-500 text-sm mt-1">
-            High-traffic corner site with car wash and QSR potential.
+        {loading && (
+          <p className="col-span-full text-center text-gray-500">
+            Loading listings...
           </p>
-        </div>
+        )}
 
-        <div className="bg-white shadow rounded-lg p-5">
-          <h3 className="font-semibold text-lg text-nxt-primary">
-            SaaS Subscription Analytics Platform
-          </h3>
-          <p className="text-gray-600 text-sm mt-1">Fully Remote • Digital</p>
-          <p className="mt-3 font-semibold">$450k Asking</p>
-          <p className="text-gray-500 text-sm mt-1">
-            B2B analytics SaaS with recurring MRR and low churn.
-          </p>
-        </div>
+        {error && (
+          <div className="col-span-full bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+            {error}
+          </div>
+        )}
 
-        <div className="bg-white shadow rounded-lg p-5">
-          <h3 className="font-semibold text-lg text-nxt-primary">
-            E-commerce Brand: Home &amp; Lifestyle
-          </h3>
-          <p className="text-gray-600 text-sm mt-1">
-            Canada &amp; US • Shopify
+        {!loading && !error && listings.length === 0 && (
+          <p className="col-span-full text-center text-gray-500">
+            No listings yet. Be the first to list your business.
           </p>
-          <p className="mt-3 font-semibold">$320k Asking</p>
-          <p className="text-gray-500 text-sm mt-1">
-            Growing DTC brand with strong repeat customer base.
-          </p>
-        </div>
+        )}
+
+        {!loading &&
+          !error &&
+          listings.map((listing) => (
+            <div
+              key={listing.id}
+              className="bg-white shadow-sm rounded-xl p-6 hover:shadow-md transition"
+            >
+              <h3 className="font-semibold text-lg text-nxt-primary">
+                {listing.title}
+              </h3>
+              <p className="text-gray-500 text-sm mt-1">
+                {listing.location} • {listing.asset_type}
+              </p>
+              <p className="mt-3 font-semibold text-gray-900">
+                {formatPrice(listing.asking_price)} Asking
+              </p>
+              <p className="text-gray-500 text-sm mt-2">
+                {truncateSummary(listing.summary)}
+              </p>
+            </div>
+          ))}
       </section>
     </main>
   );
