@@ -9,12 +9,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        nxt: {
-          primary: "#0A1A2F",
-          green: "#1DBF73",
-          orange: "#FF7A45",
-          surface: "#FFFFFF",
-          bgSoft: "#F5F7FA",
+        brand: {
+          navy: "#020617",
+          navyAlt: "#02081F",
+          bg: "#F3F4F6",
+          card: "#FFFFFF",
+          border: "#E5E7EB",
+          text: "#020617",
+          muted: "#6B7280",
+          green: "#16A34A",
+          orange: "#EA580C",
         },
       },
     },

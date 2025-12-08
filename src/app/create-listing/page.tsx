@@ -72,22 +72,22 @@ export default function CreateListingPage() {
   }
 
   return (
-    <main className="bg-[#F5F7FB] min-h-screen py-12">
+    <main className="bg-brand-bg min-h-screen py-12">
       <div className="max-w-4xl mx-auto px-4">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-3xl font-bold text-brand-text mb-2">
           Create a Listing
         </h1>
-        <p className="text-gray-600 mb-8">
+        <p className="text-brand-muted mb-8">
           Submit your business for sale on NxtOwner. Provide key details and our
           team will review it shortly.
         </p>
 
-        <div className="bg-white rounded-2xl shadow-sm px-6 py-8 sm:px-10 sm:py-10">
+        <div className="max-w-3xl mx-auto bg-brand-card border border-brand-border rounded-2xl shadow-sm p-8 space-y-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label
                 htmlFor="title"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-brand-muted mb-1"
               >
                 Business Title *
               </label>
@@ -97,14 +97,14 @@ export default function CreateListingPage() {
                 type="text"
                 required
                 placeholder="Example: Petro-Canada Gas Station with C-Store"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                className="w-full rounded-md border border-brand-border bg-white px-3 py-2 text-sm text-brand-text placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-navy focus:border-brand-navy"
               />
             </div>
 
             <div>
               <label
                 htmlFor="assetType"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-brand-muted mb-1"
               >
                 Asset Type *
               </label>
@@ -112,7 +112,7 @@ export default function CreateListingPage() {
                 id="assetType"
                 name="assetType"
                 required
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                className="w-full rounded-md border border-brand-border bg-white px-3 py-2 text-sm text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-navy focus:border-brand-navy"
               >
                 <option value="Gas Station">Gas Station</option>
                 <option value="Car Wash">Car Wash</option>
@@ -127,7 +127,7 @@ export default function CreateListingPage() {
             <div>
               <label
                 htmlFor="location"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-brand-muted mb-1"
               >
                 Location *
               </label>
@@ -137,14 +137,14 @@ export default function CreateListingPage() {
                 type="text"
                 required
                 placeholder="City, Province (e.g., London, ON)"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                className="w-full rounded-md border border-brand-border bg-white px-3 py-2 text-sm text-brand-text placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-navy focus:border-brand-navy"
               />
             </div>
 
             <div>
               <label
                 htmlFor="askingPrice"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-brand-muted mb-1"
               >
                 Asking Price (Optional)
               </label>
@@ -155,14 +155,14 @@ export default function CreateListingPage() {
                 min="0"
                 step="0.01"
                 placeholder="450000"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                className="w-full rounded-md border border-brand-border bg-white px-3 py-2 text-sm text-brand-text placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-navy focus:border-brand-navy"
               />
             </div>
 
             <div>
               <label
                 htmlFor="summary"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-brand-muted mb-1"
               >
                 Business Summary
               </label>
@@ -171,7 +171,7 @@ export default function CreateListingPage() {
                 name="summary"
                 rows={4}
                 placeholder="Short overview of the business, key strengths, and reason for sale."
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                className="w-full rounded-md border border-brand-border bg-white px-3 py-2 text-sm text-brand-text placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-navy focus:border-brand-navy"
               />
             </div>
 
@@ -182,7 +182,7 @@ export default function CreateListingPage() {
             )}
 
             {success && (
-              <p className="text-sm text-green-700 bg-green-50 border border-green-100 rounded-md px-3 py-2">
+              <p className="text-sm text-brand-green bg-green-50 border border-green-100 rounded-md px-3 py-2">
                 {success}
               </p>
             )}
@@ -191,7 +191,7 @@ export default function CreateListingPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="inline-flex items-center justify-center px-6 py-2.5 rounded-md bg-gray-900 text-white text-sm font-semibold shadow-sm hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center px-6 py-2.5 rounded-md bg-brand-navy text-white text-sm font-semibold shadow-sm hover:bg-slate-900 disabled:opacity-60 disabled:cursor-not-allowed transition"
               >
                 {loading ? "Saving..." : "Submit Listing"}
               </button>

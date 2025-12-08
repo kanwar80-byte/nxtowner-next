@@ -54,81 +54,83 @@ export default function BrowsePage() {
   };
 
   return (
-    <main className="py-16 max-w-6xl mx-auto px-4">
-      <header className="mb-10">
-        <h1 className="text-3xl font-bold text-nxt-primary">
-          Browse Listings
-        </h1>
-        <p className="text-gray-600 mt-2">
-          Explore verified physical and digital businesses ready for new owners.
-        </p>
-      </header>
-
-      {/* Simple filter bar (static for now) */}
-      <section className="mb-8 flex flex-col md:flex-row gap-4">
-        <input
-          className="flex-1 px-4 py-2 rounded-md border border-gray-300"
-          placeholder="Search by name, type, or location..."
-        />
-        <select className="px-4 py-2 rounded-md border border-gray-300">
-          <option>All Asset Types</option>
-          <option>Gas Stations &amp; C-Stores</option>
-          <option>Car Wash &amp; Auto</option>
-          <option>QSR &amp; Restaurants</option>
-          <option>SaaS &amp; Software</option>
-          <option>E-commerce &amp; DTC</option>
-        </select>
-        <select className="px-4 py-2 rounded-md border border-gray-300">
-          <option>Any Price</option>
-          <option>Under $250k</option>
-          <option>$250k – $1M</option>
-          <option>$1M – $5M</option>
-          <option>$5M+</option>
-        </select>
-      </section>
-
-      {/* Listings Section */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {loading && (
-          <p className="col-span-full text-center text-gray-500">
-            Loading listings...
+    <main className="bg-brand-bg min-h-screen py-16">
+      <div className="max-w-6xl mx-auto px-4">
+        <header className="mb-10">
+          <h1 className="text-3xl font-bold text-brand-text">
+            Browse Listings
+          </h1>
+          <p className="text-brand-muted mt-2">
+            Explore verified physical and digital businesses ready for new owners.
           </p>
-        )}
+        </header>
 
-        {error && (
-          <div className="col-span-full bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-            {error}
-          </div>
-        )}
+        {/* Simple filter bar (static for now) */}
+        <section className="mb-8 flex flex-col md:flex-row gap-4">
+          <input
+            className="flex-1 px-4 py-2 rounded-md border border-brand-border bg-white text-brand-text placeholder:text-gray-400"
+            placeholder="Search by name, type, or location..."
+          />
+          <select className="px-4 py-2 rounded-md border border-brand-border bg-white text-brand-text">
+            <option>All Asset Types</option>
+            <option>Gas Stations &amp; C-Stores</option>
+            <option>Car Wash &amp; Auto</option>
+            <option>QSR &amp; Restaurants</option>
+            <option>SaaS &amp; Software</option>
+            <option>E-commerce &amp; DTC</option>
+          </select>
+          <select className="px-4 py-2 rounded-md border border-brand-border bg-white text-brand-text">
+            <option>Any Price</option>
+            <option>Under $250k</option>
+            <option>$250k – $1M</option>
+            <option>$1M – $5M</option>
+            <option>$5M+</option>
+          </select>
+        </section>
 
-        {!loading && !error && listings.length === 0 && (
-          <p className="col-span-full text-center text-gray-500">
-            No listings yet. Be the first to list your business.
-          </p>
-        )}
+        {/* Listings Section */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {loading && (
+            <p className="col-span-full text-center text-brand-muted">
+              Loading listings...
+            </p>
+          )}
 
-        {!loading &&
-          !error &&
-          listings.map((listing) => (
-            <div
-              key={listing.id}
-              className="bg-white shadow-sm rounded-xl p-6 hover:shadow-md transition"
-            >
-              <h3 className="font-semibold text-lg text-nxt-primary">
-                {listing.title}
-              </h3>
-              <p className="text-gray-500 text-sm mt-1">
-                {listing.location} • {listing.asset_type}
-              </p>
-              <p className="mt-3 font-semibold text-gray-900">
-                {formatPrice(listing.asking_price)} Asking
-              </p>
-              <p className="text-gray-500 text-sm mt-2">
-                {truncateSummary(listing.summary)}
-              </p>
+          {error && (
+            <div className="col-span-full bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+              {error}
             </div>
-          ))}
-      </section>
+          )}
+
+          {!loading && !error && listings.length === 0 && (
+            <p className="col-span-full text-center text-brand-muted">
+              No listings yet. Be the first to list your business.
+            </p>
+          )}
+
+          {!loading &&
+            !error &&
+            listings.map((listing) => (
+              <div
+                key={listing.id}
+                className="bg-brand-card border border-brand-border shadow-sm rounded-xl p-6 hover:shadow-md transition"
+              >
+                <h3 className="font-semibold text-lg text-brand-text">
+                  {listing.title}
+                </h3>
+                <p className="text-brand-muted text-sm mt-1">
+                  {listing.location} • {listing.asset_type}
+                </p>
+                <p className="mt-3 font-semibold text-brand-text">
+                  {formatPrice(listing.asking_price)} Asking
+                </p>
+                <p className="text-brand-muted text-sm mt-2">
+                  {truncateSummary(listing.summary)}
+                </p>
+              </div>
+            ))}
+        </section>
+      </div>
     </main>
   );
 }

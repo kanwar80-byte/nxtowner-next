@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f7fa;
-  --foreground: #111827;
+  --background: #F3F4F6;
+  --foreground: #020617;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -13,8 +13,8 @@
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background-color: #F3F4F6;
+  color: #020617;
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

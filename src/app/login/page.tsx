@@ -34,42 +34,57 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="py-16 max-w-md mx-auto px-4">
-      <h1 className="text-2xl font-bold text-nxt-primary mb-4">Sign In</h1>
+    <main className="bg-brand-bg min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-md bg-brand-card border border-brand-border rounded-2xl shadow-sm p-8 space-y-6">
+        <h1 className="text-2xl font-bold text-brand-text mb-6">Sign In</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          name="email"
-          type="email"
-          required
-          placeholder="Email"
-          className="w-full px-4 py-2 rounded-md border border-gray-300"
-        />
-        <input
-          name="password"
-          type="password"
-          required
-          placeholder="Password"
-          className="w-full px-4 py-2 rounded-md border border-gray-300"
-        />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-brand-muted mb-1">
+              Email
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              placeholder="you@example.com"
+              className="w-full px-4 py-2 rounded-md border border-brand-border bg-white text-brand-text placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-navy"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-brand-muted mb-1">
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              placeholder="Enter your password"
+              className="w-full px-4 py-2 rounded-md border border-brand-border bg-white text-brand-text placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-navy"
+            />
+          </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full px-4 py-2 bg-nxt-primary text-white rounded-md font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition"
-        >
-          {loading ? "Signing in..." : "Sign In"}
-        </button>
-      </form>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-md bg-brand-navy px-4 py-2 text-sm font-semibold text-white hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
 
-      <p className="mt-4 text-sm text-gray-600">
-        Don&apos;t have an account?{" "}
-        <a href="/signup" className="text-nxt-primary underline">
-          Join Free
-        </a>
-      </p>
+        <p className="mt-6 text-sm text-brand-muted text-center">
+          Don&apos;t have an account?{" "}
+          <a href="/signup" className="text-brand-navy font-medium underline hover:text-slate-900">
+            Join Free
+          </a>
+        </p>
+      </div>
     </main>
   );
 }

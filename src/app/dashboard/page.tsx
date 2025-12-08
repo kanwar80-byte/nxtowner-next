@@ -27,40 +27,46 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <main className="py-16 max-w-5xl mx-auto px-4">
-        <div className="text-center text-gray-600">Loading...</div>
+      <main className="bg-brand-bg min-h-screen py-16">
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="text-center text-brand-muted">Loading...</div>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="py-16 max-w-5xl mx-auto px-4">
-      <h1 className="text-3xl font-bold text-nxt-primary mb-4">
-        Your NxtOwner Dashboard
-      </h1>
-      <p className="text-gray-600 mb-2">
-        Welcome, {userEmail}
-      </p>
-      <p className="text-gray-600 mb-6">
-        This is a simple placeholder dashboard. 
-        We will later replace this with:
-      </p>
-      <ul className="list-disc list-inside text-gray-700 space-y-1">
-        <li>Saved searches &amp; watched listings</li>
-        <li>Active offers &amp; NDAs</li>
-        <li>My listings (as a seller)</li>
-        <li>Profile &amp; verification status</li>
-      </ul>
-      
-      <button
-        onClick={async () => {
-          await supabase.auth.signOut();
-          router.push("/");
-        }}
-        className="mt-6 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition"
-      >
-        Sign Out
-      </button>
+    <main className="bg-brand-bg min-h-screen py-16">
+      <div className="max-w-5xl mx-auto px-4">
+        <div className="bg-brand-card border border-brand-border rounded-2xl shadow-sm p-8">
+          <h1 className="text-3xl font-bold text-brand-text mb-4">
+            Your NxtOwner Dashboard
+          </h1>
+          <p className="text-brand-muted mb-2">
+            Welcome, {userEmail}
+          </p>
+          <p className="text-brand-muted mb-6">
+            This is a simple placeholder dashboard. 
+            We will later replace this with:
+          </p>
+          <ul className="list-disc list-inside text-brand-text space-y-1">
+            <li>Saved searches &amp; watched listings</li>
+            <li>Active offers &amp; NDAs</li>
+            <li>My listings (as a seller)</li>
+            <li>Profile &amp; verification status</li>
+          </ul>
+          
+          <button
+            onClick={async () => {
+              await supabase.auth.signOut();
+              router.push("/");
+            }}
+            className="mt-6 px-4 py-2 bg-brand-navy text-white rounded-md hover:bg-slate-900 transition"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
     </main>
   );
 }

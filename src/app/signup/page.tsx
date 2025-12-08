@@ -38,38 +38,53 @@ export default function SignupPage() {
   }
 
   return (
-    <main className="py-16 max-w-md mx-auto px-4">
-      <h1 className="text-2xl font-bold text-nxt-primary mb-4">
-        Join NxtOwner
-      </h1>
+    <main className="bg-brand-bg min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-md bg-brand-card border border-brand-border rounded-2xl shadow-sm p-8 space-y-6">
+        <h1 className="text-2xl font-bold text-brand-text mb-6">
+          Join NxtOwner
+        </h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          name="email"
-          type="email"
-          required
-          placeholder="Email"
-          className="w-full px-4 py-2 rounded-md border border-gray-300"
-        />
-        <input
-          name="password"
-          type="password"
-          required
-          placeholder="Password (min 6 characters)"
-          className="w-full px-4 py-2 rounded-md border border-gray-300"
-        />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-brand-muted mb-1">
+              Email
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              placeholder="you@example.com"
+              className="w-full px-4 py-2 rounded-md border border-brand-border bg-white text-brand-text placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-navy"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-brand-muted mb-1">
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              placeholder="Minimum 6 characters"
+              className="w-full px-4 py-2 rounded-md border border-brand-border bg-white text-brand-text placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-navy"
+            />
+          </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {success && <p className="text-sm text-nxt-green">Account created! Redirecting to login...</p>}
+          {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
+          {success && <p className="text-sm text-brand-green bg-green-50 px-3 py-2 rounded-md">Account created! Redirecting to login...</p>}
 
-        <button
-          type="submit"
-          disabled={loading || success}
-          className="w-full px-4 py-2 bg-nxt-orange text-white rounded-md font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition"
-        >
-          {loading ? "Creating account..." : success ? "Success!" : "Create Account"}
-        </button>
-      </form>
+          <button
+            type="submit"
+            disabled={loading || success}
+            className="w-full rounded-md bg-brand-orange px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            {loading ? "Creating account..." : success ? "Success!" : "Create Account"}
+          </button>
+        </form>
+      </div>
     </main>
   );
 }
