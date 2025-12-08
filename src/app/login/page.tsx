@@ -30,7 +30,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard"); // we'll create this later
+    router.push("/dashboard");
   }
 
   return (
@@ -58,7 +58,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full px-4 py-2 bg-nxt-primary text-white rounded-md font-semibold"
+          className="w-full px-4 py-2 bg-nxt-primary text-white rounded-md font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition"
         >
           {loading ? "Signing in..." : "Sign In"}
         </button>

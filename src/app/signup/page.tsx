@@ -8,6 +8,7 @@ export default function SignupPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -30,8 +31,10 @@ export default function SignupPage() {
       return;
     }
 
-    // For now, just send the user to login after sign-up
-    router.push("/login");
+    setSuccess(true);
+    setTimeout(() => {
+      router.push("/login");
+    }, 2000);
   }
 
   return (
@@ -57,13 +60,14 @@ export default function SignupPage() {
         />
 
         {error && <p className="text-sm text-red-600">{error}</p>}
+        {success && <p className="text-sm text-nxt-green">Account created! Redirecting to login...</p>}
 
         <button
           type="submit"
-          disabled={loading}
-          className="w-full px-4 py-2 bg-nxt-orange text-white rounded-md font-semibold"
+          disabled={loading || success}
+          className="w-full px-4 py-2 bg-nxt-orange text-white rounded-md font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition"
         >
-          {loading ? "Creating account..." : "Create Account"}
+          {loading ? "Creating account..." : success ? "Success!" : "Create Account"}
         </button>
       </form>
     </main>
