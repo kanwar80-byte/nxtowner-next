@@ -30,12 +30,16 @@ export default function SignupPage() {
       return;
     }
 
-    router.push("/login"); // ask them to log in after confirming email
+    // For now, just send the user to login after sign-up
+    router.push("/login");
   }
 
   return (
     <main className="py-16 max-w-md mx-auto px-4">
-      <h1 className="text-2xl font-bold text-nxt-primary mb-4">Join NxtOwner</h1>
+      <h1 className="text-2xl font-bold text-nxt-primary mb-4">
+        Join NxtOwner
+      </h1>
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           name="email"
@@ -48,10 +52,12 @@ export default function SignupPage() {
           name="password"
           type="password"
           required
-          placeholder="Password (min 6 chars)"
+          placeholder="Password (min 6 characters)"
           className="w-full px-4 py-2 rounded-md border border-gray-300"
         />
+
         {error && <p className="text-sm text-red-600">{error}</p>}
+
         <button
           type="submit"
           disabled={loading}

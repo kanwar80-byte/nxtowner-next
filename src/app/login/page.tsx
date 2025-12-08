@@ -30,12 +30,13 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard"); // we'll build later
+    router.push("/dashboard"); // we'll create this later
   }
 
   return (
     <main className="py-16 max-w-md mx-auto px-4">
       <h1 className="text-2xl font-bold text-nxt-primary mb-4">Sign In</h1>
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           name="email"
@@ -51,7 +52,9 @@ export default function LoginPage() {
           placeholder="Password"
           className="w-full px-4 py-2 rounded-md border border-gray-300"
         />
+
         {error && <p className="text-sm text-red-600">{error}</p>}
+
         <button
           type="submit"
           disabled={loading}
@@ -60,6 +63,7 @@ export default function LoginPage() {
           {loading ? "Signing in..." : "Sign In"}
         </button>
       </form>
+
       <p className="mt-4 text-sm text-gray-600">
         Don&apos;t have an account?{" "}
         <a href="/signup" className="text-nxt-primary underline">
