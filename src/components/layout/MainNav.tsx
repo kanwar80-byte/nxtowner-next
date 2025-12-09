@@ -163,6 +163,30 @@ export function MainNav() {
         </Link>
 
         <div className="hidden lg:flex items-center gap-8">
+          <Link
+            href="/about"
+            className="group text-sm font-semibold text-slate-700 hover:text-slate-900 transition-colors"
+          >
+            About
+            <span className="absolute left-0 -bottom-1 h-0.5 w-full scale-x-0 bg-[#F97316] transition-transform group-hover:scale-x-100" />
+          </Link>
+
+          <Link
+            href="/faq"
+            className="group text-sm font-semibold text-slate-700 hover:text-slate-900 transition-colors"
+          >
+            FAQ
+            <span className="absolute left-0 -bottom-1 h-0.5 w-full scale-x-0 bg-[#F97316] transition-transform group-hover:scale-x-100" />
+          </Link>
+
+          <Link
+            href="/how-it-works"
+            className="group text-sm font-semibold text-slate-700 hover:text-slate-900 transition-colors"
+          >
+            How It Works
+            <span className="absolute left-0 -bottom-1 h-0.5 w-full scale-x-0 bg-[#F97316] transition-transform group-hover:scale-x-100" />
+          </Link>
+
           <div
             className="relative"
             onMouseEnter={() => setOpenMenu("buyers")}
