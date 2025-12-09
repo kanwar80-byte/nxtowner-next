@@ -15,6 +15,7 @@ export default function SignupPage() {
     const formData = new FormData(e.currentTarget);
     const email = String(formData.get("email") || "");
     const password = String(formData.get("password") || "");
+    const role = (formData.get('role') as string) || "buyer";
 
     setLoading(true);
     setError(null);
@@ -22,6 +23,9 @@ export default function SignupPage() {
     const { error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: { role }
+      }
     });
 
     setLoading(false);
@@ -71,6 +75,24 @@ export default function SignupPage() {
               placeholder="Minimum 6 characters"
               className="w-full px-4 py-2 rounded-md border border-brand-border bg-white text-brand-text placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-navy"
             />
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-brand-muted">Choose your role</label>
+            <div className="flex flex-col space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="role" value="buyer" defaultChecked className="h-4 w-4 text-brand-navy focus:ring-brand-navy" />
+                <span className="text-sm text-brand-text">Buyer - I&apos;m looking to purchase a business</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="role" value="seller" className="h-4 w-4 text-brand-navy focus:ring-brand-navy" />
+                <span className="text-sm text-brand-text">Seller - I&apos;m selling my business</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="role" value="both" className="h-4 w-4 text-brand-navy focus:ring-brand-navy" />
+                <span className="text-sm text-brand-text">Both - I&apos;m buying and selling</span>
+              </label>
+            </div>
           </div>
 
           {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}

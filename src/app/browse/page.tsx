@@ -2,18 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import Link from "next/link";
+import { PublicListing } from "@/types/listing";
 
-type Listing = {
-  id: string;
-  title: string;
-  asset_type: string;
-  location: string;
-  asking_price: number | null;
-  summary: string | null;
-};
+// TODO: Wire NexusAI filters + NDA/Deal Room gating later (data layer already Supabase-backed).
 
 export default function BrowsePage() {
-  const [listings, setListings] = useState<Listing[]>([]);
+  const [listings, setListings] = useState<PublicListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,13 +19,17 @@ export default function BrowsePage() {
 
       const { data, error: fetchError } = await supabase
         .from("listings")
-        .select("id, title, asset_type, location, asking_price, summary")
-        .order("created_at", { ascending: false });
+        .select(
+          "id, title, summary, type, status, asking_price, annual_revenue, annual_cashflow, country, region, is_verified, created_at, updated_at, meta"
+        )
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(60);
 
       if (fetchError) {
         setError(fetchError.message);
       } else {
-        setListings(data || []);
+        setListings((data || []) as PublicListing[]);
       }
 
       setLoading(false);
@@ -54,19 +53,20 @@ export default function BrowsePage() {
   };
 
   return (
-    <main className="bg-brand-bg min-h-screen py-16">
-      <div className="max-w-6xl mx-auto px-4">
-        <header className="mb-10">
+    <main className="bg-brand-bg min-h-screen py-16 md:py-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-10">
           <h1 className="text-3xl font-bold text-brand-text">
             Browse Listings
           </h1>
           <p className="text-brand-muted mt-2">
             Explore verified physical and digital businesses ready for new owners.
           </p>
-        </header>
+        </div>
 
         {/* Simple filter bar (static for now) */}
         <section className="mb-8 flex flex-col md:flex-row gap-4">
+          {/* TODO: Implement filters — industry, price, region */}
           <input
             className="flex-1 px-4 py-2 rounded-md border border-brand-border bg-white text-brand-text placeholder:text-gray-400"
             placeholder="Search by name, type, or location..."
@@ -111,23 +111,36 @@ export default function BrowsePage() {
           {!loading &&
             !error &&
             listings.map((listing) => (
-              <div
+              <Link
                 key={listing.id}
-                className="bg-brand-card border border-brand-border shadow-sm rounded-xl p-6 hover:shadow-md transition"
+                href={`/listing/${listing.id}`}
+                className="bg-brand-card border border-brand-border shadow-sm rounded-xl p-6 hover:shadow-md transition block"
               >
-                <h3 className="font-semibold text-lg text-brand-text">
-                  {listing.title}
-                </h3>
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-semibold text-lg text-brand-text flex-1">
+                    {listing.title}
+                  </h3>
+                  {listing.is_verified && (
+                    <span className="ml-2 px-2 py-1 bg-brand-green text-white text-xs rounded font-semibold">
+                      ✓ Verified
+                    </span>
+                  )}
+                </div>
                 <p className="text-brand-muted text-sm mt-1">
-                  {listing.location} • {listing.asset_type}
+                  {listing.region}, {listing.country} • {listing.type === 'asset' ? 'Asset' : 'Digital'}
                 </p>
                 <p className="mt-3 font-semibold text-brand-text">
-                  {formatPrice(listing.asking_price)} Asking
+                  {formatPrice(listing.asking_price)}
                 </p>
+                {listing.annual_revenue && (
+                  <p className="text-sm text-brand-muted mt-1">
+                    Annual Revenue: {formatPrice(listing.annual_revenue)}
+                  </p>
+                )}
                 <p className="text-brand-muted text-sm mt-2">
                   {truncateSummary(listing.summary)}
                 </p>
-              </div>
+              </Link>
             ))}
         </section>
       </div>

@@ -18,12 +18,13 @@ export default function CreateListingPage() {
 
     const formData = new FormData(form);
     const title = String(formData.get("title") || "").trim();
-    const assetType = String(formData.get("assetType") || "").trim();
-    const location = String(formData.get("location") || "").trim();
+    const type = String(formData.get("type") || "").trim();
+    const country = String(formData.get("country") || "").trim();
+    const region = String(formData.get("region") || "").trim();
     const askingPriceRaw = String(formData.get("askingPrice") || "").trim();
     const summary = String(formData.get("summary") || "").trim();
 
-    if (!title || !assetType || !location) {
+    if (!title || !type || !country || !region) {
       setError("Please fill in all required fields.");
       setLoading(false);
       return;
@@ -54,8 +55,9 @@ export default function CreateListingPage() {
     const { error: insertError } = await supabase.from("listings").insert({
       owner_id: user.id,
       title,
-      asset_type: assetType,
-      location,
+      type: type,
+      country,
+      region,
       asking_price: askingPrice,
       summary,
     });
@@ -73,7 +75,7 @@ export default function CreateListingPage() {
 
   return (
     <main className="bg-brand-bg min-h-screen py-12">
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold text-brand-text mb-2">
           Create a Listing
         </h1>
@@ -103,40 +105,53 @@ export default function CreateListingPage() {
 
             <div>
               <label
-                htmlFor="assetType"
+                htmlFor="type"
                 className="block text-sm font-medium text-brand-muted mb-1"
               >
-                Asset Type *
+                Business Type *
               </label>
               <select
-                id="assetType"
-                name="assetType"
+                id="type"
+                name="type"
                 required
                 className="w-full rounded-md border border-brand-border bg-white px-3 py-2 text-sm text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-navy focus:border-brand-navy"
               >
-                <option value="Gas Station">Gas Station</option>
-                <option value="Car Wash">Car Wash</option>
-                <option value="QSR / Restaurant">QSR / Restaurant</option>
-                <option value="C-Store">C-Store</option>
-                <option value="SaaS">SaaS</option>
-                <option value="E-commerce">E-commerce</option>
-                <option value="Other">Other</option>
+                <option value="">Select type</option>
+                <option value="asset">Asset-Based (Physical Business)</option>
+                <option value="digital">Digital Business</option>
               </select>
             </div>
 
             <div>
               <label
-                htmlFor="location"
+                htmlFor="country"
                 className="block text-sm font-medium text-brand-muted mb-1"
               >
-                Location *
+                Country *
               </label>
               <input
-                id="location"
-                name="location"
+                id="country"
+                name="country"
                 type="text"
                 required
-                placeholder="City, Province (e.g., London, ON)"
+                placeholder="Country (e.g., Canada)"
+                className="w-full rounded-md border border-brand-border bg-white px-3 py-2 text-sm text-brand-text placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-navy focus:border-brand-navy"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="region"
+                className="block text-sm font-medium text-brand-muted mb-1"
+              >
+                Province/State *
+              </label>
+              <input
+                id="region"
+                name="region"
+                type="text"
+                required
+                placeholder="Province/State (e.g., Ontario)"
                 className="w-full rounded-md border border-brand-border bg-white px-3 py-2 text-sm text-brand-text placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-navy focus:border-brand-navy"
               />
             </div>
