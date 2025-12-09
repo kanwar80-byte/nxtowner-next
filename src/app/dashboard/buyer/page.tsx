@@ -3,6 +3,7 @@ import { getWatchlistForUser } from '@/app/actions/watchlist';
 import { getUserDealRooms } from '@/app/actions/dealroom';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
+import { ValuationBadgeFetcher } from './ValuationBadgeFetcher';
 import { PlanStatus } from '@/components/billing/PlanStatus';
 
 export const revalidate = 0; // Render on demand, not at build time
@@ -116,6 +117,9 @@ export default async function BuyerDashboardPage() {
                         ? `$${item.listing.asking_price.toLocaleString()}`
                         : 'Price on request'}
                     </p>
+                    <div className="mt-2">
+                      <ValuationBadgeFetcher listingId={item.listing.id} />
+                    </div>
                     <p className="text-xs text-brand-muted mt-2">
                       Saved {new Date(item.created_at).toLocaleDateString()}
                     </p>

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { PublicListing } from "@/types/listing";
 import { WatchlistButton } from "@/components/listings/WatchlistButton";
 import ListingBadges from "@/components/ListingBadges";
+import { ValuationBadgeFetcher } from "@/app/dashboard/buyer/ValuationBadgeFetcher";
 import ListingInterestModal from "@/components/listings/ListingInterestModal";
 import { hasUserSignedNda, signNdaAndCreateDealRoom, getDealRoomForListing } from "@/app/actions/nda";
 
@@ -174,6 +175,9 @@ export default function ListingDetailPage({ params }: ListingDetailPageProps) {
                 {listing.region}, {listing.country} •{" "}
                 {listing.type === "asset" ? "Asset-Based" : "Digital"} Business
               </p>
+              <div className="mt-2">
+                <ValuationBadgeFetcher listingId={listing.id} />
+              </div>
             </div>
             {listing.is_verified && (
               <div className="px-3 py-1 bg-brand-green text-white rounded font-semibold text-sm">
