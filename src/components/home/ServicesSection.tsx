@@ -1,8 +1,6 @@
-interface ServicesSectionProps {
-  mode: 'all' | 'operational' | 'digital';
-}
+// Removed ServicesSectionProps interface as mode is currently unused
 
-export default function ServicesSection({ mode }: ServicesSectionProps) {
+export default function ServicesSection() {
   const services = [
     {
       icon: '🤝',
@@ -27,14 +25,14 @@ export default function ServicesSection({ mode }: ServicesSectionProps) {
   ];
 
   return (
-    <section className="bg-[#0A122A] text-white py-16 md:py-20">
+    <section className="bg-[#0A122A] text-white py-12 md:py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h2 className="text-3xl font-bold tracking-tight text-white text-center mb-4">
           Select Services for Your Deal
         </h2>
-        <p className="mt-4 max-w-2xl text-slate-300 text-center mx-auto mb-10">
+        <p className="mt-3 max-w-2xl text-slate-300 text-center mx-auto mb-8">
           Our vetted partner network supports valuation, due diligence, financing, legal review, 
-          and closing—so you don't have to build a deal team from scratch.
+          and closing—so you don&apos;t have to build a deal team from scratch.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-7">
           {services.map((service, index) => (
@@ -49,7 +47,7 @@ export default function ServicesSection({ mode }: ServicesSectionProps) {
             </div>
           ))}
         </div>
-        <div className="text-center mt-8">
+        <div className="text-center mt-7">
           <a
             href="/partners"
             className="inline-flex items-center justify-center px-8 py-3 bg-[#F97316] text-white rounded-full font-semibold shadow-[0_8px_30px_rgba(0,0,0,0.2)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.24)] hover:scale-[1.03] active:scale-[0.98] hover:bg-[#ea580c] transition-all duration-300"

@@ -18,20 +18,20 @@ export default function HomePage() {
   return (
     <main>
       <Hero mode={mode} setMode={setMode} />
-      <div className="border-t border-gray-200 my-12"></div>
-      <BadgeBar mode={mode} />
-      <div className="border-t border-gray-200 my-12"></div>
+      <div className="border-t border-gray-200 my-8 sm:my-10"></div>
+      <BadgeBar />
+      <div className="border-t border-gray-200 my-8 sm:my-10"></div>
       <CategoryGrid mode={mode} />
-      <div className="border-t border-gray-200 my-12"></div>
-      <BuyerSellerPanels mode={mode} />
-      <div className="border-t border-gray-200 my-12"></div>
-      <ServicesSection mode={mode} />
-      <div className="border-t border-gray-200 my-12"></div>
-      <CuratedListings mode={mode} />
-      <div className="border-t border-gray-200 my-12"></div>
-      <RecentListings mode={mode} />
-      <div className="border-t border-gray-200 my-12"></div>
-      <MarketInsights mode={mode} />
+      <div className="border-t border-gray-200 my-8 sm:my-10"></div>
+      <BuyerSellerPanels />
+      <div className="border-t border-gray-200 my-8 sm:my-10"></div>
+      <ServicesSection />
+      <div className="border-t border-gray-200 my-8 sm:my-10"></div>
+      <CuratedListings />
+      <div className="border-t border-gray-200 my-8 sm:my-10"></div>
+      <RecentListings />
+      <div className="border-t border-gray-200 my-8 sm:my-10"></div>
+      <MarketInsights />
     </main>
   );
 }

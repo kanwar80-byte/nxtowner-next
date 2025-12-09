@@ -31,11 +31,7 @@ const icons = {
   ),
 };
 
-interface BadgeBarProps {
-  mode: 'all' | 'operational' | 'digital';
-}
-
-export default function BadgeBar({ mode }: BadgeBarProps) {
+export default function BadgeBar() {
   const badges = [
     { icon: icons.shield, label: 'Verified Listings' },
     { icon: icons.brain, label: 'AI Due Diligence' },
@@ -44,7 +40,7 @@ export default function BadgeBar({ mode }: BadgeBarProps) {
   ];
 
   return (
-    <section className="bg-[#F8FAFC] py-12">
+    <section className="bg-[#F8FAFC] mt-8 sm:mt-10 mb-8 sm:mb-10 py-8 sm:py-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-fadeInUp">
         <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.08)] px-6 sm:px-10 py-6 border border-gray-100">
           <div className="flex flex-wrap justify-center gap-6 sm:gap-12">

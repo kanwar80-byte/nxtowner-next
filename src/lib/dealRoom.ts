@@ -21,12 +21,18 @@ export async function createDealRoomWithNda({
   signedPdfUrl,
   initialMessage,
 }: CreateDealRoomWithNdaParams): Promise<CreateDealRoomWithNdaResult> {
-  const { data, error } = await supabaseAdmin.rpc("create_deal_room_with_nda", {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase admin client is not configured. Ensure SUPABASE_SERVICE_ROLE_KEY is set.');
+  }
+
+  const rpcParams = {
     _listing_id: listingId,
     _buyer_id: buyerId,
     _signed_pdf_url: signedPdfUrl,
     _initial_message: initialMessage ?? null,
-  });
+  };
+
+  const { data, error } = await supabaseAdmin.rpc("create_deal_room_with_nda", rpcParams as never);
 
   if (error || !data) {
     throw new Error(`create_deal_room_with_nda failed: ${error?.message ?? "unknown error"}`);

@@ -112,9 +112,9 @@ export default function CategoryGrid({ mode }: CategoryGridProps) {
       : CATEGORIES.filter(cat => cat.kind === mode);
 
   return (
-    <section className="bg-[#F8FAFC] py-16 md:py-20">
+    <section className="bg-[#F8FAFC] py-12 md:py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-4xl font-bold text-gray-900 text-center mb-10">
+        <h2 className="text-4xl font-bold text-gray-900 text-center mb-8">
           {mode === 'all' && 'Browse by Category'}
           {mode === 'operational' && 'Operational Business Categories'}
           {mode === 'digital' && 'Digital Asset Categories'}
@@ -128,6 +128,7 @@ export default function CategoryGrid({ mode }: CategoryGridProps) {
               style={{ animationDelay: `${index * 80}ms` }}
             >
               <div className="aspect-[4/3] bg-gray-300 overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={category.image}
                   alt={category.label}

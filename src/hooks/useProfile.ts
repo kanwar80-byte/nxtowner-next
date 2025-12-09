@@ -69,14 +69,16 @@ export function useUserProfile(): UseUserProfileResult {
           // Use role from user metadata if available, otherwise default to 'buyer'
           const userRole = (user.user_metadata?.role as 'buyer' | 'seller' | 'admin') || 'buyer';
 
+          const profilePayload = {
+            user_id: user.id,
+            email: user.email,
+            full_name: null,
+            role: userRole,
+          };
+
           const { data: insertedData, error: insertError } = await supabase
             .from('profiles')
-            .insert({
-              user_id: user.id,
-              email: user.email,
-              full_name: null,
-              role: userRole,
-            })
+            .insert(profilePayload as never)
             .select('user_id, email, full_name, role')
             .single();
 

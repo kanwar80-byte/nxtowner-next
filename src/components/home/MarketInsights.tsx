@@ -1,8 +1,4 @@
-interface MarketInsightsProps {
-  mode: 'all' | 'operational' | 'digital';
-}
-
-export default function MarketInsights({ mode }: MarketInsightsProps) {
+export default function MarketInsights() {
   const articles = [
     {
       id: 1,
@@ -39,9 +35,9 @@ export default function MarketInsights({ mode }: MarketInsightsProps) {
   ];
 
   return (
-    <section className="bg-[#F8FAFC] py-16 md:py-20">
+    <section className="bg-[#F8FAFC] py-12 md:py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-10">
+        <div className="flex justify-between items-center mb-8">
           <div>
             <h2 className="text-3xl font-bold tracking-tight text-slate-900">Market Insights</h2>
             <p className="mt-3 max-w-2xl text-slate-600">
@@ -64,6 +60,7 @@ export default function MarketInsights({ mode }: MarketInsightsProps) {
               style={{ animationDelay: `${idx * 80}ms` }}
             >
               <div className="relative aspect-[4/3] bg-gray-200 overflow-hidden rounded-b-none">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={article.image}
                   alt={article.title}
@@ -87,7 +84,7 @@ export default function MarketInsights({ mode }: MarketInsightsProps) {
             </a>
           ))}
         </div>
-        <div className="text-center mt-10 sm:hidden">
+        <div className="text-center mt-8 sm:hidden">
           <a
             href="/resources"
             className="inline-block px-6 py-3 border-2 border-[#0A122A] text-[#0A122A] rounded-full font-semibold hover:bg-[#0A122A] hover:text-white hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"

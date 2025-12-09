@@ -18,7 +18,7 @@ const menuData = {
     {
       title: "Tools",
       links: [
-        { href: "/valuation/asset", label: "Run Valuation" },
+        { href: "/valuation", label: "Run Valuation" },
         { href: "/deal-room", label: "Deal Room Access (coming soon)" },
         { href: "/tools/calculators", label: "Calculator Tools (coming soon)" },
       ],
@@ -45,7 +45,7 @@ const menuData = {
       title: "Preparation",
       links: [
         { href: "/guides/seller-guide", label: "Seller Guide" },
-        { href: "/valuation/asset", label: "How Valuation Works" },
+        { href: "/valuation", label: "How Valuation Works" },
         { href: "/resources", label: "Prepare Financials (coming soon)" },
       ],
     },
@@ -70,7 +70,7 @@ const menuData = {
     {
       title: "Tools",
       links: [
-        { href: "/valuation/asset", label: "Valuation Tools" },
+        { href: "/valuation", label: "Valuation Tools" },
         { href: "/tools/calculators", label: "Calculator Tools" },
         { href: "/resources", label: "Templates (coming soon)" },
       ],
@@ -86,28 +86,13 @@ const menuData = {
   ],
 };
 
-export function MainNav() {
-  const [user, setUser] = useState<User | null>(null);
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
+type MenuColumn = {
+  title: string;
+  links: Array<{ href: string; label: string }>;
+};
 
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      setUser(authUser);
-    };
-
-    getUser();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const MegaMenuDropdown = ({ columns }: { columns: typeof menuData.buyers }) => (
+function MegaMenuDropdown({ columns }: { columns: MenuColumn[] }) {
+  return (
     <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-white shadow-2xl rounded-2xl px-8 py-6 z-50" style={{ width: 'min(64rem, calc(100vw - 2rem))' }}>
       <div className="grid grid-cols-3 gap-8">
         {columns.map((col, colIdx) => (
@@ -130,6 +115,45 @@ export function MainNav() {
       </div>
     </div>
   );
+}
+
+type UserProfile = {
+  role: 'buyer' | 'seller' | 'partner' | 'admin';
+};
+
+export function MainNav() {
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      setUser(authUser);
+
+      if (authUser) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('user_id', authUser.id)
+          .single();
+        setProfile(profileData as UserProfile | null);
+      }
+    };
+
+    getUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (!session?.user) {
+        setProfile(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
@@ -177,12 +201,59 @@ export function MainNav() {
         </div>
 
         <div className="flex items-center justify-end gap-2 sm:gap-3">
-          <Link
-            href="/valuation/asset"
-            className="hidden md:inline-flex items-center rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-[#0A122A] shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
-          >
-            Run Valuation
-          </Link>
+          {/* Role-based quick links */}
+          {user && profile?.role !== 'admin' && (
+            <>
+              <Link
+                href="/browse"
+                className="hidden md:inline-flex items-center rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 transition"
+              >
+                Browse
+              </Link>
+              {profile?.role === 'seller' && (
+                <Link
+                  href="/sell"
+                  className="hidden md:inline-flex items-center rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 transition"
+                >
+                  Sell
+                </Link>
+              )}
+            </>
+          )}
+
+          {/* Admin link for admins */}
+          {user && profile?.role === 'admin' && (
+            <Link
+              href="/admin"
+              className="hidden md:inline-flex items-center rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 transition"
+            >
+              Admin
+            </Link>
+          )}
+
+          {/* Public quick actions when not logged in */}
+          {!user && (
+            <>
+              <Link
+                href="/pricing"
+                className="hidden md:inline-flex items-center rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 transition"
+              >
+                Pricing
+              </Link>
+              <Link
+                href="/valuation"
+                className="hidden md:inline-flex items-center rounded-full bg-amber-400 px-4 py-2 text-sm font-semibold text-[#0A122A] shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                Run Valuation
+              </Link>
+              <Link
+                href="/sell"
+                className="hidden md:inline-flex items-center rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 transition"
+              >
+                Sell your business
+              </Link>
+            </>
+          )}
 
           {!user ? (
             <>

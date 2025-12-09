@@ -36,7 +36,7 @@ export default function AdminPage() {
             </div>
 
             {/* Quick Links */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <a
                 href="/admin/listings"
                 className="block p-6 border border-brand-border rounded-xl hover:bg-gray-50 transition"
@@ -68,6 +68,17 @@ export default function AdminPage() {
                 </h3>
                 <p className="text-sm text-brand-muted">
                   Process pending business verifications and identity checks.
+                </p>
+              </a>
+              <a
+                href="/admin/partners"
+                className="block p-6 border border-brand-border rounded-xl hover:bg-gray-50 transition"
+              >
+                <h3 className="text-lg font-semibold text-brand-text mb-2">
+                  Partner Applications
+                </h3>
+                <p className="text-sm text-brand-muted">
+                  Review and approve broker, CPA, and lawyer applications.
                 </p>
               </a>
             </div>

@@ -1,102 +1,180 @@
-"use client";
+'use client';
 
-import { AuthGate } from "@/components/auth/AuthGate";
-import { useState } from "react";
+import { useEffect, useState, useRef } from 'react';
+import { AuthGate } from '@/components/auth/AuthGate';
+import { getPendingListingsAdmin, approveListingAdmin, rejectListingAdmin } from '@/app/actions/listings';
+import type { Listing } from '@/types/database';
 
 export default function AdminListingsPage() {
-  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "flagged">("all");
+  const [pendingListings, setPendingListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
+
+  async function loadPendingListings() {
+    setLoading(true);
+    const listings = await getPendingListingsAdmin();
+    setPendingListings(listings);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    if (!hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      void loadPendingListings();
+    }
+  }, []);
+
+  async function handleApprove(id: string) {
+    setActionLoading(id);
+    const result = await approveListingAdmin(id);
+    if (result.success) {
+      await loadPendingListings();
+    } else {
+      alert(result.error || 'Failed to approve listing');
+    }
+    setActionLoading(null);
+  }
+
+  async function handleReject(id: string) {
+    setActionLoading(id);
+    const result = await rejectListingAdmin(id);
+    if (result.success) {
+      await loadPendingListings();
+    } else {
+      alert(result.error || 'Failed to reject listing');
+    }
+    setActionLoading(null);
+  }
+
+  const formatCurrency = (amount: number | null) => {
+    if (!amount) return 'N/A';
+    return new Intl.NumberFormat('en-CA', {
+      style: 'currency',
+      currency: 'CAD',
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
 
   return (
     <AuthGate requireAdmin={true}>
-      <div className="min-h-screen bg-brand-bg py-12">
-        <div className="max-w-6xl mx-auto px-4 space-y-6">
-          <div className="bg-brand-card border border-brand-border rounded-2xl shadow-sm p-8">
-            <h1 className="text-3xl font-bold text-brand-text mb-2">
-              Manage Listings
-            </h1>
-            <p className="text-brand-muted mb-6">
-              Review, approve, or flag business listings across the platform.
+      <div className="min-h-screen bg-slate-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-slate-900">Pending Listings</h1>
+            <p className="mt-2 text-slate-600">
+              Review and approve listings submitted for publication
             </p>
+          </div>
 
-            {/* Filter Tabs */}
-            <div className="flex gap-2 mb-6 border-b border-brand-border">
-              <button
-                onClick={() => setFilter("all")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
-                  filter === "all"
-                    ? "border-brand-navy text-brand-navy"
-                    : "border-transparent text-brand-muted hover:text-brand-text"
-                }`}
-              >
-                All Listings
-              </button>
-              <button
-                onClick={() => setFilter("pending")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
-                  filter === "pending"
-                    ? "border-brand-orange text-brand-orange"
-                    : "border-transparent text-brand-muted hover:text-brand-text"
-                }`}
-              >
-                Pending Review
-              </button>
-              <button
-                onClick={() => setFilter("approved")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
-                  filter === "approved"
-                    ? "border-brand-green text-brand-green"
-                    : "border-transparent text-brand-muted hover:text-brand-text"
-                }`}
-              >
-                Approved
-              </button>
-              <button
-                onClick={() => setFilter("flagged")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
-                  filter === "flagged"
-                    ? "border-red-600 text-red-600"
-                    : "border-transparent text-brand-muted hover:text-brand-text"
-                }`}
-              >
-                Flagged
-              </button>
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-orange-500 border-r-transparent"></div>
+              <p className="mt-4 text-slate-600">Loading pending listings...</p>
             </div>
+          ) : pendingListings.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
+              <div className="text-6xl mb-4">✅</div>
+              <h2 className="text-xl font-semibold text-slate-900 mb-2">
+                All caught up!
+              </h2>
+              <p className="text-slate-600">
+                No pending listings to review at the moment.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {pendingListings.map((listing) => (
+                <div
+                  key={listing.id}
+                  className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
+                >
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h2 className="text-2xl font-bold text-slate-900">
+                            {listing.title}
+                          </h2>
+                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
+                            {listing.type === 'asset' ? 'Operational Asset' : 'Digital Asset'}
+                          </span>
+                        </div>
+                        {listing.category && (
+                          <p className="text-sm text-slate-600 mb-2">
+                            Category: <span className="font-medium">{listing.category}</span>
+                          </p>
+                        )}
+                        {listing.location && (
+                          <p className="text-sm text-slate-600">
+                            📍 {listing.location}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-3xl font-bold text-orange-600">
+                          {formatCurrency(listing.asking_price)}
+                        </p>
+                      </div>
+                    </div>
 
-            {/* Placeholder Listing Cards */}
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="p-4 border border-brand-border rounded-lg flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-brand-text">Example Business #{i}</h3>
-                    <p className="text-sm text-brand-muted">
-                      Type: Asset-based • Location: Toronto, ON • Price: $XXX,XXX
-                    </p>
-                    <p className="text-xs text-brand-muted mt-1">
-                      Submitted: Dec {i}, 2025 • Status: Pending Review
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="px-3 py-1 text-sm bg-brand-green text-white rounded-md hover:bg-green-700 transition">
-                      Approve
-                    </button>
-                    <button className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition">
-                      Flag
-                    </button>
-                    <button className="px-3 py-1 text-sm border border-brand-border text-brand-text rounded-md hover:bg-gray-50 transition">
-                      View
-                    </button>
+                    {listing.summary && (
+                      <p className="text-slate-700 mb-4 leading-relaxed">
+                        {listing.summary}
+                      </p>
+                    )}
+
+                    <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-slate-50 rounded-lg">
+                      <div>
+                        <p className="text-xs text-slate-500 mb-1">Annual Revenue</p>
+                        <p className="text-lg font-semibold text-slate-900">
+                          {formatCurrency(listing.annual_revenue)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 mb-1">Annual Cashflow</p>
+                        <p className="text-lg font-semibold text-slate-900">
+                          {formatCurrency(listing.annual_cashflow)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 mb-1">Submitted</p>
+                        <p className="text-sm font-medium text-slate-900">
+                          {new Date(listing.created_at).toLocaleDateString('en-CA')}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => handleApprove(listing.id)}
+                        disabled={actionLoading === listing.id}
+                        className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                      >
+                        {actionLoading === listing.id ? 'Processing...' : '✓ Approve & Publish'}
+                      </button>
+                      <button
+                        onClick={() => handleReject(listing.id)}
+                        disabled={actionLoading === listing.id}
+                        className="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                      >
+                        {actionLoading === listing.id ? 'Processing...' : '✗ Reject'}
+                      </button>
+                      <a
+                        href={`/listing/${listing.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-6 py-3 bg-slate-100 text-slate-700 rounded-lg font-semibold hover:bg-slate-200 transition"
+                      >
+                        View Details →
+                      </a>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
-
-            <div className="mt-8 pt-6 border-t border-brand-border">
-              <p className="text-xs text-brand-muted">
-                <strong>TODO:</strong> Fetch listings from Supabase with admin_status filter. 
-                Implement approve/flag/delete actions updating listings table.
-              </p>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </AuthGate>

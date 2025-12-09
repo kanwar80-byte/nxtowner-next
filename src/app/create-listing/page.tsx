@@ -52,7 +52,7 @@ export default function CreateListingPage() {
       return;
     }
 
-    const { error: insertError } = await supabase.from("listings").insert({
+    const listingPayload = {
       owner_id: user.id,
       title,
       type: type,
@@ -60,7 +60,9 @@ export default function CreateListingPage() {
       region,
       asking_price: askingPrice,
       summary,
-    });
+    };
+
+    const { error: insertError } = await supabase.from("listings").insert(listingPayload as never);
 
     if (insertError) {
       setError(insertError.message);

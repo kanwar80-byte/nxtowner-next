@@ -1,8 +1,4 @@
-interface RecentListingsProps {
-  mode: 'all' | 'operational' | 'digital';
-}
-
-export default function RecentListings({ mode }: RecentListingsProps) {
+export default function RecentListings() {
   const listings = [
     {
       id: 5,
@@ -37,9 +33,9 @@ export default function RecentListings({ mode }: RecentListingsProps) {
   ];
 
   return (
-    <section className="bg-white py-16 md:py-20">
+    <section className="bg-white py-12 md:py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-10">
+        <div className="flex justify-between items-center mb-8">
           <div>
             <h2 className="text-3xl font-bold tracking-tight text-slate-900">Recent Listings</h2>
             <p className="mt-3 max-w-2xl text-slate-600">
@@ -62,6 +58,7 @@ export default function RecentListings({ mode }: RecentListingsProps) {
               style={{ animationDelay: `${idx * 80}ms` }}
             >
               <div className="relative aspect-[16/10] bg-gray-200 overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={listing.image}
                   alt={listing.title}
@@ -98,7 +95,7 @@ export default function RecentListings({ mode }: RecentListingsProps) {
             </a>
           ))}
         </div>
-        <div className="text-center mt-10 sm:hidden">
+        <div className="text-center mt-8 sm:hidden">
           <a
             href="/browse"
             className="inline-block px-6 py-3 bg-[#F97316] text-white rounded-full font-semibold shadow-[0_8px_30px_rgba(0,0,0,0.14)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.18)] hover:scale-[1.03] active:scale-[0.98] hover:bg-[#ea580c] transition-all duration-300"

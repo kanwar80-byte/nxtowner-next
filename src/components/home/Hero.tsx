@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
 
 type MarketplaceMode = 'all' | 'operational' | 'digital';
 
@@ -44,7 +43,7 @@ const TRUST_CHIPS = [
 
 export default function Hero({ mode, setMode }: HeroProps) {
   return (
-    <section className="px-4 pt-16 pb-20 sm:pt-20 sm:pb-24 bg-slate-950">
+    <section className="px-4 py-12 sm:py-16 bg-slate-950">
       <div className="mx-auto max-w-6xl text-center">
         {/* 1. H1 Title */}
         <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white text-center max-w-4xl mx-auto">
@@ -53,7 +52,7 @@ export default function Hero({ mode, setMode }: HeroProps) {
 
         {/* 2. Mode Toggle Row */}
         <div className="mt-4 flex justify-center">
-          <div className="inline-flex rounded-full bg-slate-900/70 p-1 text-sm">
+          <div className="inline-flex rounded-full bg-slate-900/70 p-1 text-xs md:text-sm">
           {(['all', 'operational', 'digital'] as MarketplaceMode[]).map(option => {
             const isActive = mode === option;
             const label =
@@ -82,12 +81,17 @@ export default function Hero({ mode, setMode }: HeroProps) {
         </div>
 
         {/* 3. Subtitle Paragraph */}
-        <p className="mt-6 max-w-3xl mx-auto text-center text-lg md:text-xl text-slate-100/80">
+        <p className="mt-5 max-w-3xl mx-auto text-center text-lg md:text-xl text-slate-100/80">
           {MODE_CONFIG[mode].subtitle}
         </p>
 
+        {/* Metrics Line */}
+        <p className="mt-3 text-sm md:text-base text-slate-200/75 text-center">
+          325+ live listings · 14K+ qualified buyers · $480M+ deal volume reviewed
+        </p>
+
         {/* 4. CTA Buttons Row */}
-        <div className="mt-8 flex flex-wrap justify-center gap-4">
+        <div className="mt-7 flex flex-wrap justify-center gap-4">
           <Link
             href="/browse"
             className="inline-flex items-center justify-center rounded-full px-8 py-3 text-base font-semibold bg-orange-500 text-white hover:bg-orange-600 transition"
@@ -136,7 +140,7 @@ export default function Hero({ mode, setMode }: HeroProps) {
           </div>
 
           {/* Trust Badges */}
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
             {TRUST_CHIPS.map((chip, index) => (
               <div
                 key={index}
