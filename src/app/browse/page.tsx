@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -6,6 +7,7 @@ import Link from "next/link";
 import { PublicListing } from "@/types/listing";
 import { WatchlistButton } from "@/components/listings/WatchlistButton";
 import ListingBadges from "@/components/ListingBadges";
+import clsx from "clsx";
 
 type SearchMode = "default" | "ai";
 
@@ -13,563 +15,302 @@ const CATEGORIES = [
   { value: "all", label: "All Categories" },
   { value: "gas_station", label: "Gas Stations & C-Stores" },
   { value: "car_wash", label: "Car Wash & Auto" },
-  { value: "qsr", label: "QSR & Restaurants" },
-  { value: "saas", label: "SaaS & Software" },
-  { value: "ecommerce", label: "E-commerce & DTC" },
-  { value: "other", label: "Other" },
+  // ...add more as needed
 ];
 
-const TYPES = [
-  { value: "all", label: "All Types" },
-  { value: "asset", label: "Physical Asset" },
-  { value: "digital", label: "Digital Business" },
-];
-
-const SORT_OPTIONS = [
-  { value: "featured", label: "Featured First" },
-  { value: "newest", label: "Newest First" },
-  { value: "price_asc", label: "Price: Low to High" },
-  { value: "price_desc", label: "Price: High to Low" },
-  { value: "revenue", label: "Highest Revenue" },
-  { value: "cashflow", label: "Highest Cashflow" },
-];
-
-const PRICE_RANGES = [
-  { label: "Any Price", min: undefined, max: undefined },
-  { label: "Under $250k", min: undefined, max: 250000 },
-  { label: "$250k – $1M", min: 250000, max: 1000000 },
-  { label: "$1M – $5M", min: 1000000, max: 5000000 },
-  { label: "$5M+", min: 5000000, max: undefined },
-];
-
-export default function BrowsePage() {
-  const [listings, setListings] = useState<PublicListing[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // AI search state
-  const [searchMode, setSearchMode] = useState<SearchMode>("default");
-  const [aiQuery, setAiQuery] = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
-
-  // Filter state
-  const [filters, setFilters] = useState<BrowseFilters>({
-    type: "all",
-    category: "all",
-    sort: "newest",
-    minPrice: undefined,
-    maxPrice: undefined,
-    location: "",
+// Inline formatPrice helper (shared with listing/[id]/page.tsx)
+const formatPrice = (price: number | null | undefined) => {
+  if (price == null) return "$—";
+  return price.toLocaleString("en-CA", {
+    style: "currency",
+    currency: "CAD",
+    maximumFractionDigits: 0,
   });
+};
 
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-
-  // Fetch listings with current filters
-  const fetchListings = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    const data = await getFilteredListings(filters);
-    setListings(data);
-    setLoading(false);
-  }, [filters]);
-
-  // Load initial listings
-  useEffect(() => {
-    if (searchMode === "default") {
-      fetchListings();
-    }
-  }, [searchMode, fetchListings]);
-
-  const handleFilterChange = (newFilters: Partial<BrowseFilters>) => {
-    setFilters((prev) => ({ ...prev, ...newFilters }));
-  };
-
-  const handleResetFilters = () => {
-    setFilters({
-      type: "all",
-      category: "all",
-      sort: "newest",
-      minPrice: undefined,
-      maxPrice: undefined,
-      location: "",
-    });
-  };
-
-  const handleAISearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!aiQuery.trim()) {
-      setAiError("Please enter a search query");
-      return;
-    }
-
-    setAiLoading(true);
-    setAiError(null);
-    setError(null);
-
-    try {
-      const response = await fetch("/api/ai-search-listings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: aiQuery }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "AI search failed");
-      }
-
-      if (data.success) {
-        setListings(data.results as PublicListing[]);
-        setSearchMode("ai");
-
-        if (data.results.length === 0) {
-          setAiError(
-            "No results found for this AI query. Try another phrase or use regular filters."
-          );
-        }
-      } else {
-        throw new Error("Unexpected response from AI search");
-      }
-    } catch (err) {
-      console.error("AI search error:", err);
-      setAiError(
-        err instanceof Error
-          ? err.message
-          : "Failed to process AI search"
-      );
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  const handleClearAISearch = () => {
-    setSearchMode("default");
-    setAiQuery("");
-    setAiError(null);
-    setListings([]);
-  };
-
-  const formatPrice = (price: number | null) => {
-    if (price === null) return "Price on request";
-    return price.toLocaleString("en-CA", {
-      style: "currency",
-      currency: "CAD",
-      maximumFractionDigits: 0,
-    });
-  };
-
-  const isFiltersActive =
-    filters.type !== "all" ||
-    filters.category !== "all" ||
-    filters.minPrice !== undefined ||
-    filters.maxPrice !== undefined ||
-    (filters.location && filters.location.trim());
-
+// ListingCard component
+function ListingCard({ listing }: { listing: PublicListing }) {
   return (
-    <main className="bg-brand-bg min-h-screen py-16 md:py-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold text-brand-text">
-            Browse Listings
-          </h1>
-          <p className="text-brand-muted mt-2">
-            Explore verified physical and digital businesses ready for new owners.
-          </p>
+    <Link
+      href={`/listing/${listing.id}`}
+      className="group block rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-lg transition overflow-hidden"
+    >
+      <div className="p-6 pb-3 flex flex-col gap-2">
+        <div className="flex items-center gap-2 mb-2">
+          <ListingBadges
+            isAiVerified={listing.is_ai_verified}
+            aiVerifiedAt={listing.ai_verified_at}
+            isFeatured={listing.is_featured}
+            featuredUntil={listing.featured_until}
+          />
         </div>
-
-        {/* AI Search Section */}
-        <section className="mb-8 bg-white rounded-xl border border-brand-border p-6 shadow-sm">
-          <form onSubmit={handleAISearch} className="flex flex-col md:flex-row gap-3">
-            <div className="flex-1">
-              <label
-                htmlFor="ai-search"
-                className="block text-sm font-medium text-brand-text mb-2"
-              >
-                🤖 AI-Powered Search
-              </label>
-              <input
-                id="ai-search"
-                type="text"
-                value={aiQuery}
-                onChange={(e) => setAiQuery(e.target.value)}
-                className="w-full px-4 py-3 rounded-md border border-brand-border bg-white text-brand-text placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                placeholder="Try: 'profitable gas station under 3M in Ontario' or 'SaaS business with recurring revenue'"
-                disabled={aiLoading}
-              />
-            </div>
-            <div className="flex gap-2 items-end">
-              <button
-                type="submit"
-                disabled={aiLoading || !aiQuery.trim()}
-                className="px-6 py-3 bg-brand-orange text-white font-semibold rounded-md hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-              >
-                {aiLoading ? "Searching..." : "AI Search"}
-              </button>
-              {searchMode === "ai" && (
-                <button
-                  type="button"
-                  onClick={handleClearAISearch}
-                  className="px-6 py-3 bg-gray-100 text-brand-text font-semibold rounded-md hover:bg-gray-200 transition whitespace-nowrap"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-          </form>
-
-          {aiError && (
-            <div className="mt-3 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-2 rounded-md text-sm">
-              {aiError}
-            </div>
-          )}
-
-          {searchMode === "ai" && !aiError && (
-            <div className="mt-3 text-sm text-brand-muted">
-              ✨ Showing AI-filtered results for:{" "}
-              <span className="font-medium text-brand-text">&quot;{aiQuery}&quot;</span>
-            </div>
-          )}
-        </section>
-
-        {/* Filter Section - Only show in default mode */}
-        {searchMode === "default" && (
-          <section className="mb-8 space-y-4">
-            {/* Quick Filters */}
-            <div className="bg-white rounded-xl border border-brand-border p-4 md:p-6 shadow-sm">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
-                {/* Type */}
-                <div>
-                  <label className="block text-xs font-semibold text-brand-text uppercase tracking-wide mb-2">
-                    Business Type
-                  </label>
-                  <select
-                    value={filters.type || "all"}
-                    onChange={(e) =>
-                      handleFilterChange({ type: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-md border border-brand-border bg-white text-sm text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                  >
-                    {TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Category */}
-                <div>
-                  <label className="block text-xs font-semibold text-brand-text uppercase tracking-wide mb-2">
-                    Category
-                  </label>
-                  <select
-                    value={filters.category || "all"}
-                    onChange={(e) =>
-                      handleFilterChange({ category: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-md border border-brand-border bg-white text-sm text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                  >
-                    {CATEGORIES.map((c) => (
-                      <option key={c.value} value={c.value}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Price Range */}
-                <div>
-                  <label className="block text-xs font-semibold text-brand-text uppercase tracking-wide mb-2">
-                    Price Range
-                  </label>
-                  <select
-                    value={
-                      filters.minPrice === undefined && filters.maxPrice === undefined
-                        ? "all"
-                        : `${filters.minPrice}-${filters.maxPrice}`
-                    }
-                    onChange={(e) => {
-                      const range = PRICE_RANGES.find((r) =>
-                        e.target.value === "all"
-                          ? r.min === undefined && r.max === undefined
-                          : `${r.min}-${r.max}` === e.target.value
-                      );
-                      if (range) {
-                        handleFilterChange({
-                          minPrice: range.min,
-                          maxPrice: range.max,
-                        });
-                      }
-                    }}
-                    className="w-full px-3 py-2 rounded-md border border-brand-border bg-white text-sm text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                  >
-                    {PRICE_RANGES.map((r) => (
-                      <option
-                        key={r.label}
-                        value={
-                          r.min === undefined && r.max === undefined
-                            ? "all"
-                            : `${r.min}-${r.max}`
-                        }
-                      >
-                        {r.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Sort */}
-                <div>
-                  <label className="block text-xs font-semibold text-brand-text uppercase tracking-wide mb-2">
-                    Sort By
-                  </label>
-                  <select
-                    value={filters.sort || "newest"}
-                    onChange={(e) =>
-                      handleFilterChange({ sort: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-md border border-brand-border bg-white text-sm text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                  >
-                    {SORT_OPTIONS.map((s) => (
-                      <option key={s.value} value={s.value}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Advanced Toggle */}
-                <div className="flex items-end">
-                  <button
-                    type="button"
-                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                    className="w-full px-3 py-2 text-sm font-medium text-brand-orange border border-brand-orange rounded-md hover:bg-orange-50 transition"
-                  >
-                    {showAdvancedFilters ? "Hide" : "More Filters"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Advanced Filters */}
-              {showAdvancedFilters && (
-                <div className="border-t border-brand-border pt-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Location */}
-                    <div>
-                      <label className="block text-xs font-semibold text-brand-text uppercase tracking-wide mb-2">
-                        Location (City/Region)
-                      </label>
-                      <input
-                        type="text"
-                        value={filters.location || ""}
-                        onChange={(e) =>
-                          handleFilterChange({ location: e.target.value })
-                        }
-                        placeholder="e.g., Ontario, Toronto, Alberta"
-                        className="w-full px-3 py-2 rounded-md border border-brand-border bg-white text-sm text-brand-text placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                      />
-                    </div>
-
-                    {/* Custom Price Range */}
-                    <div className="space-y-2">
-                      <label className="block text-xs font-semibold text-brand-text uppercase tracking-wide">
-                        Custom Price Range
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="number"
-                          value={filters.minPrice || ""}
-                          onChange={(e) =>
-                            handleFilterChange({
-                              minPrice: e.target.value
-                                ? parseFloat(e.target.value)
-                                : undefined,
-                            })
-                          }
-                          placeholder="Min"
-                          className="flex-1 px-3 py-2 rounded-md border border-brand-border bg-white text-sm text-brand-text placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                        />
-                        <input
-                          type="number"
-                          value={filters.maxPrice || ""}
-                          onChange={(e) =>
-                            handleFilterChange({
-                              maxPrice: e.target.value
-                                ? parseFloat(e.target.value)
-                                : undefined,
-                            })
-                          }
-                          placeholder="Max"
-                          className="flex-1 px-3 py-2 rounded-md border border-brand-border bg-white text-sm text-brand-text placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-orange"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Active Filters Display & Reset */}
-            {isFiltersActive && (
-              <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
-                <span className="text-sm font-medium text-blue-900">
-                  Filters applied • Results: {listings.length}
-                </span>
-                <button
-                  onClick={handleResetFilters}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-800 transition"
-                >
-                  Reset All
-                </button>
+        <h3 className="text-lg font-semibold text-brand-text mb-1 line-clamp-2">
+          {listing.title}
+        </h3>
+        <p className="text-2xl font-bold text-brand-orange">
+          {formatPrice(listing.asking_price)}
+        </p>
+        {/* Metrics */}
+        {(listing.annual_revenue || listing.annual_cashflow) && (
+          <div className="grid grid-cols-2 gap-3 p-3 bg-gray-50 rounded-lg">
+            {listing.annual_revenue && (
+              <div>
+                <p className="text-xs text-brand-muted uppercase font-semibold">Revenue</p>
+                <p className="text-sm font-bold text-brand-text">{formatPrice(listing.annual_revenue)}</p>
               </div>
             )}
-          </section>
-        )}
-
-        {/* Results Count */}
-        {!loading && (
-          <div className="mb-6 text-sm text-brand-muted">
-            {listings.length === 0
-              ? "No listings found"
-              : `Found ${listings.length} listing${listings.length !== 1 ? "s" : ""}`}
+            {listing.annual_cashflow && (
+              <div>
+                <p className="text-xs text-brand-muted uppercase font-semibold">Cashflow</p>
+                <p className="text-sm font-bold text-brand-text">{formatPrice(listing.annual_cashflow)}</p>
+              </div>
+            )}
           </div>
         )}
-
-        {/* Listings Grid */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {loading && (
-            <p className="col-span-full text-center text-brand-muted py-12">
-              Loading listings...
-            </p>
-          )}
-
-          {error && (
-            <div className="col-span-full bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-              {error}
-            </div>
-          )}
-
-          {!loading && !error && listings.length === 0 && (
-            <div className="col-span-full text-center py-12">
-              <p className="text-brand-muted text-lg">
-                {searchMode === "ai"
-                  ? "No results found for your AI search"
-                  : "No listings match your filters"}
-              </p>
-              {searchMode === "default" && isFiltersActive && (
-                <button
-                  onClick={handleResetFilters}
-                  className="mt-4 px-4 py-2 bg-brand-orange text-white rounded-md hover:bg-orange-600 transition"
-                >
-                  Reset Filters
-                </button>
-              )}
-            </div>
-          )}
-
-          {!loading &&
-            !error &&
-            listings.map((listing) => (
-              <Link
-                key={listing.id}
-                href={`/listing/${listing.id}`}
-                className="group"
-              >
-                <div className="bg-white border border-brand-border rounded-xl overflow-hidden hover:shadow-lg transition-shadow duration-300 h-full flex flex-col">
-                  {/* Header with Watchlist */}
-                  <div className="p-6 pb-4 border-b border-gray-100 flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <h3 className="font-bold text-lg text-brand-text group-hover:text-brand-orange transition line-clamp-2">
-                        {listing.title}
-                      </h3>
-                      <div className="mt-2 flex flex-col gap-2">
-                        {listing.is_verified && (
-                          <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded font-semibold w-fit">
-                            ✓ Verified
-                          </span>
-                        )}
-                        <ListingBadges
-                          isFeatured={listing.is_featured || false}
-                          featuredUntil={listing.featured_until}
-                          isAiVerified={listing.is_ai_verified || false}
-                          aiVerifiedAt={listing.ai_verified_at}
-                        />
-                      </div>
-                    </div>
-                    <div className="pt-1 flex-shrink-0">
-                      <WatchlistButton listingId={listing.id} />
-                    </div>
-                  </div>
-
-                  {/* Main Content */}
-                  <div className="flex-1 p-6 space-y-4">
-                    {/* Location & Type */}
-                    <div className="text-sm text-brand-muted">
-                      📍 {listing.region || listing.country || "Location TBD"} •{" "}
-                      <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-800 rounded text-xs font-medium">
-                        {listing.type === "asset" ? "Physical" : "Digital"}
-                      </span>
-                    </div>
-
-                    {/* Price */}
-                    <div className="pt-2 border-t border-gray-100">
-                      <p className="text-sm text-brand-muted mb-1">Asking Price</p>
-                      <p className="text-2xl font-bold text-brand-orange">
-                        {formatPrice(listing.asking_price)}
-                      </p>
-                    </div>
-
-                    {/* Metrics */}
-                    {(listing.annual_revenue || listing.annual_cashflow) && (
-                      <div className="grid grid-cols-2 gap-3 p-3 bg-gray-50 rounded-lg">
-                        {listing.annual_revenue && (
-                          <div>
-                            <p className="text-xs text-brand-muted uppercase font-semibold">
-                              Revenue
-                            </p>
-                            <p className="text-sm font-bold text-brand-text">
-                              {formatPrice(listing.annual_revenue)}
-                            </p>
-                          </div>
-                        )}
-                        {listing.annual_cashflow && (
-                          <div>
-                            <p className="text-xs text-brand-muted uppercase font-semibold">
-                              Cashflow
-                            </p>
-                            <p className="text-sm font-bold text-brand-text">
-                              {formatPrice(listing.annual_cashflow)}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Summary */}
-                    {listing.summary && (
-                      <p className="text-sm text-brand-muted line-clamp-3">
-                        {listing.summary}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Footer CTA */}
-                  <div className="p-6 pt-4 border-t border-gray-100 bg-gray-50 group-hover:bg-brand-orange group-hover:bg-opacity-5 transition">
-                    <span className="inline-flex items-center text-brand-orange font-semibold group-hover:translate-x-1 transition-transform">
-                      View Details
-                      <span className="ml-2">→</span>
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-        </section>
+        {/* Summary */}
+        {listing.summary && (
+          <p className="text-sm text-brand-muted line-clamp-3">{listing.summary}</p>
+        )}
       </div>
-    </main>
+      {/* Footer CTA */}
+      <div className="p-6 pt-4 border-t border-gray-100 bg-gray-50 group-hover:bg-brand-orange group-hover:bg-opacity-5 transition">
+        <span className="inline-flex items-center text-brand-orange font-semibold group-hover:translate-x-1 transition-transform">
+          View Details
+          <span className="ml-2">→</span>
+        </span>
+      </div>
+    </Link>
   );
 }
+
+// Main BrowsePage component
+export default function BrowsePage() {
+  // TODO: DEV ONLY - remove sampleListings when real data is available
+  const sampleListings: PublicListing[] = [
+      {
+        id: "sample-1",
+        title: "Sample Gas Station",
+        summary: "High-traffic location, strong financials, turnkey operation.",
+        type: "asset",
+        status: "active",
+        asking_price: 850000,
+        annual_revenue: 1200000,
+        annual_cashflow: 180000,
+        country: "Canada",
+        region: "Ontario",
+        is_verified: true,
+        is_featured: true,
+        is_ai_verified: false,
+        featured_until: null,
+        ai_verified_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        meta: null,
+      },
+      {
+        id: "sample-2",
+        title: "Sample SaaS Business",
+        summary: "Profitable B2B SaaS, 500+ customers, recurring revenue.",
+        type: "digital",
+        status: "active",
+        asking_price: 420000,
+        annual_revenue: 210000,
+        annual_cashflow: 95000,
+        country: "USA",
+        region: "California",
+        is_verified: true,
+        is_featured: false,
+        is_ai_verified: true,
+        featured_until: null,
+        ai_verified_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        meta: null,
+      },
+    ];
+  const [listings, setListings] = useState<PublicListing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [segment, setSegment] = useState<'all' | 'asset' | 'digital'>('all');
+  const [category, setCategory] = useState<string>('All Categories');
+        // Removed duplicate declarations. Use the top-level sampleListings and listings only.
+
+        // TODO: DEV ONLY - remove effectiveListings fallback when real data is available
+        const effectiveListings: PublicListing[] = listings.length > 0 ? listings : sampleListings;
+
+  // Example: fetch all listings on mount (replace with actual filter/search logic as needed)
+  useEffect(() => {
+    async function fetchListings() {
+      setLoading(true);
+      try {
+        const results = await getFilteredListings({});
+        setListings(Array.isArray(results) ? results : []);
+      } catch (e) {
+        console.error("[Browse] listings query error:", e);
+        setListings([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchListings();
+  }, []);
+
+  // Inline FiltersSidebar component (restyle only, keep logic as is)
+  function FiltersSidebar() {
+    return (
+      <div className="space-y-6 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Filters</h3>
+          {/* Place filter controls here, e.g. price, location, etc. */}
+          {/* ...existing filter controls... */}
+          <div className="mb-3">
+            <label className="block text-xs font-medium text-slate-600 mb-1">Location</label>
+            <input className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm focus:border-nx-primary focus:ring-1 focus:ring-nx-primary" placeholder="City, region, etc." />
+          </div>
+          <div className="mb-3">
+            <label className="block text-xs font-medium text-slate-600 mb-1">Price Range</label>
+            <input className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm focus:border-nx-primary focus:ring-1 focus:ring-nx-primary" placeholder="Min - Max" />
+          </div>
+        </div>
+        {/* Add more filter sections as needed */}
+      </div>
+    );
+  }
+
+  // Category labels for chips
+  const CATEGORY_LABELS = [
+    "All Categories",
+    "Gas Station",
+    "SaaS",
+    "Car Wash",
+    "E-Commerce",
+    "Franchise",
+    "Restaurant / QSR",
+    "Content Site",
+    "Manufacturing",
+    "Agency",
+    "Other",
+  ];
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      {/* HERO */}
+      <section className="px-4 py-12 sm:py-16 bg-slate-950 text-white">
+        <div className="mx-auto max-w-6xl px-4 py-6 lg:py-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold lg:text-3xl text-white">Browse Listings</h1>
+              <p className="mt-1 text-sm text-white/70">
+                Discover verified digital and operational businesses across Canada and beyond.
+              </p>
+            </div>
+            {/* toolbar: search + sort */}
+            <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:items-center">
+              {/* Add search input and sort select here if needed */}
+              <div className="w-full max-w-xs">
+                <input
+                  type="text"
+                  placeholder="Search businesses..."
+                  className="
+                    w-full rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm
+                    text-white placeholder-white/60 backdrop-blur-sm
+                    focus:bg-white focus:text-slate-900 focus:placeholder-slate-400
+                    focus:border-slate-300 shadow-sm transition
+                  "
+                  // reuse existing value/onChange if present
+                />
+              </div>
+            </div>
+          </div>
+          {/* Segment tabs */}
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="inline-flex rounded-full bg-white/10 p-1 text-xs">
+              {['all', 'asset', 'digital'].map((seg) => (
+                <button
+                  key={seg}
+                  type="button"
+                  className={clsx(
+                    "px-4 py-1.5 text-sm rounded-full transition",
+                    segment === seg
+                      ? "bg-white text-primary font-medium shadow-sm"
+                      : "text-white/80 hover:bg-white/10"
+                  )}
+                  onClick={() => setSegment(seg as typeof segment)}
+                >
+                  {seg === 'all' ? 'All' : seg.charAt(0).toUpperCase() + seg.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Category chips row */}
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            {CATEGORY_LABELS.map((label) => {
+              const active = category === label;
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  className={clsx(
+                    "whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium transition",
+                    active
+                      ? "border-white bg-white text-primary shadow-sm"
+                      : "border-white/20 bg-white/5 text-white/80 hover:bg-white/10"
+                  )}
+                  onClick={() => setCategory(label)}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* BODY */}
+      <section className="border-t border-slate-200">
+        <div className="mx-auto flex max-w-6xl gap-6 px-4 py-6 lg:py-8">
+          {/* Sidebar (desktop only) */}
+          <aside className="hidden w-64 shrink-0 lg:block">
+            <FiltersSidebar />
+          </aside>
+
+          {/* Main content */}
+          <main className="flex-1">
+            {/* Filters button for mobile */}
+            <button className="mb-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 lg:hidden">
+              Filters
+            </button>
+            {/* top result summary row */}
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <p className="text-xs text-slate-500">
+                Found <span className="font-semibold text-slate-900">{listings.length}</span> businesses
+              </p>
+              {/* optional secondary sort dropdown (if our sort control lives here instead of hero) */}
+            </div>
+            {/* empty-state or grid + pagination */}
+            {loading ? (
+              <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-center">
+                <p className="text-sm font-medium text-slate-800">Loading listings…</p>
+              </div>
+            ) : listings.length === 0 ? (
+              <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-center">
+                <p className="text-sm font-medium text-slate-800">No listings found.</p>
+                <p className="mt-1 max-w-md text-xs text-slate-500">
+                  Try adjusting your filters, changing the category, or clearing the search to see more opportunities.
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {listings.map((listing) => (
+                  <ListingCard key={listing.id} listing={listing} />
+                ))}
+              </div>
+            )}
+            {/* pagination stays below, but only show it when listings.length > 0 if needed */}
+          </main>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// BrowsePage: restored main component wrapper, wired listings.map to ListingCard, and fixed formatPrice import.

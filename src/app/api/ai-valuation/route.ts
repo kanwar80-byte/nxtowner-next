@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "@supabase/supabase-js";
+import { cleanJsonString } from "@/lib/cleanJsonString";
+import { valuationAISchema } from "@/lib/valuationSchema";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -15,6 +17,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 
 export async function POST(req: Request) {
   if (!GEMINI_API_KEY) {
+    console.error("NexusAI /api/ai-valuation error: GEMINI_API_KEY not set");
     return NextResponse.json(
       { error: "Valuation service is not configured." },
       { status: 500 }
@@ -24,7 +27,8 @@ export async function POST(req: Request) {
   let body;
   try {
     body = await req.json();
-  } catch {
+  } catch (err) {
+    console.error("NexusAI /api/ai-valuation error: Invalid JSON body", err);
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
@@ -45,6 +49,7 @@ export async function POST(req: Request) {
   } = body;
 
   if (!profile_id || !asset_type || !title) {
+    console.error("NexusAI /api/ai-valuation error: Missing required fields", { profile_id, asset_type, title });
     return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
   }
 
@@ -57,8 +62,20 @@ export async function POST(req: Request) {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const result = await model.generateContent(prompt);
     const text = result.response.text();
-    parsed = JSON.parse(text);
-    aiResult = parsed;
+    const cleanedValue = cleanJsonString(text);
+    try {
+      parsed = JSON.parse(cleanedValue);
+    } catch (error) {
+      console.error("NexusAI /api/ai-valuation error: JSON parse error", error, cleanedValue);
+      return NextResponse.json({ error: "AI returned invalid JSON. Please try again." }, { status: 500 });
+    }
+    // Zod validation
+    try {
+      aiResult = valuationAISchema.parse(parsed);
+    } catch (error) {
+      console.error("NexusAI /api/ai-valuation error: schema validation error", error, parsed);
+      return NextResponse.json({ error: "AI returned data in an unexpected format. Please try again." }, { status: 500 });
+    }
   } catch (err) {
     return NextResponse.json({ error: "AI valuation failed.", details: String(err) }, { status: 500 });
   }
@@ -68,7 +85,7 @@ export async function POST(req: Request) {
   if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
     supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     try {
-      const { data, error }: { data: any; error: any } = await supabase.from("valuations").insert([
+      const { data, error }: { data: unknown; error: { message?: string } | null } = await supabase.from("valuations").insert([
         {
           profile_id,
           listing_id,
@@ -83,14 +100,13 @@ export async function POST(req: Request) {
           key_metrics,
           notes,
           ai_input_summary: prompt.slice(0, 500),
-          ai_output_range_min: aiResult.valuation_min,
-          ai_output_range_max: aiResult.valuation_max,
-          ai_output_currency: aiResult.currency,
+          ai_output_range_min: aiResult.valuation.range_low,
+          ai_output_range_max: aiResult.valuation.range_high,
+          ai_output_currency: "CAD",
           ai_output_multiples: {
-            revenue_multiple: aiResult.revenue_multiple,
-            profit_multiple: aiResult.profit_multiple,
+            method: aiResult.valuation.method,
           },
-          ai_output_narrative: aiResult.narrative,
+          ai_output_narrative: aiResult.valuation.notes,
           status: "completed",
         },
       ]);
@@ -102,6 +118,7 @@ export async function POST(req: Request) {
         dbResult = { id: undefined };
       }
     } catch (err) {
+      console.error("NexusAI /api/ai-valuation error: Supabase insert error", err);
       dbResult = { error: String(err) };
     }
   }

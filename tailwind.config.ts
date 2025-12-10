@@ -20,6 +20,10 @@ const config: Config = {
           green: "#16A34A",
           orange: "#EA580C",
         },
+        nx: {
+          primary: '#0A0F2C',
+        },
+        primary: '#0A0F2C',
       },
     },
   },

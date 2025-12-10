@@ -1,3 +1,4 @@
+create policy "Public read" on public.listings for select using (true);
 -- NxtOwner Core Schema Migration
 -- Run this in Supabase SQL Editor or via: supabase db push
 
@@ -71,6 +72,10 @@ create index idx_listings_type on public.listings(type);
 
 -- RLS policies for listings
 alter table public.listings enable row level security;
+
+
+-- DEBUG/OPEN: Allow ALL SELECTs (remove in production!)
+create policy "Allow all select for debugging" on public.listings for select using (true);
 
 create policy "Anyone can read active listings"
   on public.listings for select

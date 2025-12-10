@@ -32,7 +32,8 @@ export async function getFilteredListings(
       .select(
         'id, title, summary, type, status, asking_price, annual_revenue, annual_cashflow, category, country, region, is_verified, is_featured, is_ai_verified, featured_until, ai_verified_at, created_at, updated_at, meta'
       )
-      .eq('status', 'active');
+      .eq('status', 'active')
+      .eq('is_verified', true);
 
     // Apply filters
     if (filters.type && filters.type !== 'all') {
@@ -44,11 +45,11 @@ export async function getFilteredListings(
     }
 
     if (filters.minPrice !== undefined && filters.minPrice > 0) {
-      query = query.gte('asking_price', filters.minPrice);
+      query = query.gte('price', filters.minPrice);
     }
 
     if (filters.maxPrice !== undefined && filters.maxPrice > 0) {
-      query = query.lte('asking_price', filters.maxPrice);
+      query = query.lte('price', filters.maxPrice);
     }
 
     if (filters.location && filters.location.trim()) {

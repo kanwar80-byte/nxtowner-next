@@ -40,12 +40,12 @@ export function ValuationBadgeFetcher({ listingId }: { listingId: string }) {
 
   if (loading) {
     return (
-      <span className="inline-block animate-pulse bg-orange-100 rounded px-2 py-1 text-xs text-orange-600">Loading AI Valuation…</span>
+      <span className="inline-block animate-pulse bg-orange-100 rounded px-2 py-1 text-xs text-orange-600">AI valuation loading…</span>
     );
   }
   if (error) {
     return (
-      <span className="inline-block rounded px-2 py-1 text-xs text-red-500" title={error}>No AI Valuation</span>
+      <span className="inline-block rounded px-2 py-1 text-xs text-gray-400 bg-gray-100" title={error}>AI valuation unavailable</span>
     );
   }
   if (!valuation) return null;

@@ -33,4 +33,7 @@ export type ValuationAIResult = {
   revenue_multiple: number;
   profit_multiple: number;
   narrative: string;
+  method?: string;
+  key_drivers?: string[];
+  risks?: string[];
 };

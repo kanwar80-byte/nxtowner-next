@@ -125,6 +125,7 @@ export function MainNav() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const isAuthenticated = !!user;
 
   useEffect(() => {
     const getUser = async () => {
@@ -226,7 +227,7 @@ export function MainNav() {
 
         <div className="flex items-center justify-end gap-2 sm:gap-3">
           {/* Role-based quick links */}
-          {user && profile?.role !== 'admin' && (
+          {isAuthenticated && profile?.role !== 'admin' && (
             <>
               <Link
                 href="/browse"
@@ -246,7 +247,7 @@ export function MainNav() {
           )}
 
           {/* Admin link for admins */}
-          {user && profile?.role === 'admin' && (
+          {isAuthenticated && profile?.role === 'admin' && (
             <Link
               href="/admin"
               className="hidden md:inline-flex items-center rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 transition"
@@ -256,7 +257,7 @@ export function MainNav() {
           )}
 
           {/* Public quick actions when not logged in */}
-          {!user && (
+          {!isAuthenticated && (
             <>
               <Link
                 href="/pricing"
@@ -279,7 +280,7 @@ export function MainNav() {
             </>
           )}
 
-          {!user ? (
+          {!isAuthenticated ? (
             <>
               <Link
                 href="/login"
