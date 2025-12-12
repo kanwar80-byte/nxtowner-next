@@ -1,20 +1,23 @@
-import { redirect } from 'next/navigation';
-import { getUserProfile } from '@/lib/auth';
 
-export const revalidate = 0; // Render on demand, not at build time
+import { redirect } from "next/navigation";
+import { supabaseServer } from "@/lib/supabaseServer";
 
 export default async function DashboardPage() {
-  const { profile } = await getUserProfile();
-  
-  // Redirect based on user role
-  if (profile?.role === 'admin') {
-    redirect('/admin');
-  } else if (profile?.role === 'seller') {
-    redirect('/dashboard/seller');
-  } else if (profile?.role === 'partner') {
-    redirect('/dashboard/partner');
-  } else {
-    // Default to buyer dashboard
-    redirect('/dashboard/buyer');
+  const supabase = await supabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login?next=/dashboard");
   }
+
+  return (
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+      <p className="mt-2 text-slate-600">
+        You’re signed in. (This page is server-protected.)
+      </p>
+    </main>
+  );
 }
