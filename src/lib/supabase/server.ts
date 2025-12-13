@@ -1,8 +1,8 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
-export function supabaseServer() {
-  const cookieStore = cookies();
+export async function supabaseServer() {
+  const cookieStore = await cookies(); // ✅ Next 16: cookies() is async
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,7 +18,7 @@ export function supabaseServer() {
               cookieStore.set(name, value, options);
             });
           } catch {
-            // cookies can be readonly during certain server renders
+            // ok during server component render
           }
         },
       },
