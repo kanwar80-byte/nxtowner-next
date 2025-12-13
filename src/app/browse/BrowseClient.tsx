@@ -68,8 +68,8 @@ export default function BrowseClient() {
                   {l.title ?? "Untitled Listing"}
                 </div>
                 <div className="mt-1 text-sm text-muted-foreground">
-                  {l.location ?? "Canada"}
-                </div>
+  {((l as any).location ?? (l as any).city ?? (l as any).province ?? "Canada") as string}
+</div>
                 {l.summary ? (
                   <p className="mt-3 line-clamp-3 text-sm text-muted-foreground">{l.summary}</p>
                 ) : null}
