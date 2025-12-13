@@ -35,8 +35,8 @@ export async function getFilteredListings(
       .eq('status', 'active');
 
     // Apply filters
-    if (filters.type && filters.type !== 'all') {
-      query = query.eq('type', filters.type);
+    if (filters.type && filters.type.toLowerCase() !== 'all') {
+      query = query.eq('type', filters.type.toLowerCase());
     }
 
     if (filters.category && filters.category !== 'all') {

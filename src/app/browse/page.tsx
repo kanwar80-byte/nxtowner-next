@@ -1,3 +1,6 @@
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -184,6 +187,12 @@ export default function BrowsePage() {
 
         {/* AI Search Section */}
         <section className="mb-8 bg-white rounded-xl border border-brand-border p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="inline-block px-3 py-1 bg-brand-orange/10 text-brand-orange font-semibold rounded-full text-xs">
+              AI-Powered Search
+            </span>
+            <span className="text-xs text-gray-500">Try natural language queries!</span>
+          </div>
           <form onSubmit={handleAISearch} className="flex flex-col md:flex-row gap-3">
             <div className="flex-1">
               <label
@@ -456,19 +465,19 @@ export default function BrowsePage() {
 
           {!loading && !error && listings.length === 0 && (
             <div className="col-span-full text-center py-12">
-              <p className="text-brand-muted text-lg">
-                {searchMode === "ai"
-                  ? "No results found for your AI search"
-                  : "No listings match your filters"}
-              </p>
-              {searchMode === "default" && isFiltersActive && (
-                <button
-                  onClick={handleResetFilters}
-                  className="mt-4 px-4 py-2 bg-brand-orange text-white rounded-md hover:bg-orange-600 transition"
-                >
-                  Reset Filters
-                </button>
-              )}
+                <p className="text-brand-muted text-lg">
+                  {searchMode === "ai"
+                    ? "No results found for your AI search"
+                    : "No listings match your filters"}
+                </p>
+                {searchMode === "default" && isFiltersActive && (
+                  <button
+                    onClick={handleResetFilters}
+                    className="mt-4 px-4 py-2 bg-brand-orange text-white rounded-md hover:bg-orange-600 transition"
+                  >
+                    Reset Filters
+                  </button>
+                )}
             </div>
           )}
 
