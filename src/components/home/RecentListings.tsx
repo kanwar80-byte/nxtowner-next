@@ -32,78 +32,59 @@ export default function RecentListings() {
     },
   ];
 
-  return (
-    <section className="bg-white py-12 md:py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-8">
+    import Link from "next/link";
+
+    const DEMO = [
+      {
+        title: "E-commerce Store (Health & Wellness)",
+        location: "Toronto, ON",
+        price: "$580,000",
+        href: "/browse",
+      },
+      {
+        title: "Industrial Warehouse Property",
+        location: "Brampton, ON",
+        price: "$4,200,000",
+        href: "/browse",
+      },
+      {
+        title: "Coffee Shop (High Foot Traffic Location)",
+        location: "Mississauga, ON",
+        price: "$1,850,000",
+        href: "/browse",
+      },
+    ];
+
+    return (
+      <section className="bg-white rounded-xl border border-brand-border p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900">Recent Listings</h2>
-            <p className="mt-3 max-w-2xl text-slate-600">
-              The latest operational and digital assets added to NxtOwner.ca.
-            </p>
+            <h2 className="text-lg font-bold text-brand-text">Recent Listings</h2>
+            <p className="text-sm text-brand-muted">Fresh opportunities added to NxtOwner.</p>
           </div>
-          <a
+          <Link
             href="/browse"
-            className="hidden sm:inline-block px-6 py-3 bg-[#F97316] text-white rounded-full font-semibold shadow-[0_8px_30px_rgba(0,0,0,0.14)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.18)] hover:scale-[1.03] active:scale-[0.98] hover:bg-[#ea580c] transition-all duration-300"
+            className="text-sm font-semibold text-brand-orange hover:underline"
           >
             Browse All
-          </a>
+          </Link>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
-          {listings.map((listing, idx) => (
-            <a
-              key={listing.id}
-              href={`/listing/${listing.id}`}
-              className="bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.16)] hover:-translate-y-1 transition-all duration-300 overflow-hidden border border-gray-100 group animate-fadeInUp flex flex-col h-full"
-              style={{ animationDelay: `${idx * 80}ms` }}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {DEMO.map((item) => (
+            <Link
+              key={item.title}
+              href={item.href}
+              className="group rounded-lg border border-brand-border bg-white p-5 hover:shadow-md transition"
             >
-              <div className="relative aspect-[16/10] bg-gray-200 overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={listing.image}
-                  alt={listing.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                {listing.verified && (
-                  <div className="absolute top-3 left-3">
-                    <span className="px-2 py-1 bg-[#16A34A] text-white text-xs font-semibold rounded">
-                      VERIFIED
-                    </span>
-                  </div>
-                )}
+              <div className="text-sm text-brand-muted">{item.location}</div>
+              <div className="mt-2 font-semibold text-brand-text group-hover:text-brand-orange transition">
+                {item.title}
               </div>
-              <div className="p-5 space-y-3 flex-1 flex flex-col">
-                <div className="text-2xl font-semibold text-[#F97316]">{listing.price}</div>
-                <h3 className="font-semibold text-gray-900 leading-snug line-clamp-2">{listing.title}</h3>
-                <div className="text-sm text-gray-600 space-y-1 pt-1">
-                  <div className="flex justify-between">
-                    <span>Revenue:</span>
-                    <span className="font-semibold">{listing.revenue}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Profit:</span>
-                    <span className="font-semibold">{listing.profit}</span>
-                  </div>
-                  <div className="text-gray-500 pt-1">📍 {listing.location}</div>
-                </div>
-                <div className="pt-3">
-                  <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#0A122A]">
-                    View Details <span aria-hidden>→</span>
-                  </span>
-                </div>
-              </div>
-            </a>
+              <div className="mt-3 text-brand-orange font-bold">{item.price}</div>
+            </Link>
           ))}
         </div>
-        <div className="text-center mt-8 sm:hidden">
-          <a
-            href="/browse"
-            className="inline-block px-6 py-3 bg-[#F97316] text-white rounded-full font-semibold shadow-[0_8px_30px_rgba(0,0,0,0.14)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.18)] hover:scale-[1.03] active:scale-[0.98] hover:bg-[#ea580c] transition-all duration-300"
-          >
-            Browse All
-          </a>
-        </div>
-      </div>
-    </section>
-  );
+      </section>
+    );
 }
