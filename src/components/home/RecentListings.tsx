@@ -1,41 +1,67 @@
-import React from 'react';
+"use client"
+
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { MapPin, Clock, ArrowRight } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
 
-const RECENT_DEMO = [
-  {
-    id: 101,
-    title: 'E-commerce Store (Health & Wellness)',
-    location: 'Toronto, ON',
-    price: '$350,000',
-    revenue: '$1.2M Rev',
-    category: 'E-commerce',
-    posted: '2 days ago',
-  },
-  {
-    id: 102,
-    title: 'Industrial Warehouse Property',
-    location: 'Vaughan, ON',
-    price: '$4,200,000',
-    revenue: 'Vacant Possession',
-    category: 'Real Estate',
-    posted: '3 days ago',
-  },
-  {
-    id: 103,
-    title: 'Coffee Shop (High Foot Traffic)',
-    location: 'Montreal, QC',
-    price: '$1,250,000',
-    revenue: '$450k EBITDA',
-    category: 'Hospitality',
-    posted: '5 days ago',
-  },
-];
+// Helper to calculate "2 days ago"
+function timeAgo(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+  let interval = seconds / 31536000;
+  if (interval > 1) return Math.floor(interval) + " years ago";
+  interval = seconds / 2592000;
+  if (interval > 1) return Math.floor(interval) + " months ago";
+  interval = seconds / 86400;
+  if (interval > 1) return Math.floor(interval) + " days ago";
+  return "Just now";
+}
+
+interface Listing {
+  id: number;
+  title: string;
+  location: string;
+  price: number | null;
+  cashflow: string;
+  category: string;
+  asset_type: string;
+  image_url: string;
+  created_at: string;
+}
 
 export default function RecentListings() {
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchRecent() {
+      // Fetch 3 newest active listings
+      const { data, error } = await supabase
+        .from('listings')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      if (error) {
+        console.error('Error fetching recent:', error);
+      } else if (data) {
+        setListings(data);
+      }
+      setLoading(false);
+    }
+
+    fetchRecent();
+  }, []);
+
+  if (loading) return null; // or a spinner
+  if (listings.length === 0) return null;
+
   return (
     <div className="w-full">
-      {/* Section Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
           <h2 className="text-2xl font-bold text-[#0a192f]">Recent Listings</h2>
@@ -46,37 +72,50 @@ export default function RecentListings() {
         </Link>
       </div>
 
-      {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {RECENT_DEMO.map((item) => (
+        {listings.map((item) => (
           <Link href={`/listing/${item.id}`} key={item.id} className="block group bg-white border border-gray-100 rounded-xl hover:shadow-lg transition-all duration-300 overflow-hidden">
-            <div className="h-40 bg-gray-50 relative flex items-center justify-center text-gray-300 text-xs font-medium">
-                {item.category} Photo
-                <span className="absolute top-2 left-2 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded">NEW</span>
-                <span className="absolute bottom-2 right-2 bg-black/50 backdrop-blur text-white text-[10px] px-2 py-0.5 rounded flex items-center gap-1">
-                    <Clock size={10} /> {item.posted}
+            <div className="h-40 bg-gray-50 relative overflow-hidden">
+               <img 
+                 src={item.image_url || 'https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?auto=format&fit=crop&q=80'} 
+                 alt={item.title}
+                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+               />
+                
+                {/* NEW Badge Logic: Show NEW if less than 7 days old */}
+                {(new Date().getTime() - new Date(item.created_at).getTime()) / (1000 * 3600 * 24) < 7 && (
+                   <span className="absolute top-2 left-2 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm">
+                      NEW
+                   </span>
+                )}
+                
+                <span className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-0.5 rounded flex items-center gap-1">
+                    <Clock size={10} /> {timeAgo(item.created_at)}
                 </span>
             </div>
             <div className="p-4">
               <div className="flex justify-between items-start mb-2">
-                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{item.category}</span>
-                 <span className="text-sm font-bold text-green-700">{item.price}</span>
+                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    {item.asset_type || 'Asset'}
+                 </span>
+                 <span className="text-sm font-bold text-green-700">
+                    {item.price ? `$${item.price.toLocaleString()}` : 'Contact'}
+                 </span>
               </div>
-              <h3 className="font-bold text-gray-900 text-base mb-2 line-clamp-1 group-hover:text-blue-900">{item.title}</h3>
+              <h3 className="font-bold text-gray-900 text-base mb-2 line-clamp-1 group-hover:text-blue-900">
+                {item.title}
+              </h3>
               <div className="flex items-center justify-between text-xs text-gray-500 mt-3 pt-3 border-t border-gray-50">
                  <span className="flex items-center gap-1"><MapPin size={12} /> {item.location}</span>
-                 <span className="font-medium text-gray-700">{item.revenue}</span>
+                 <span className="font-medium text-gray-700">{item.cashflow || 'N/A'}</span>
               </div>
             </div>
           </Link>
         ))}
       </div>
-
-      {/* Mobile CTA */}
+      
       <div className="mt-6 md:hidden text-center">
-        <Link href="/browse" className="text-sm font-bold text-orange-600">
-          View All Listings →
-        </Link>
+        <Link href="/browse" className="text-sm font-bold text-orange-600">View All Listings →</Link>
       </div>
     </div>
   );
