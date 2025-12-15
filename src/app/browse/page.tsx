@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { getFilteredListings, type BrowseFilters } from "@/app/actions/listings";
+import { getFilteredListings, type BrowseFiltersInput as BrowseFilters } from "@/app/actions/getFilteredListings";
 import Link from "next/link";
 import { PublicListing } from "@/types/listing";
 import { WatchlistButton } from "@/components/listings/WatchlistButton";

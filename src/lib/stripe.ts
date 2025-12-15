@@ -1,23 +1,10 @@
-/**
- * Stripe client configuration and helper functions
- */
-
+import 'server-only'; // Safety: Never let this leak to client
 import Stripe from 'stripe';
 
-// Initialize Stripe with secret key (optional during build, required at runtime)
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-
-export const stripe: Stripe | null = stripeSecretKey
-  ? new Stripe(stripeSecretKey, {
-      apiVersion: '2024-06-20',
-      typescript: true,
-    })
-  : null;
-
-/**
- * Plan type to Stripe price ID mapping
- * These must be configured in the Stripe Dashboard and referenced via env vars
- */
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2025-01-27.acacia', // Use latest or your dashboard version
+  typescript: true,
+});
 export const PLAN_PRICE_IDS: Record<string, string> = {
   pro_buyer: process.env.STRIPE_PRICE_PRO_BUYER || '',
   verified_seller: process.env.STRIPE_PRICE_VERIFIED_SELLER || '',
