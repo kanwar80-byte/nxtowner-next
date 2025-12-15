@@ -2,7 +2,7 @@ import 'server-only'; // Safety: Never let this leak to client
 import Stripe from 'stripe';
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-01-27.acacia', // Use latest or your dashboard version
+  apiVersion: '2024-06-20', // Use latest supported by stripe-node
   typescript: true,
 });
 export const PLAN_PRICE_IDS: Record<string, string> = {
