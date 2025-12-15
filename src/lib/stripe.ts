@@ -27,7 +27,9 @@ export const PLAN_PRICE_IDS: Record<string, string> = {
 // Validate that all required price IDs are set
 Object.entries(PLAN_PRICE_IDS).forEach(([plan, priceId]) => {
   if (!priceId) {
-    console.warn(`Warning: STRIPE_PRICE_${plan.toUpperCase()} is not configured`);
+    if (process.env.NODE_ENV === "production") {
+      console.warn(`Warning: STRIPE_PRICE_${plan.toUpperCase()} is not configured`);
+    }
   }
 });
 

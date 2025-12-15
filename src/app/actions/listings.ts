@@ -32,7 +32,7 @@ export async function getFilteredListings(
       .select(
         'id, title, summary, type, status, asking_price, annual_revenue, annual_cashflow, category, country, region, is_verified, is_featured, is_ai_verified, featured_until, ai_verified_at, created_at, updated_at, meta'
       )
-      .eq('status', 'active');
+      .in('status', ['active', 'pending_review']);
 
     // Apply filters
     if (filters.type && filters.type !== 'all') {
@@ -53,7 +53,7 @@ export async function getFilteredListings(
 
     if (filters.location && filters.location.trim()) {
       query = query.or(
-        `region.ilike.%${filters.location}%,location.ilike.%${filters.location}%,country.ilike.%${filters.location}%`
+        `region.ilike.%${filters.location}%,country.ilike.%${filters.location}%`
       );
     }
 

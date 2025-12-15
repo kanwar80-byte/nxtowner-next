@@ -70,7 +70,16 @@ export default function BrowsePage() {
     setLoading(true);
     setError(null);
 
-    const data = await getFilteredListings(filters);
+    // ✅ normalize "all" → undefined so server action doesn't filter wrongly
+    const normalized: BrowseFilters = {
+      ...filters,
+      type: filters.type === "all" ? undefined : filters.type,
+      category: filters.category === "all" ? undefined : filters.category,
+      sort: filters.sort || "newest",
+      location: (filters.location || "").trim(),
+    };
+
+    const data = await getFilteredListings(normalized);
     setListings(data);
     setLoading(false);
   }, [filters]);
@@ -88,8 +97,8 @@ export default function BrowsePage() {
 
   const handleResetFilters = () => {
     setFilters({
-      type: "all",
-      category: "all",
+      type: undefined,
+      category: undefined,
       sort: "newest",
       minPrice: undefined,
       maxPrice: undefined,
@@ -163,8 +172,8 @@ export default function BrowsePage() {
   };
 
   const isFiltersActive =
-    filters.type !== "all" ||
-    filters.category !== "all" ||
+    !!filters.type ||
+    !!filters.category ||
     filters.minPrice !== undefined ||
     filters.maxPrice !== undefined ||
     (filters.location && filters.location.trim());
@@ -248,9 +257,9 @@ export default function BrowsePage() {
                     Business Type
                   </label>
                   <select
-                    value={filters.type || "all"}
+                    value={filters.type ?? "all"}
                     onChange={(e) =>
-                      handleFilterChange({ type: e.target.value })
+                      handleFilterChange({ type: e.target.value === "all" ? undefined : e.target.value })
                     }
                     className="w-full px-3 py-2 rounded-md border border-brand-border bg-white text-sm text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-orange"
                   >
@@ -268,9 +277,9 @@ export default function BrowsePage() {
                     Category
                   </label>
                   <select
-                    value={filters.category || "all"}
+                    value={filters.category ?? "all"}
                     onChange={(e) =>
-                      handleFilterChange({ category: e.target.value })
+                      handleFilterChange({ category: e.target.value === "all" ? undefined : e.target.value })
                     }
                     className="w-full px-3 py-2 rounded-md border border-brand-border bg-white text-sm text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-orange"
                   >
