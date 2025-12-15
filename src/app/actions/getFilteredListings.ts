@@ -13,10 +13,8 @@ export type SearchFilters = {
 };
 
 export async function getFilteredListings(filters: SearchFilters) {
-  // Initialize the Server Client
   const supabase = await supabaseServer();
 
-  // Start with all listings
   let query = supabase.from("listings").select("*");
 
   // 1. Text Search
@@ -29,7 +27,7 @@ export async function getFilteredListings(filters: SearchFilters) {
     query = query.eq("category", filters.category);
   }
 
-  // 3. Asset Type (Operational vs Digital)
+  // 3. Asset Type
   if (filters.assetType && filters.assetType !== "all") {
     query = query.eq("deal_type", filters.assetType);
   }
@@ -50,11 +48,10 @@ export async function getFilteredListings(filters: SearchFilters) {
     query = query.gte("revenue", filters.minRevenue);
   }
 
-  // Execute Query
   const { data, error } = await query.order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Server Action Error:", error);
+    console.error("Search Error:", error);
     return [];
   }
 
