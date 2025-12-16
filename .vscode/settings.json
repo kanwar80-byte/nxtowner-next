@@ -1,0 +1,21 @@
+{
+    // A. Auto-Format on Save (Prettier)
+    "editor.formatOnSave": true,
+    
+    // Set Prettier as the default formatter for all files it supports
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+    // B. Auto-Fix Code Issues (ESLint) and C. Organize Imports
+    // These actions run automatically every time you save a file
+    "editor.codeActionsOnSave": {
+        // Automatically fixes errors flagged by ESLint (e.g., unused variables, semicolons)
+        "source.fixAll.eslint": "explicit",
+        
+        // Automatically sorts and removes unused imports
+        "source.organizeImports": "explicit"
+    },
+
+    // Optional: Recommended for Next.js and TypeScript projects
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "typescript.enablePromptUseWorkspaceTsdk": true
+}

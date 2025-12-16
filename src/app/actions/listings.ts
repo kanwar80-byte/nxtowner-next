@@ -9,6 +9,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import type { ListingInsert, ListingUpdate, Listing } from '@/types/database';
 import type { PublicListing } from '@/types/listing';
 import { revalidatePath } from 'next/cache';
+import { handleEvent } from '@/lib/automation/eventHandler';
 
 // ============================================================================
 // BROWSE & FILTER QUERIES
@@ -150,6 +151,15 @@ export async function updateListing(id: string, updates: ListingUpdate): Promise
       .eq('id', id);
 
     if (error) throw error;
+
+    // If the listing is being published (status set to 'active'), trigger automation
+    if (updates.status === 'active') {
+      await handleEvent({
+        type: 'LISTING_CREATED_OR_UPDATED',
+        listingId: id,
+        userId: user.id,
+      });
+    }
 
     revalidatePath('/browse');
     revalidatePath(`/listing/${id}`);

@@ -2,80 +2,140 @@
 
 import { supabaseServer } from "@/lib/supabase/server";
 
-// 1. UPDATED TYPE DEFINITION
-export type SearchFilters = {
-  query?: string;
+import type { PublicListing } from "@/types/listing";
+// 🚨 NEW IMPORT: Import the helper function
+import { getSubCategoriesForMainCategory } from "@/lib/categories";
+
+export type BrowseFiltersInput = {
+  assetType?: string;
   category?: string;
   minPrice?: number;
   maxPrice?: number;
-  minCashflow?: number;
-  minRevenue?: number;
-  
-  // These MUST be here to match the frontend
-  assetType?: string; 
-  location?: string;  // <--- This is the missing field causing your error
-  sort?: string;      
-  
-  // Safety catch-all
-  [key: string]: any; 
+  location?: string;
+  sort?: string;
 };
 
-export async function getFilteredListings(filters: SearchFilters) {
+/**
+ * Helper to centralize and normalize base filters (status and asset type)
+ */
+function applyBaseFilters(q: any, filters: BrowseFiltersInput) {
+  // Status: Ensure only publishable statuses are included.
+  q = q.in("status", ["published", "active"]);
+
+  // Asset type normalization:
+  if (filters.assetType === "digital") {
+    // Only fetch listings explicitly marked as 'digital'
+    q = q.eq("asset_type", "digital");
+  } else if (filters.assetType === "physical") {
+    // Fetch listings marked as 'physical' OR 'asset' OR where asset_type is NULL
+    q = q.or("asset_type.eq.physical,asset_type.eq.asset,asset_type.is.null");
+  }
+  return q;
+}
+
+export async function getFilteredListings(
+  filters: BrowseFiltersInput
+): Promise<PublicListing[]> {
   const supabase = await supabaseServer();
 
-  let query = supabase.from("listings").select("*");
+  let q = supabase
+    .from("listings")
+    .select("*");
 
-  // --- TEXT SEARCH ---
-  if (filters.query) {
-    query = query.ilike("title", `%${filters.query}%`);
-  }
-
-  // --- FILTERS ---
-  if (filters.category && filters.category !== "all" && filters.category !== "All Categories") {
-    query = query.eq("category", filters.category);
-  }
-
+  // 1. APPLY BASE FILTERS (Status and Asset Type)
   if (filters.assetType && filters.assetType !== "all") {
-    query = query.eq("deal_type", filters.assetType);
+    // This is correct: apply the asset_type filter first.
+    q = q.eq("asset_type", filters.assetType);
+    q = q.in("status", ["published", "active"]);
+  } else {
+    q = q.in("status", ["published", "active"]); 
   }
 
-  // Fix: Add Location Search
-  if (filters.location) {
-    query = query.ilike("location", `%${filters.location}%`);
+  // 2. APPLY CATEGORY FILTER (using subCategories)
+  if (filters.category && filters.category !== 'all') {
+    const subCategories = getSubCategoriesForMainCategory(filters.category);
+    if (subCategories && subCategories.length > 0) {
+      // CRITICAL FIX: Include the Main Category name itself for maximum sync.
+      const searchCategories = [filters.category, ...subCategories];
+      // This query now searches for listings whose category column
+      // is any of: ("Fuel & Auto", "Gas Stations", "Truck Stops")
+      q = q.in("category", searchCategories); 
+    } else {
+      // Fallback: If no sub-categories defined, search by the category name directly
+      q = q.eq("category", filters.category); 
+    }
   }
 
-  // Price Range
-  if (filters.minPrice) query = query.gte("price", filters.minPrice);
-  if (filters.maxPrice) query = query.lte("price", filters.maxPrice);
+  // Price Filters
+  if (typeof filters.minPrice === "number")
+    q = q.gte("asking_price", filters.minPrice);
+  if (typeof filters.maxPrice === "number")
+    q = q.lte("asking_price", filters.maxPrice);
 
-  // Financials
-  if (filters.minCashflow) query = query.gte("cashflow_numeric", filters.minCashflow);
-  if (filters.minRevenue) query = query.gte("revenue", filters.minRevenue);
+  // **NEW** Cash Flow Filters
+  if (typeof filters.minCashFlow === "number")
+    q = q.gte("cashflow_numeric", filters.minCashFlow);
+  if (typeof filters.maxCashFlow === "number")
+    q = q.lte("cashflow_numeric", filters.maxCashFlow);
 
-  // --- SORTING ---
-  let sortColumn = "created_at";
-  let ascending = false;
+  // **NEW** Seller Financing Filter
+  if (filters.hasFinancing)
+    q = q.eq("seller_financing", true);
 
-  if (filters.sort === "oldest") {
-    ascending = true;
-  } else if (filters.sort === "lowest_price") {
-    sortColumn = "price";
-    ascending = true;
-  } else if (filters.sort === "highest_price") {
-    sortColumn = "price";
-    ascending = false;
-  } else if (filters.sort === "highest_cashflow") {
-    sortColumn = "cashflow_numeric";
-    ascending = false;
-  }
+  // Location Filter
+  if (filters.location) q = q.ilike("location", `%${filters.location}%`);
 
-  // Execute Query
-  const { data, error } = await query.order(sortColumn, { ascending });
+  // 3. APPLY SORTING
+  // **NEW** Cashflow sorting option
+  if (filters.sort === "cashflow_desc")
+    q = q.order("cashflow_numeric", { ascending: false });
+  if (filters.sort === "newest")
+    q = q.order("created_at", { ascending: false });
+  if (filters.sort === "price_asc")
+    q = q.order("asking_price", { ascending: true });
+  if (filters.sort === "price_desc")
+    q = q.order("asking_price", { ascending: false });
+
+  // Fallback sort if none is specified
+  if (!filters.sort) q = q.order("created_at", { ascending: false });
+
+  const { data, error } = await q;
 
   if (error) {
-    console.error("Search Error:", error);
+    console.error("getFilteredListings error:", error);
     return [];
   }
 
-  return data;
+  return (data ?? []) as PublicListing[];
+}
+
+export type BrowseMeta = {
+  categories: string[];
+};
+
+// Keep this function as is, since it was already using applyBaseFilters correctly.
+export async function getBrowseMeta(
+  filters: BrowseFiltersInput
+): Promise<BrowseMeta> {
+  const supabase = await supabaseServer();
+
+  let q = supabase
+    .from("listings")
+    .select("category", { count: "exact", head: false })
+    .not("category", "is", null);
+
+  q = applyBaseFilters(q, filters);
+
+  const { data, error } = await q;
+  if (error) {
+    console.error("[getBrowseMeta] error:", error);
+    return { categories: [] };
+  }
+
+  // unique, cleaned, sorted
+  const categories = Array.from(
+    new Set((data ?? []).map((r: any) => String(r.category).trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
+
+  return { categories };
 }

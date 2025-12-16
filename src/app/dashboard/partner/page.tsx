@@ -1,226 +1,156 @@
-import { requireAuth, getUserProfile } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import {
-  getPartnerProfileByUserId,
-  getConsultationRequestsForPartner,
-} from "@/app/actions/partners";
-import Link from "next/link";
-import { PartnerProfileForm } from "@/components/partners/PartnerProfileForm";
-import { ConsultationRequestsList } from "@/components/partners/ConsultationRequestsList";
-import { supabase } from "@/lib/supabase";
-import { PlanStatus } from "@/components/billing/PlanStatus";
 
-export const revalidate = 0; // Render on demand, not at build time
+import React from 'react';
+import { getPartnerDashboardData, PartnerReferral } from '@/app/actions/getPartnerDashboardData';
+import { Users, DollarSign, Send, ArrowRight, TrendingUp } from 'lucide-react';
+import Link from 'next/link';
+
+const StatCard = ({ title, value, icon: Icon, colorClass = "text-blue-600" }: { title: string, value: string | number, icon: React.ElementType, colorClass?: string }) => (
+    <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+        <div className={`p-3 rounded-full inline-flex mb-4 ${colorClass} bg-opacity-10`} style={{ backgroundColor: `${colorClass}20` }}>
+            <Icon size={24} className={colorClass} />
+        </div>
+        <p className="text-sm font-medium text-gray-500 uppercase">{title}</p>
+        <p className="text-3xl font-bold text-gray-900 mt-1">{value}</p>
+    </div>
+);
+
+const ReferralRow = ({ referral }: { referral: PartnerReferral }) => {
+    const statusColors = {
+        'Active': 'text-blue-600 bg-blue-50',
+        'Pending': 'text-yellow-600 bg-yellow-50',
+        'Closed': 'text-green-600 bg-green-50',
+    };
+    const statusColor = statusColors[referral.status] || 'text-gray-600 bg-gray-50';
+    
+    const formatMoney = (amount: number) => `$${amount.toLocaleString()}`;
+
+    return (
+        <div className="flex items-center p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors">
+            
+            <div className="w-1/4 min-w-0">
+                <span className="font-semibold text-gray-900 truncate block">
+                    {referral.listingTitle || `New ${referral.type} Referral`}
+                </span>
+                <span className="text-xs text-gray-500">{referral.referralId}</span>
+            </div>
+            
+            <div className="w-1/6 text-center text-sm font-bold text-gray-700">{referral.type}</div>
+
+            <div className="w-1/6 text-center">
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColor}`}>
+                    {referral.status}
+                </span>
+            </div>
+            
+            <div className="w-1/4 text-right text-sm font-medium text-gray-700">
+                {referral.status === 'Closed' ? formatMoney(referral.potentialCommission) : '---'}
+            </div>
+            
+            <div className="w-1/6 text-right">
+                <Link href={`/partner/referral/${referral.referralId}`} className="text-xs font-semibold text-[#F97316] hover:text-orange-600 transition-colors">
+                    View Details
+                </Link>
+            </div>
+        </div>
+    );
+};
+
 
 export default async function PartnerDashboardPage() {
-  const user = await requireAuth();
-  const { profile } = await getUserProfile();
+    const data = await getPartnerDashboardData();
 
-  if (!profile || profile.role !== "partner") {
-    redirect("/dashboard");
-  }
+    if (!data) {
+        // Handle non-logged-in or unauthorized users
+        return <div className="p-10 text-center">Please log in as a Partner to view this dashboard.</div>;
+    }
 
-  const partnerProfile = await getPartnerProfileByUserId(profile.id);
-
-  // Fetch plan info
-  const { data: planData } = await supabase
-    .from('profiles')
-    .select('plan, plan_renews_at')
-    .eq('id', user.id)
-    .single();
-
-  // If no partner profile exists, show onboarding form
-  if (!partnerProfile) {
     return (
-      <main className="bg-brand-bg min-h-screen py-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-10">
-            <h1 className="text-3xl font-bold text-brand-text">
-              Partner Onboarding
-            </h1>
-            <p className="text-brand-muted mt-2">
-              Complete your partner profile to get listed in our directory
-            </p>
-          </div>
+        <div className="min-h-screen bg-gray-50 pt-16">
+            <div className="max-w-7xl mx-auto px-4 py-8">
+                
+                {/* Dashboard Header */}
+                <div className="flex justify-between items-center mb-8">
+                    <h1 className="text-3xl font-bold text-[#0B1120]">Partner Dashboard</h1>
+                    <Link href="/partner/profile/edit" className="bg-[#F97316] text-white px-4 py-2 rounded-lg font-semibold hover:bg-orange-600 transition-colors">
+                        Edit Profile
+                    </Link>
+                </div>
 
-          <PartnerProfileForm profileId={profile.id} />
+                {/* KPI Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                    <StatCard 
+                        title="Active Leads" 
+                        value={data.totalActiveLeads} 
+                        icon={Send} 
+                        colorClass="text-indigo-600" 
+                    />
+                    <StatCard 
+                        title="Profile Views" 
+                        value={data.profileViews} 
+                        icon={Users} 
+                        colorClass="text-blue-600" 
+                    />
+                    <StatCard 
+                        title="Est. Monthly Earnings" 
+                        value={`$${data.estimatedMonthlyEarnings.toLocaleString()}`} 
+                        icon={DollarSign} 
+                        colorClass="text-green-600" 
+                    />
+                    <StatCard 
+                        title="Closed Referrals (YTD)" 
+                        value={data.totalReferralsClosed} 
+                        icon={TrendingUp} 
+                        colorClass="text-purple-600" 
+                    />
+                </div>
+
+                {/* Active Referrals Table */}
+                <div className="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden">
+                    <h2 className="text-xl font-bold p-6 border-b text-[#0B1120] flex items-center gap-2">
+                        <DollarSign size={20} /> Active Referral Pipeline
+                    </h2>
+                    
+                    {/* Table Header */}
+                    <div className="flex p-4 bg-gray-50 text-xs uppercase font-semibold text-gray-500">
+                        <div className="w-1/4">Deal / Client</div>
+                        <div className="w-1/6 text-center">Type</div>
+                        <div className="w-1/6 text-center">Status</div>
+                        <div className="w-1/4 text-right">Commission (Est.)</div>
+                        <div className="w-1/6 text-right">Action</div>
+                    </div>
+
+                    {/* Referral Rows */}
+                    <div>
+                        {data.activeReferrals.length > 0 ? (
+                            data.activeReferrals.map(referral => (
+                                <ReferralRow key={referral.referralId} referral={referral} />
+                            ))
+                        ) : (
+                            <div className="p-8 text-center text-gray-500">
+                                No active referrals. Check the Partner Directory for new leads!
+                            </div>
+                        )}
+                    </div>
+                    
+                    <div className="p-4 border-t text-sm text-gray-500">
+                        *Commission amounts are estimated based on deal size and platform fee structure.
+                    </div>
+                </div>
+
+                {/* Call to action for Enterprise features */}
+                <div className="mt-10 p-8 bg-blue-50 rounded-xl border border-blue-200 text-center">
+                    <h2 className="text-xl font-bold text-blue-900 flex items-center justify-center gap-2 mb-3">
+                        <TrendingUp size={24} /> API & CRM Integrations (Enterprise Partner)
+                    </h2>
+                    <p className="text-blue-800 mb-4">
+                        Upgrade to **Enterprise Partner** for API access, CRM synchronization, and custom deal flow reporting.
+                    </p>
+                    <Link href="/partner/enterprise" className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-md">
+                        Contact Sales for Enterprise
+                    </Link>
+                </div>
+
+            </div>
         </div>
-      </main>
     );
-  }
-
-  // Get consultation requests for this partner
-  const consultationRequests = await getConsultationRequestsForPartner(
-    partnerProfile.id
-  );
-
-  const pendingRequests = consultationRequests.filter(
-    (req) => req.status === "pending"
-  );
-  const contactedRequests = consultationRequests.filter(
-    (req) => req.status === "contacted"
-  );
-
-  return (
-    <main className="bg-brand-bg min-h-screen py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold text-brand-text">
-            Partner Dashboard
-          </h1>
-          <p className="text-brand-muted mt-2">
-            Manage your profile and consultation requests
-          </p>
-        </div>
-
-        {/* Plan Status */}
-        {planData && (
-          <div className="mb-8">
-            <PlanStatus 
-              plan={
-                // @ts-expect-error - plan fields added in migration
-                planData.plan || 'free'
-              } 
-              planRenewsAt={
-                // @ts-expect-error - plan fields added in migration
-                planData.plan_renews_at
-              }
-            />
-          </div>
-        )}
-
-        {/* Status Banner */}
-        <div className="mb-8">
-          {partnerProfile.status === "pending" && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-sm text-yellow-800">
-                <strong>Pending Approval:</strong> Your partner profile is under
-                review. You&apos;ll be notified once it&apos;s approved and listed in our
-                directory.
-              </p>
-            </div>
-          )}
-          {partnerProfile.status === "approved" && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-sm text-green-800">
-                <strong>Active:</strong> Your profile is live in the{" "}
-                <Link href="/partners" className="underline font-semibold">
-                  Partner Directory
-                </Link>
-              </p>
-            </div>
-          )}
-          {partnerProfile.status === "rejected" && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-sm text-red-800">
-                <strong>Application Rejected:</strong> Your partner application
-                was not approved. Please contact support for details.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <div className="bg-white rounded-lg border border-brand-border p-6">
-            <p className="text-sm text-brand-muted uppercase tracking-wide mb-1">
-              Total Requests
-            </p>
-            <p className="text-3xl font-bold text-brand-text">
-              {consultationRequests.length}
-            </p>
-          </div>
-          <div className="bg-white rounded-lg border border-brand-border p-6">
-            <p className="text-sm text-brand-muted uppercase tracking-wide mb-1">
-              Pending
-            </p>
-            <p className="text-3xl font-bold text-orange-600">
-              {pendingRequests.length}
-            </p>
-          </div>
-          <div className="bg-white rounded-lg border border-brand-border p-6">
-            <p className="text-sm text-brand-muted uppercase tracking-wide mb-1">
-              In Progress
-            </p>
-            <p className="text-3xl font-bold text-blue-600">
-              {contactedRequests.length}
-            </p>
-          </div>
-        </div>
-
-        {/* Profile Summary */}
-        <div className="bg-white rounded-lg border border-brand-border p-8 mb-10">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-brand-text">
-              Your Profile
-            </h2>
-            <Link
-              href="/dashboard/partner/edit"
-              className="px-4 py-2 bg-brand-orange text-white font-semibold rounded-md hover:bg-orange-600 transition text-sm"
-            >
-              Edit Profile
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <p className="text-sm font-semibold text-brand-text mb-1">
-                Firm Name
-              </p>
-              <p className="text-brand-muted">{partnerProfile.firm_name}</p>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-brand-text mb-1">
-                Partner Type
-              </p>
-              <p className="text-brand-muted capitalize">
-                {partnerProfile.partner_type}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-brand-text mb-1">
-                Contact Email
-              </p>
-              <p className="text-brand-muted">{partnerProfile.contact_email}</p>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-brand-text mb-1">
-                Years Experience
-              </p>
-              <p className="text-brand-muted">
-                {partnerProfile.years_experience || "Not specified"}
-              </p>
-            </div>
-          </div>
-
-          {partnerProfile.specialties && partnerProfile.specialties.length > 0 && (
-            <div className="mt-6">
-              <p className="text-sm font-semibold text-brand-text mb-2">
-                Specialties
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {partnerProfile.specialties.map((specialty) => (
-                  <span
-                    key={specialty}
-                    className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded"
-                  >
-                    {specialty}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Consultation Requests */}
-        <div className="bg-white rounded-lg border border-brand-border p-8">
-          <h2 className="text-xl font-bold text-brand-text mb-6">
-            Consultation Requests
-          </h2>
-          <ConsultationRequestsList requests={consultationRequests} />
-        </div>
-      </div>
-    </main>
-  );
 }

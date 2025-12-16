@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { SubmitForReviewButton } from './SubmitForReviewButton';
 import { supabase } from '@/lib/supabase';
 import { PlanStatus } from '@/components/billing/PlanStatus';
+import { Zap, ShieldCheck } from 'lucide-react';
 
 export const revalidate = 0; // Render on demand, not at build time
 
@@ -60,116 +61,46 @@ export default async function SellerDashboardPage() {
             <PlanStatus 
               plan={
                 // @ts-expect-error - plan fields added in migration
-                profile.plan || 'free'
-              } 
-              planRenewsAt={
-                // @ts-expect-error - plan fields added in migration
-                profile.plan_renews_at
-              }
-            />
-          </div>
-        )}
-
-        {/* Listings Section */}
-        <section>
-          <h2 className="text-2xl font-semibold text-brand-text mb-4">
-            Your Listings
-          </h2>
-          
-          {listings.length === 0 ? (
-            <div className="bg-white rounded-lg border border-brand-border p-8 text-center">
-              <p className="text-brand-muted mb-4">You haven&apos;t created any listings yet.</p>
-              <Link
-                href="/sell"
-                className="inline-block px-6 py-2 bg-brand-orange text-white rounded-md hover:bg-orange-600 transition"
-              >
-                Create Your First Listing
-              </Link>
-            </div>
-          ) : (
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <StatCard 
+          title="Active Listings" 
+          value={data.totalActiveListings} 
+          icon={BarChart2} 
+          colorClass="text-indigo-600" 
+        />
+        <StatCard 
+          title="Total Views" 
+          value={data.listingPerformance.reduce((sum, l) => sum + l.views, 0).toLocaleString()} 
+          icon={Eye} 
+          colorClass="text-blue-600" 
+        />
+        <StatCard 
+          title="NDAs Signed" 
+          value={data.totalNDAsSigned} 
+          icon={FileText} 
+          colorClass="text-green-600" 
+        />
+        <StatCard 
+          title="Qualified Buyers" 
+          value={data.listingPerformance.reduce((sum, l) => sum + l.qualifiedBuyers, 0)} 
+          icon={ShieldCheck} // Changed icon to ShieldCheck for 'Qualified'
+          colorClass="text-purple-600" // New color for emphasis
+        />
+      </div>
             <div className="bg-white rounded-lg border border-brand-border overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-brand-border">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Title
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Type
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Price
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Created
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-brand-border">
-                    {listings.map((listing) => (
-                      <tr key={listing.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4">
-                          <div className="text-sm font-medium text-brand-text">
-                            {listing.title}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-brand-muted">
-                          {listing.type === 'asset' ? 'Physical' : 'Digital'}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            statusColors[listing.status] || 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {statusCopy[listing.status] || listing.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-brand-text">
-                          {listing.asking_price
-                            ? `$${listing.asking_price.toLocaleString()}`
-                            : 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-brand-muted">
-                          {new Date(listing.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          <div className="flex gap-2">
-                            {listing.status === 'draft' && (
-                              <SubmitForReviewButton listingId={listing.id} />
-                            )}
-                            {listing.status === 'pending_review' && (
-                              <span className="text-brand-muted text-xs">
-                                Under review
-                              </span>
-                            )}
-                            {listing.status === 'active' && (
-                              <Link
-                                href={`/listing/${listing.id}`}
-                                className="text-brand-orange hover:text-orange-600 font-medium"
-                              >
-                                View
-                              </Link>
-                            )}
-                            {listing.status === 'draft' && (
-                              <Link
-                                href={`/sell?edit=${listing.id}`}
-                                className="text-gray-600 hover:text-gray-800 font-medium"
-                              >
-                                Edit
-                              </Link>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="flex p-4 bg-gray-50 text-xs uppercase font-semibold text-gray-500">
+                  <div className="w-1/4">Listing Title</div>
+                  <div className="w-1/6 text-center">AI Status</div>
+                  <div className="w-1/6 text-center">Views</div>
+                  <div className="w-1/6 text-center">Qualified</div>
+                  <div className="w-1/6 text-center">NDAs</div>
+                  <div className="w-1/6 text-center">Age (Days)</div>
+                </div>
+                {listings.map((listing) => (
+                  <ListingRow key={listing.id} listing={listing} />
+                ))}
               </div>
             </div>
           )}
@@ -178,3 +109,32 @@ export default async function SellerDashboardPage() {
     </main>
   );
 }
+
+const ListingRow = ({ listing }) => {
+  const statusColor = listing.aiVerificationStatus === 'Verified' 
+      ? 'text-green-600 bg-green-50' 
+      : listing.aiVerificationStatus === 'Pending' 
+      ? 'text-orange-600 bg-orange-50' 
+      : 'text-red-600 bg-red-50';
+
+  return (
+      <div className="flex items-center p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors">
+          <div className="w-1/4 min-w-0">
+              <Link href={`/listing/${listing.listingId}/analytics`} className="font-semibold text-blue-600 hover:underline truncate block">
+                  {listing.title}
+              </Link>
+              <span className="text-xs text-gray-500">{listing.listingStatus}</span>
+          </div>
+          <div className="w-1/6 text-center">
+              <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColor}`}>
+                  <Zap size={10} className="inline mr-1" />
+                  {listing.aiVerificationStatus}
+              </span>
+          </div>
+          <div className="w-1/6 text-center text-sm font-medium text-gray-700">{listing.views}</div>
+          <div className="w-1/6 text-center text-sm font-medium text-purple-600 font-bold">{listing.qualifiedBuyers}</div>
+          <div className="w-1/6 text-center text-sm font-medium text-gray-700">{listing.ndasSigned}</div>
+          <div className="w-1/6 text-center text-sm text-gray-700">{listing.timeOnMarketDays} days</div>
+      </div>
+  );
+};
