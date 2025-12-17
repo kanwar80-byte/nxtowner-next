@@ -56,38 +56,38 @@ export default async function SellerDashboardPage() {
         </div>
 
         {/* Plan Status */}
-        {profile && (
+        {profile ? (
           <div className="mb-8">
             <PlanStatus 
               plan={data?.plan || 'free'}
             />
             {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <StatCard 
-          title="Active Listings" 
-          value={data.totalActiveListings} 
-          icon={BarChart2} 
-          colorClass="text-indigo-600" 
-        />
-        <StatCard 
-          title="Total Views" 
-          value={data.listingPerformance.reduce((sum, l) => sum + l.views, 0).toLocaleString()} 
-          icon={Eye} 
-          colorClass="text-blue-600" 
-        />
-        <StatCard 
-          title="NDAs Signed" 
-          value={data.totalNDAsSigned} 
-          icon={FileText} 
-          colorClass="text-green-600" 
-        />
-        <StatCard 
-          title="Qualified Buyers" 
-          value={data.listingPerformance.reduce((sum, l) => sum + l.qualifiedBuyers, 0)} 
-          icon={ShieldCheck} // Changed icon to ShieldCheck for 'Qualified'
-          colorClass="text-purple-600" // New color for emphasis
-        />
-      </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+              <StatCard 
+                title="Active Listings" 
+                value={data.totalActiveListings} 
+                icon={BarChart2} 
+                colorClass="text-indigo-600" 
+              />
+              <StatCard 
+                title="Total Views" 
+                value={data.listingPerformance.reduce((sum, l) => sum + l.views, 0).toLocaleString()} 
+                icon={Eye} 
+                colorClass="text-blue-600" 
+              />
+              <StatCard 
+                title="NDAs Signed" 
+                value={data.totalNDAsSigned} 
+                icon={FileText} 
+                colorClass="text-green-600" 
+              />
+              <StatCard 
+                title="Qualified Buyers" 
+                value={data.listingPerformance.reduce((sum, l) => sum + l.qualifiedBuyers, 0)} 
+                icon={ShieldCheck} {/* Changed icon to ShieldCheck for 'Qualified' */}
+                colorClass="text-purple-600" {/* New color for emphasis */}
+              />
+            </div>
             <div className="bg-white rounded-lg border border-brand-border overflow-hidden">
               <div className="overflow-x-auto">
                 <div className="flex p-4 bg-gray-50 text-xs uppercase font-semibold text-gray-500">
@@ -103,7 +103,8 @@ export default async function SellerDashboardPage() {
                 ))}
               </div>
             </div>
-          )}
+          </div>
+        ) : null}
         </section>
       </div>
     </main>
