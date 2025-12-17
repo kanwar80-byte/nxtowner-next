@@ -68,12 +68,36 @@ export default function Home() {
         <MarketInsights />
       </div>
 
-      {/* Final CTA Section */}
-      <section className="bg-blue-600 py-16 md:py-20 text-center">
-        <h2 className="text-4xl font-bold text-white mb-8">Ready to make your move?</h2>
-        <div className="flex justify-center gap-4">
-          <Link href="/buy" className="bg-white text-blue-900 px-10 py-4 rounded-xl font-bold">Browse Listings</Link>
-          <Link href="/valuation" className="bg-blue-800 text-white px-10 py-4 rounded-xl font-bold">Get Valuation</Link>
+      {/* 5. FINAL CTA SECTION (PREMIUM UPGRADE) */}
+      <section className="relative py-24 px-4 overflow-hidden bg-[#0B1221] border-t border-white/10">
+        {/* Ambient Background Glow (Subtle & Premium) */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-blue-900/20 rounded-full blur-[120px] opacity-50" />
+        </div>
+
+        <div className="relative z-10 max-w-4xl mx-auto text-center">
+          <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">
+            Ready to make your move?
+          </h2>
+          <p className="text-slate-400 text-lg mb-10 max-w-2xl mx-auto leading-relaxed">
+            Join Canada's verified marketplace. Stop searching through noise and start closing deals with confidence.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-5 justify-center">
+            {/* Primary Action: GOLD Button */}
+            <Link 
+              href="/browse" 
+              className="inline-flex items-center justify-center bg-[#D4AF37] text-[#0B1221] px-8 py-4 rounded-xl font-bold text-lg hover:bg-[#C5A028] transition-all shadow-xl shadow-yellow-900/20"
+            >
+              Browse Verified Listings
+            </Link>
+            {/* Secondary Action: Glass/White Button */}
+            <Link 
+              href="/valuation" 
+              className="inline-flex items-center justify-center bg-white/5 text-white border border-white/10 px-8 py-4 rounded-xl font-bold text-lg hover:bg-white/10 hover:border-white/20 transition-all backdrop-blur-sm"
+            >
+              Get Free Valuation
+            </Link>
+          </div>
         </div>
       </section>
     </main>
