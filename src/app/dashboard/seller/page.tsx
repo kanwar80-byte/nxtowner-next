@@ -84,8 +84,8 @@ export default async function SellerDashboardPage() {
               <StatCard 
                 title="Qualified Buyers" 
                 value={data.listingPerformance.reduce((sum, l) => sum + l.qualifiedBuyers, 0)} 
-                icon={ShieldCheck} {/* Changed icon to ShieldCheck for 'Qualified' */}
-                colorClass="text-purple-600" {/* New color for emphasis */}
+                icon={ShieldCheck}
+                colorClass="text-purple-600"
               />
             </div>
             <div className="bg-white rounded-lg border border-brand-border overflow-hidden">
