@@ -1,9 +1,9 @@
 "use client"
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { MapPin, Clock, ArrowRight } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
+import { ArrowRight, Clock, MapPin } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 // Helper to calculate "2 days ago"
 function timeAgo(dateString: string) {
@@ -39,12 +39,13 @@ export default function RecentListings() {
 
   useEffect(() => {
     async function fetchRecent() {
-      // Fetch 3 newest active listings
+      // Fetch 6 newest active listings
       const { data, error } = await supabase
         .from('listings')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(3);
+        .order('created_at', { ascending: false, nullsLast: true })
+        .order('updated_at', { ascending: false, nullsLast: true })
+        .limit(6);
 
       if (error) {
         console.error('Error fetching recent:', error);

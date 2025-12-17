@@ -4,6 +4,13 @@
 :root {
   --background: #f3f4f6;
   --foreground: #020617;
+  --nx-nav-bg: #0B1221;
+  --nx-nav-text: #EAF0FF;
+  --nx-nav-muted: #A3B2CC;
+  --nx-nav-border: rgba(255,255,255,0.12);
+  --nx-nav-hover: rgba(255,255,255,0.08);
+  --nx-nav-cta: #18233a;
+  --nx-nav-ring: #60a5fa;
 }
 
 /* Base body styles */

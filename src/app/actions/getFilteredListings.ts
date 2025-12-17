@@ -1,141 +1,94 @@
+// src/app/actions/getFilteredListings.ts
 "use server";
 
 import { supabaseServer } from "@/lib/supabase/server";
+import { BrowseFiltersInput, PublicListing } from "@/types/listing";
 
-import type { PublicListing } from "@/types/listing";
-// 🚨 NEW IMPORT: Import the helper function
-import { getSubCategoriesForMainCategory } from "@/lib/categories";
-
-export type BrowseFiltersInput = {
-  assetType?: string;
-  category?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  location?: string;
-  sort?: string;
-};
-
-/**
- * Helper to centralize and normalize base filters (status and asset type)
- */
-function applyBaseFilters(q: any, filters: BrowseFiltersInput) {
-  // Status: Ensure only publishable statuses are included.
-  q = q.in("status", ["published", "active"]);
-
-  // Asset type normalization:
-  if (filters.assetType === "digital") {
-    // Only fetch listings explicitly marked as 'digital'
-    q = q.eq("asset_type", "digital");
-  } else if (filters.assetType === "physical") {
-    // Fetch listings marked as 'physical' OR 'asset' OR where asset_type is NULL
-    q = q.or("asset_type.eq.physical,asset_type.eq.asset,asset_type.is.null");
-  }
-  return q;
+export interface PaginatedListings {
+    listings: PublicListing[];
+    totalCount: number;
+    pageSize: number;
 }
 
 export async function getFilteredListings(
-  filters: BrowseFiltersInput
-): Promise<PublicListing[]> {
-  const supabase = await supabaseServer();
+    filters: BrowseFiltersInput,
+    page: number = 1
+): Promise<PaginatedListings> {
+    const supabase = await supabaseServer();
+    const PAGE_SIZE = 20;
+    const OFFSET = (page - 1) * PAGE_SIZE;
 
-  let q = supabase
-    .from("listings")
-    .select("*");
+    // Start the query
+    // We select * and get the exact count of matching rows
+    let q = supabase.from("listings").select("*", { count: 'exact' });
 
-  // 1. APPLY BASE FILTERS (Status and Asset Type)
-  if (filters.assetType && filters.assetType !== "all") {
-    // This is correct: apply the asset_type filter first.
-    q = q.eq("asset_type", filters.assetType);
-    q = q.in("status", ["published", "active"]);
-  } else {
-    q = q.in("status", ["published", "active"]); 
-  }
-
-  // 2. APPLY CATEGORY FILTER (using subCategories)
-  if (filters.category && filters.category !== 'all') {
-    const subCategories = getSubCategoriesForMainCategory(filters.category);
-    if (subCategories && subCategories.length > 0) {
-      // CRITICAL FIX: Include the Main Category name itself for maximum sync.
-      const searchCategories = [filters.category, ...subCategories];
-      // This query now searches for listings whose category column
-      // is any of: ("Fuel & Auto", "Gas Stations", "Truck Stops")
-      q = q.in("category", searchCategories); 
-    } else {
-      // Fallback: If no sub-categories defined, search by the category name directly
-      q = q.eq("category", filters.category); 
+    // --- 1. ASSET TYPE FILTER ---
+    // If user picks 'physical' or 'digital', filter by it. 
+    // If 'all', we don't filter (show everything).
+    if (filters.assetType && filters.assetType !== 'all') {
+        q = q.eq('asset_type', filters.assetType);
     }
-  }
 
-  // Price Filters
-  if (typeof filters.minPrice === "number")
-    q = q.gte("asking_price", filters.minPrice);
-  if (typeof filters.maxPrice === "number")
-    q = q.lte("asking_price", filters.maxPrice);
+    // --- 2. CATEGORY FILTER (Smart Logic) ---
+    // If user picks a Main Category (like "Fuel & Auto"), use main_category column.
+    // If user picks a specific sub-category (like "Car Wash"), use category column.
+    if (filters.category && filters.category !== 'all') {
+        const MAIN_CATEGORIES = [
+            'Fuel & Auto',
+            'Food & Beverage',
+            'Digital Assets',
+            'Industrial & Logistics',
+            'Retail',
+            'Service Businesses'
+        ];
 
-  // **NEW** Cash Flow Filters
-  if (typeof filters.minCashFlow === "number")
-    q = q.gte("cashflow_numeric", filters.minCashFlow);
-  if (typeof filters.maxCashFlow === "number")
-    q = q.lte("cashflow_numeric", filters.maxCashFlow);
+        if (MAIN_CATEGORIES.includes(filters.category)) {
+            // Broad Filter
+            q = q.eq('main_category', filters.category);
+        } else {
+            // Specific Filter
+            q = q.eq('category', filters.category);
+        }
+    }
 
-  // **NEW** Seller Financing Filter
-  if (filters.hasFinancing)
-    q = q.eq("seller_financing", true);
+    // --- 3. PRICE RANGE FILTERS ---
+    if (filters.minPrice) {
+        q = q.gte('asking_price', filters.minPrice);
+    }
+    if (filters.maxPrice) {
+        q = q.lte('asking_price', filters.maxPrice);
+    }
 
-  // Location Filter
-  if (filters.location) q = q.ilike("location", `%${filters.location}%`);
+    // --- 4. LOCATION FILTER ---
+    if (filters.location && filters.location !== 'all') {
+        // Use ILIKE for partial text match (e.g. "Toronto" matches "Toronto, ON")
+        q = q.ilike('location', `%${filters.location}%`);
+    }
 
-  // 3. APPLY SORTING
-  // **NEW** Cashflow sorting option
-  if (filters.sort === "cashflow_desc")
-    q = q.order("cashflow_numeric", { ascending: false });
-  if (filters.sort === "newest")
-    q = q.order("created_at", { ascending: false });
-  if (filters.sort === "price_asc")
-    q = q.order("asking_price", { ascending: true });
-  if (filters.sort === "price_desc")
-    q = q.order("asking_price", { ascending: false });
+    // --- 5. STATUS FILTER ---
+    // If status is 'all', show everything. Otherwise filter by status (e.g. 'active')
+    if (filters.status && filters.status !== 'all') {
+        q = q.eq('status', filters.status);
+    }
 
-  // Fallback sort if none is specified
-  if (!filters.sort) q = q.order("created_at", { ascending: false });
+    // --- 6. SORTING & PAGINATION ---
+    // Show newest listings first
+    q = q.order('created_at', { ascending: false });
+    
+    // Apply Pagination limits
+    q = q.range(OFFSET, OFFSET + PAGE_SIZE - 1);
 
-  const { data, error } = await q;
+    // Execute the query
+    const { data, count, error } = await q;
 
-  if (error) {
-    console.error("getFilteredListings error:", error);
-    return [];
-  }
+    if (error) {
+        console.error("Error fetching listings:", error);
+        throw new Error(error.message);
+    }
 
-  return (data ?? []) as PublicListing[];
-}
-
-export type BrowseMeta = {
-  categories: string[];
-};
-
-// Keep this function as is, since it was already using applyBaseFilters correctly.
-export async function getBrowseMeta(
-  filters: BrowseFiltersInput
-): Promise<BrowseMeta> {
-  const supabase = await supabaseServer();
-
-  let q = supabase
-    .from("listings")
-    .select("category", { count: "exact", head: false })
-    .not("category", "is", null);
-
-  q = applyBaseFilters(q, filters);
-
-  const { data, error } = await q;
-  if (error) {
-    console.error("[getBrowseMeta] error:", error);
-    return { categories: [] };
-  }
-
-  // unique, cleaned, sorted
-  const categories = Array.from(
-    new Set((data ?? []).map((r: any) => String(r.category).trim()).filter(Boolean))
-  ).sort((a, b) => a.localeCompare(b));
-
-  return { categories };
+    return {
+        listings: (data as PublicListing[]) || [],
+        totalCount: count || 0,
+        pageSize: PAGE_SIZE,
+    };
 }
