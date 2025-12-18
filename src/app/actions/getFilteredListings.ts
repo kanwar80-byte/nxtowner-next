@@ -1,94 +1,81 @@
-// src/app/actions/getFilteredListings.ts
 "use server";
 
 import { supabaseServer } from "@/lib/supabase/server";
-import { BrowseFiltersInput, PublicListing } from "@/types/listing";
 
-export interface PaginatedListings {
-    listings: PublicListing[];
-    totalCount: number;
-    pageSize: number;
-}
+// 1. UPDATED TYPE DEFINITION
+export type SearchFilters = {
+  query?: string;
+  category?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minCashflow?: number;
+  minRevenue?: number;
+  
+  // These MUST be here to match the frontend
+  assetType?: string; 
+  location?: string;  // <--- This is the missing field causing your error
+  sort?: string;      
+  
+  // Safety catch-all
+  [key: string]: any; 
+};
 
-export async function getFilteredListings(
-    filters: BrowseFiltersInput,
-    page: number = 1
-): Promise<PaginatedListings> {
-    const supabase = await supabaseServer();
-    const PAGE_SIZE = 20;
-    const OFFSET = (page - 1) * PAGE_SIZE;
+export async function getFilteredListings(filters: SearchFilters) {
+  const supabase = await supabaseServer();
 
-    // Start the query
-    // We select * and get the exact count of matching rows
-    let q = supabase.from("listings").select("*", { count: 'exact' });
+  let query = supabase.from("listings").select("*");
 
-    // --- 1. ASSET TYPE FILTER ---
-    // If user picks 'physical' or 'digital', filter by it. 
-    // If 'all', we don't filter (show everything).
-    if (filters.assetType && filters.assetType !== 'all') {
-        q = q.eq('asset_type', filters.assetType);
-    }
+  // --- TEXT SEARCH ---
+  if (filters.query) {
+    query = query.ilike("title", `%${filters.query}%`);
+  }
 
-    // --- 2. CATEGORY FILTER (Smart Logic) ---
-    // If user picks a Main Category (like "Fuel & Auto"), use main_category column.
-    // If user picks a specific sub-category (like "Car Wash"), use category column.
-    if (filters.category && filters.category !== 'all') {
-        const MAIN_CATEGORIES = [
-            'Fuel & Auto',
-            'Food & Beverage',
-            'Digital Assets',
-            'Industrial & Logistics',
-            'Retail',
-            'Service Businesses'
-        ];
+  // --- FILTERS ---
+  if (filters.category && filters.category !== "all" && filters.category !== "All Categories") {
+    query = query.eq("category", filters.category);
+  }
 
-        if (MAIN_CATEGORIES.includes(filters.category)) {
-            // Broad Filter
-            q = q.eq('main_category', filters.category);
-        } else {
-            // Specific Filter
-            q = q.eq('category', filters.category);
-        }
-    }
+  if (filters.assetType && filters.assetType !== "all") {
+    query = query.eq("deal_type", filters.assetType);
+  }
 
-    // --- 3. PRICE RANGE FILTERS ---
-    if (filters.minPrice) {
-        q = q.gte('asking_price', filters.minPrice);
-    }
-    if (filters.maxPrice) {
-        q = q.lte('asking_price', filters.maxPrice);
-    }
+  // Fix: Add Location Search
+  if (filters.location) {
+    query = query.ilike("location", `%${filters.location}%`);
+  }
 
-    // --- 4. LOCATION FILTER ---
-    if (filters.location && filters.location !== 'all') {
-        // Use ILIKE for partial text match (e.g. "Toronto" matches "Toronto, ON")
-        q = q.ilike('location', `%${filters.location}%`);
-    }
+  // Price Range
+  if (filters.minPrice) query = query.gte("price", filters.minPrice);
+  if (filters.maxPrice) query = query.lte("price", filters.maxPrice);
 
-    // --- 5. STATUS FILTER ---
-    // If status is 'all', show everything. Otherwise filter by status (e.g. 'active')
-    if (filters.status && filters.status !== 'all') {
-        q = q.eq('status', filters.status);
-    }
+  // Financials
+  if (filters.minCashflow) query = query.gte("cashflow_numeric", filters.minCashflow);
+  if (filters.minRevenue) query = query.gte("revenue", filters.minRevenue);
 
-    // --- 6. SORTING & PAGINATION ---
-    // Show newest listings first
-    q = q.order('created_at', { ascending: false });
-    
-    // Apply Pagination limits
-    q = q.range(OFFSET, OFFSET + PAGE_SIZE - 1);
+  // --- SORTING ---
+  let sortColumn = "created_at";
+  let ascending = false;
 
-    // Execute the query
-    const { data, count, error } = await q;
+  if (filters.sort === "oldest") {
+    ascending = true;
+  } else if (filters.sort === "lowest_price") {
+    sortColumn = "price";
+    ascending = true;
+  } else if (filters.sort === "highest_price") {
+    sortColumn = "price";
+    ascending = false;
+  } else if (filters.sort === "highest_cashflow") {
+    sortColumn = "cashflow_numeric";
+    ascending = false;
+  }
 
-    if (error) {
-        console.error("Error fetching listings:", error);
-        throw new Error(error.message);
-    }
+  // Execute Query
+  const { data, error } = await query.order(sortColumn, { ascending });
 
-    return {
-        listings: (data as PublicListing[]) || [],
-        totalCount: count || 0,
-        pageSize: PAGE_SIZE,
-    };
+  if (error) {
+    console.error("Search Error:", error);
+    return [];
+  }
+
+  return data;
 }
