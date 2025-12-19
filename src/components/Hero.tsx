@@ -1,139 +1,194 @@
-'use client';
+"use client";
 
-import { MapPin, Search, ShieldCheck, Sparkles, TrendingUp } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import React, { useState } from 'react';
+import { MapPin, Search, ShieldCheck, Sparkles, TrendingUp } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useMemo, useState } from "react";
 
-const MESSAGING = {
-  All: {
-    headlineStart: "The Operating System for",
-    headlineGradient: "Business Acquisitions.",
-    // Exact gradient from your screenshot (Blue -> Purple -> Pink)
-    textGradientClass: "from-blue-500 via-purple-500 to-pink-500",
-    
-    subtitle: "Canada’s premier marketplace. Buy and sell verified assets with bank-grade data and AI valuations.",
-    placeholder: "Ask NxtOwner (e.g. 'SaaS under $500k with stable cash flow')",
-    glowColor: "from-blue-600/20 via-purple-600/20 to-pink-600/20"
+type AssetType = "all" | "operational" | "digital";
+
+const HERO_COPY: Record<
+  AssetType,
+  { title: string; subtitle: string; placeholder: string }
+> = {
+  all: {
+    title: "The Operating System for Business Acquisitions.",
+    subtitle:
+      "Canada’s premier marketplace. Buy and sell verified assets with bank-grade data and AI valuations.",
+    placeholder: "Search 'SaaS', 'Gas Station', 'Logistics'...",
   },
-  Operational: {
-    headlineStart: "Institutional-Grade",
-    headlineGradient: "Operational Businesses.",
-    textGradientClass: "from-cyan-400 via-blue-500 to-indigo-500",
-    
-    subtitle: "Acquire verified brick-and-mortar businesses with real cash flow, tangible assets, and lender-ready financials.",
+  operational: {
+    title: "Institutional-Grade Operational Businesses.",
+    subtitle:
+      "Acquire verified brick-and-mortar businesses with real cash flow, audited fundamentals, and asset-backed value.",
     placeholder: "Search gas stations, car washes, QSRs, logistics...",
-    glowColor: "from-cyan-500/20 via-blue-500/20 to-indigo-500/20"
   },
-  Digital: {
-    headlineStart: "Scalable",
-    headlineGradient: "Digital Businesses.",
-    textGradientClass: "from-fuchsia-400 via-pink-500 to-purple-500",
-    
-    subtitle: "Buy and sell SaaS, e-commerce, and online businesses with AI-normalized financials and verified performance.",
+  digital: {
+    title: "Scalable Digital Businesses, Professionally Vetted.",
+    subtitle:
+      "Buy and sell SaaS, e-commerce, and online businesses with AI-normalized financials and verified performance data.",
     placeholder: "Search SaaS, e-commerce, agencies, content sites...",
-    glowColor: "from-fuchsia-500/20 via-pink-500/20 to-purple-500/20"
-  }
+  },
 };
 
-type TabType = 'All' | 'Operational' | 'Digital';
+const TABS: { key: AssetType; label: string }[] = [
+  { key: "all", label: "All Assets" },
+  { key: "operational", label: "Operational" },
+  { key: "digital", label: "Digital" },
+];
 
 export default function Hero() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<TabType>('All');
-  const [query, setQuery] = useState('');
+  const searchParams = useSearchParams();
 
-  const content = MESSAGING[activeTab];
+  const initialType = (searchParams.get("type") as AssetType) || "all";
+  const normalizedType: AssetType =
+    initialType === "operational" || initialType === "digital"
+      ? initialType
+      : "all";
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
-    router.push(`/browse?q=${encodeURIComponent(query)}&type=${activeTab}`);
-  };
+  const [activeType, setActiveType] = useState<AssetType>(normalizedType);
+  const [query, setQuery] = useState<string>(searchParams.get("q") || "");
+
+  const copy = useMemo(() => HERO_COPY[activeType], [activeType]);
+
+  function goBrowse(type: AssetType, q: string) {
+    const params = new URLSearchParams();
+    if (type !== "all") params.set("type", type);
+    if (q.trim()) params.set("q", q.trim());
+    router.push(`/browse?${params.toString()}`);
+  }
 
   return (
-    <div className="relative bg-[#050B14] overflow-hidden pt-32 pb-24 md:pt-44 md:pb-32 px-4 flex flex-col items-center">
-      
-      {/* BACKGROUND GLOW */}
-      <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] opacity-30 pointer-events-none transition-all duration-1000 bg-gradient-to-r ${content.glowColor} blur-[120px] rounded-full`}></div>
+    <section className="relative overflow-hidden">
+      <div className="mx-auto max-w-7xl px-4 pt-10 pb-10 md:pt-14">
+        <div className="grid gap-8 md:grid-cols-12 md:items-center">
+          {/* LEFT */}
+          <div className="md:col-span-7">
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-medium text-slate-700">
+              <ShieldCheck className="h-4 w-4" />
+              Verified listings • AI valuations • Deal-ready workflows
+            </div>
 
-      <div className="relative max-w-5xl mx-auto text-center z-10 flex flex-col items-center">
-        
-        {/* 1. TABS */}
-        <div className="inline-flex bg-[#0F1623] p-1.5 rounded-full border border-slate-800 mb-10 shadow-xl">
-          {(['All', 'Operational', 'Digital'] as TabType[]).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-6 py-1.5 rounded-full text-xs md:text-sm font-bold transition-all duration-300 ${
-                activeTab === tab 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' 
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              {tab === 'All' ? 'All Assets' : tab}
-            </button>
-          ))}
-        </div>
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 md:text-5xl">
+              {copy.title}
+            </h1>
 
-        {/* 2. HEADLINE */}
-        <h1 className="text-5xl md:text-7xl lg:text-[5rem] font-black text-white tracking-tight mb-6 leading-[1.1]">
-          {content.headlineStart} 
-          <br /> 
-          <span className={`bg-clip-text text-transparent bg-gradient-to-r ${content.textGradientClass} animate-in fade-in duration-1000`}>
-            {content.headlineGradient}
-          </span>
-        </h1>
+            <p className="mt-3 text-base text-slate-600 md:text-lg">
+              {copy.subtitle}
+            </p>
 
-        {/* 3. SUBTITLE */}
-        <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
-          {content.subtitle}
-        </p>
+            {/* TABS */}
+            <div className="mt-6 flex flex-wrap gap-2">
+              {TABS.map((tab) => {
+                const active = tab.key === activeType;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActiveType(tab.key)}
+                    className={[
+                      "rounded-full px-4 py-2 text-sm font-medium transition",
+                      active
+                        ? "bg-slate-900 text-white"
+                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50",
+                    ].join(" ")}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
 
-        {/* 4. SEARCH BAR */}
-        <form onSubmit={handleSearch} className="w-full max-w-2xl relative mb-8">
-          <div className="relative bg-white rounded-full p-1.5 flex items-center shadow-2xl shadow-blue-900/10 h-14 pl-5">
-            <Search className="text-slate-400 mr-3" size={20} />
-            <input 
-              type="text" 
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={content.placeholder}
-              className="flex-1 bg-transparent border-none focus:ring-0 text-slate-900 placeholder:text-slate-400 text-sm md:text-base h-full outline-none"
-            />
-            <button 
-              type="submit"
-              className="bg-[#020617] text-white px-5 py-2.5 rounded-full font-bold text-xs md:text-sm flex items-center gap-2 hover:bg-slate-800 transition-all mr-1"
-            >
-              <Sparkles size={14} className="text-[#EAB308]" /> {/* Gold Icon Accent */}
-              Ask NxtOwner
-            </button>
+            {/* SEARCH */}
+            <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  goBrowse(activeType, query);
+                }}
+                className="flex flex-col gap-2 md:flex-row md:items-center"
+              >
+                <div className="flex flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3">
+                  <Search className="h-5 w-5 text-slate-500" />
+                  <input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder={copy.placeholder}
+                    className="w-full bg-transparent text-sm text-slate-900 placeholder:text-slate-500 outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  Search
+                </button>
+              </form>
+
+              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-600">
+                <span className="inline-flex items-center gap-1">
+                  <Sparkles className="h-4 w-4" />
+                  AI-ready comps
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <TrendingUp className="h-4 w-4" />
+                  Deal scoring
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="h-4 w-4" />
+                  Canada-wide
+                </span>
+                <Link
+                  href="/sell"
+                  className="ml-auto font-medium text-slate-900 hover:text-slate-700"
+                >
+                  List an asset →
+                </Link>
+              </div>
+            </div>
           </div>
-        </form>
 
-        {/* 5. TAGS: GREEN & ORANGE ACCENTS */}
-        <div className="flex flex-wrap justify-center gap-3 mb-12">
-          {/* GREEN: Verified / Money */}
-          <button onClick={() => router.push('/browse?maxPrice=500000')} className="flex items-center gap-2 bg-[#0F1623] border border-slate-800 text-slate-300 px-4 py-2 rounded-xl text-xs font-bold hover:border-emerald-500/60 hover:text-emerald-400 transition-colors group">
-            <TrendingUp size={14} className="text-emerald-500 group-hover:text-emerald-400" /> Under $500k
-          </button>
-          <button onClick={() => router.push('/browse?verified=true')} className="flex items-center gap-2 bg-[#0F1623] border border-slate-800 text-slate-300 px-4 py-2 rounded-xl text-xs font-bold hover:border-emerald-500/60 hover:text-emerald-400 transition-colors group">
-            <ShieldCheck size={14} className="text-emerald-500 group-hover:text-emerald-400" /> Verified Cash Flow
-          </button>
-          {/* ORANGE: Opportunity / Franchise */}
-          <button onClick={() => router.push('/browse?type=Franchise')} className="flex items-center gap-2 bg-[#0F1623] border border-slate-800 text-slate-300 px-4 py-2 rounded-xl text-xs font-bold hover:border-orange-500/60 hover:text-orange-400 transition-colors group">
-            <MapPin size={14} className="text-orange-500 group-hover:text-orange-400" /> Franchise Resale
-          </button>
+          {/* RIGHT */}
+          <div className="md:col-span-5">
+            <div className="rounded-3xl border border-slate-200 bg-gradient-to-b from-white to-slate-50 p-6 shadow-sm">
+              <div className="text-sm font-semibold text-slate-900">
+                What you get on NxtOwner
+              </div>
+              <ul className="mt-4 space-y-3 text-sm text-slate-700">
+                <li className="flex gap-2">
+                  <ShieldCheck className="mt-0.5 h-5 w-5 text-slate-900" />
+                  Verified data + document-ready listings
+                </li>
+                <li className="flex gap-2">
+                  <Sparkles className="mt-0.5 h-5 w-5 text-slate-900" />
+                  AI valuation ranges + key drivers
+                </li>
+                <li className="flex gap-2">
+                  <TrendingUp className="mt-0.5 h-5 w-5 text-slate-900" />
+                  Compare deals and shortlist faster
+                </li>
+              </ul>
+
+              <div className="mt-6 flex gap-3">
+                <Link
+                  href="/browse"
+                  className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-semibold text-slate-900 hover:bg-slate-50"
+                >
+                  Browse listings
+                </Link>
+                <Link
+                  href="/valuation"
+                  className="flex-1 rounded-xl bg-slate-900 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  Get valuation
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
-
-        {/* 6. MAIN CTA: GOLD (Matches List Your Business) */}
-        <button 
-          onClick={() => router.push('/sell/onboarding')}
-          className="bg-[#EAB308] hover:bg-[#CA8A04] text-slate-900 px-10 py-4 rounded-full font-bold text-lg shadow-xl shadow-[#EAB308]/20 transition-all transform hover:-translate-y-1 hover:scale-105"
-        >
-          Sell Your Business
-        </button>
-
       </div>
-    </div>
+    </section>
   );
 }

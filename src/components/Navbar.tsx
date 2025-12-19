@@ -118,7 +118,6 @@ export default function Navbar() {
               </button>
             </form>
           </div>
-<<<<<<< HEAD
 =======
 
           {/* 3. NAVIGATION LINKS (Right) */}
