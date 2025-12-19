@@ -13,23 +13,33 @@ export async function createListing(formData: any) {
 
   // Map the new "Taxonomy" fields correctly
   const listingData = {
-    title: formData.title || formData.businessName, // Handle both naming conventions
+    title: formData.title || formData.businessName,
 
-    // --- NEW TAXONOMY FIELDS ---
+    // Taxonomy
     asset_type: formData.asset_type || 'Operational',
     main_category: formData.main_category,
     sub_category: formData.sub_category,
-    category: formData.main_category, // Keep 'category' as a fallback for old components
+    category: formData.main_category,
 
-    // --- FINANCIALS & DETAILS ---
+    // Core Details
+    description: formData.description,
     location: formData.location,
+    founded_year: Number(formData.foundedYear) || null,
+    website_url: formData.websiteUrl || null,
+    employee_count: Number(formData.employees) || 0,
+
+    // Financials
     asking_price: Number(formData.asking_price) || 0,
     annual_revenue: Number(formData.annual_revenue) || 0,
     annual_cashflow: Number(formData.annual_cashflow) || 0,
-    description: formData.description,
+    expenses: Number(formData.expenses) || 0,
+    gross_margin: Number(formData.grossMargin) || 0,
 
-    // --- SCORING & META ---
-    nxt_score: formData.nxt_score || 50,
+    // Media (We store the URL string)
+    image_url: formData.imageUrl || null,
+
+    // Meta
+    nxt_score: formData.nxt_score || 10, // Default low if they cheat
     has_deal_room: true,
     is_verified: false,
     status: 'active',

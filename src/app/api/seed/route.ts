@@ -1,6 +1,6 @@
+import { AssetType, TAXONOMY } from '@/lib/taxonomy';
 import { createClient } from '@/utils/supabase/server';
 import { NextResponse } from 'next/server';
-import { TAXONOMY, AssetType } from '@/lib/taxonomy';
 
 export async function GET() {
   const supabase = await createClient();

@@ -2,12 +2,12 @@
 
 import React, { useState } from 'react';
 import { 
-  ArrowRight, ArrowLeft, CheckCircle, Sparkles, LayoutGrid, 
-  Monitor, Building2, Store, Briefcase 
+  ArrowRight, ArrowLeft, CheckCircle, Sparkles, 
+  Building2, Monitor, Image as ImageIcon, Globe, Calendar, Users
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createListing } from '@/app/actions/createListing';
-import { TAXONOMY, AssetType } from '@/lib/taxonomy'; // Import the master list
+import { TAXONOMY, AssetType } from '@/lib/taxonomy';
 
 export default function SellerOnboarding() {
   const router = useRouter();
@@ -15,269 +15,284 @@ export default function SellerOnboarding() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
-  // --- FORM STATE ---
+  // --- COMPREHENSIVE FORM STATE ---
   const [formData, setFormData] = useState({
+    // Step 1: Identity
     businessName: '',
-    url: '',
-    assetType: 'Operational' as AssetType, // Default
+    assetType: 'Operational' as AssetType,
     mainCategory: '',
     subCategory: '',
     location: '',
-    revenue: '',
-    cashflow: '', // SDE or EBITDA
+    websiteUrl: '',
     foundedYear: '',
+    employees: '',
+    
+    // Step 2: Financials
+    revenue: '',
+    cashflow: '',
+    expenses: '',
+    askingPrice: '',
+    grossMargin: '',
+    
+    // Step 3: Story & Media
     description: '',
+    imageUrl: '', // For MVP we use URL. Later: File Upload
+    
     highlights: ['', '', '']
   });
 
-  // --- QUALITY SCORE LOGIC ---
+  // --- HARDER SCORING LOGIC ---
   const calculateQualityScore = () => {
     let score = 0;
-    if (formData.businessName) score += 10;
-    if (formData.mainCategory) score += 10;
+    // Basics (20%)
+    if (formData.businessName) score += 5;
     if (formData.subCategory) score += 5;
-    if (formData.revenue && Number(formData.revenue) > 0) score += 20;
-    if (formData.cashflow && Number(formData.cashflow) > 0) score += 20;
-    if (formData.description.length > 50) score += 20;
-    if (formData.location) score += 15;
+    if (formData.location) score += 5;
+    if (formData.foundedYear) score += 5;
+
+    // Financials (30%)
+    if (Number(formData.revenue) > 0) score += 10;
+    if (Number(formData.cashflow) > 0) score += 10;
+    if (Number(formData.expenses) > 0) score += 5;
+    if (Number(formData.askingPrice) > 0) score += 5;
+
+    // Content (50%) - The hard part
+    if (formData.description.length > 100) score += 10; // Long desc required
+    if (formData.description.length > 300) score += 10; // detailed desc
+    if (formData.websiteUrl) score += 10;
+    if (formData.imageUrl) score += 20; // Big points for image
+
     return Math.min(score, 100);
   };
   const qualityScore = calculateQualityScore();
 
   // --- AI GENERATOR ---
   const handleAIGenerate = () => {
-    if (!formData.businessName || !formData.mainCategory) {
-      alert("Please select a Category first.");
-      return;
-    }
+    if (!formData.mainCategory) return alert("Select a category first.");
     setIsGeneratingAI(true);
     setTimeout(() => {
-      const metricName = formData.assetType === 'Digital' ? 'ARR' : 'Annual Revenue';
-      const profitName = formData.assetType === 'Digital' ? 'SDE/EBITDA' : 'Net Income';
-      
-      const aiSummary = `A premier ${formData.subCategory} business in the ${formData.mainCategory} sector. Founded in ${formData.foundedYear || 'recent years'}, this ${formData.assetType} asset generates $${Number(formData.revenue).toLocaleString()} in ${metricName}. Key growth opportunities include expansion into new markets and optimizing ${profitName}.`;
-      
-      setFormData(prev => ({ ...prev, description: aiSummary }));
+      const type = formData.assetType;
+      const desc = `A verified ${formData.subCategory || formData.mainCategory} opportunity in ${formData.location || 'a prime market'}. \n\nEstablished in ${formData.foundedYear || 'recent years'}, this ${type} business generates $${formData.revenue || '0'} in revenue with impressive margins. \n\nKey Strengths:\n• Stable cash flow ($${formData.cashflow})\n• Turnkey operations with ${formData.employees || 'dedicated'} staff\n• Huge growth potential in the ${formData.mainCategory} sector.\n\nIdeal for an investor looking for immediate ROI.`;
+      setFormData(prev => ({ ...prev, description: desc }));
       setIsGeneratingAI(false);
     }, 1500);
   };
 
-  // --- PUBLISH HANDLER ---
+  // --- PUBLISH ---
   const handlePublish = async () => {
     setIsPublishing(true);
     try {
       const payload = {
-        title: formData.businessName,
-        asset_type: formData.assetType,       // New Field
-        main_category: formData.mainCategory, // New Field
-        sub_category: formData.subCategory,   // New Field
-        category: formData.mainCategory,      // Fallback for old code
-        location: formData.location,
-        asking_price: 0, // Set in next step or default
-        annual_revenue: Number(formData.revenue) || 0,
-        annual_cashflow: Number(formData.cashflow) || 0,
-        description: formData.description,
-        nxt_score: Math.floor(qualityScore * 0.8 + 10),
-        has_deal_room: true
+        ...formData,
+        // Map fields to match Server Action expectation
+        annual_revenue: formData.revenue,
+        annual_cashflow: formData.cashflow,
+        asking_price: formData.askingPrice,
+        nxt_score: Math.floor(qualityScore), // Real score
       };
 
       const result = await createListing(payload);
-      if (result.success) {
-        router.push(`/deal-room/${result.listingId}`);
-      }
+      if (result.success) router.push(`/deal-room/${result.listingId}`);
     } catch (error: any) {
-      alert(`Publish Failed: ${error.message}`);
+      alert(`Error: ${error.message}`);
     } finally {
       setIsPublishing(false);
     }
   };
 
-  // Helper to get categories based on selected Asset Type
+  // Helpers
   const currentCategories = Object.keys(TAXONOMY[formData.assetType] || {});
-  
-  // Helper to get subcategories based on selected Main Category
-  const currentSubCategories = formData.mainCategory 
-    // @ts-ignore
-    ? TAXONOMY[formData.assetType][formData.mainCategory] || [] 
-    : [];
+  // @ts-ignore
+  const currentSubCategories = formData.mainCategory ? TAXONOMY[formData.assetType][formData.mainCategory] || [] : [];
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
       
-      {/* SIDEBAR */}
-      <aside className="w-full md:w-80 bg-white border-r border-slate-200 p-8 flex flex-col md:h-screen sticky top-0">
-        <h2 className="text-xl font-bold text-slate-900 mb-2">Listing Strength</h2>
-        <div className="w-full bg-slate-100 rounded-full h-3 mb-2 overflow-hidden">
-          <div className="bg-green-500 h-full transition-all duration-500" style={{ width: `${qualityScore}%` }}></div>
-        </div>
-        <div className="text-sm font-bold text-slate-500 mb-6">{qualityScore}/100</div>
+      {/* LEFT SIDEBAR: SCORE & TIPS */}
+      <aside className="w-full md:w-80 bg-white border-r border-slate-200 p-8 flex flex-col md:h-screen sticky top-0 overflow-y-auto">
+        <h2 className="text-xl font-bold text-slate-900 mb-2">Listing Score</h2>
         
-        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-          <h3 className="flex items-center gap-2 font-bold text-blue-900 text-sm mb-2"><Sparkles size={14}/> AI Tip</h3>
-          <p className="text-xs text-blue-700">
-            {formData.assetType === 'Digital' 
-              ? "Digital buyers look for Churn Rate and CAC. Mention these in your description."
-              : "Operational buyers care about Lease terms and Staffing. Be sure to highlight them."}
-          </p>
+        {/* SCORE CIRCLE */}
+        <div className="relative h-32 w-32 mx-auto my-6 flex items-center justify-center">
+           <svg className="w-full h-full" viewBox="0 0 36 36">
+              <path className="text-slate-100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
+              <path className={`${qualityScore > 80 ? 'text-green-500' : (qualityScore > 50 ? 'text-yellow-500' : 'text-red-500')} transition-all duration-1000 ease-out`} strokeDasharray={`${qualityScore}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="4" />
+           </svg>
+           <div className="absolute flex flex-col items-center">
+             <span className="text-3xl font-bold text-slate-900">{qualityScore}</span>
+             <span className="text-[10px] uppercase text-slate-400 font-bold">Points</span>
+           </div>
+        </div>
+
+        <div className="space-y-3 text-sm">
+           <div className={`flex items-center gap-2 ${formData.businessName ? 'text-green-600' : 'text-slate-400'}`}>
+             <CheckCircle size={16} /> Business Identity
+           </div>
+           <div className={`flex items-center gap-2 ${Number(formData.revenue) > 0 ? 'text-green-600' : 'text-slate-400'}`}>
+             <CheckCircle size={16} /> Financials
+           </div>
+           <div className={`flex items-center gap-2 ${formData.imageUrl ? 'text-green-600' : 'text-slate-400'}`}>
+             <CheckCircle size={16} /> Photos (Worth 20 pts)
+           </div>
         </div>
       </aside>
 
       {/* MAIN FORM */}
       <main className="flex-1 p-8 md:p-12 overflow-y-auto">
-        <div className="max-w-2xl mx-auto">
-          {/* Progress */}
-          <div className="flex items-center gap-4 mb-10 text-sm font-medium text-slate-400">
-            <span className={step===1 ? "text-blue-600 font-bold" : ""}>1. Categorization</span>
-            <span>/</span>
-            <span className={step===2 ? "text-blue-600 font-bold" : ""}>2. Financials</span>
-            <span>/</span>
-            <span className={step===3 ? "text-blue-600 font-bold" : ""}>3. Review</span>
+        <div className="max-w-3xl mx-auto">
+          
+          {/* Progress Bar */}
+          <div className="w-full bg-slate-200 h-1.5 rounded-full mb-10">
+             <div className="bg-slate-900 h-1.5 rounded-full transition-all duration-500" style={{ width: `${step * 33}%` }}></div>
           </div>
 
-          {/* STEP 1: ASSET TYPE & CATEGORY */}
+          {/* STEP 1: IDENTITY */}
           {step === 1 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-              <div>
-                <h1 className="text-3xl font-bold text-slate-900 mb-2">What are you selling?</h1>
-                <p className="text-slate-500">Choose the asset class that best fits your business.</p>
-              </div>
-
-              {/* Asset Type Switcher */}
+              <h1 className="text-3xl font-bold text-slate-900">Business Identity</h1>
+              
               <div className="grid grid-cols-2 gap-4">
-                <button 
-                  onClick={() => setFormData({...formData, assetType: 'Operational', mainCategory: '', subCategory: ''})}
-                  className={`p-6 rounded-xl border-2 text-left transition-all ${formData.assetType === 'Operational' ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600' : 'border-slate-200 hover:border-slate-300'}`}
-                >
-                  <Building2 className={`mb-3 ${formData.assetType === 'Operational' ? 'text-blue-600' : 'text-slate-400'}`} />
-                  <div className="font-bold text-slate-900">Operational Asset</div>
-                  <div className="text-xs text-slate-500 mt-1">Brick & Mortar, Retail, Logistics</div>
+                <button onClick={() => setFormData({...formData, assetType: 'Operational'})} className={`p-4 border-2 rounded-xl flex items-center gap-3 ${formData.assetType === 'Operational' ? 'border-blue-600 bg-blue-50' : 'border-slate-200'}`}>
+                  <Building2 className={formData.assetType === 'Operational' ? 'text-blue-600' : 'text-slate-400'} />
+                  <div className="text-left"><p className="font-bold text-sm">Operational</p></div>
                 </button>
-
-                <button 
-                  onClick={() => setFormData({...formData, assetType: 'Digital', mainCategory: '', subCategory: ''})}
-                  className={`p-6 rounded-xl border-2 text-left transition-all ${formData.assetType === 'Digital' ? 'border-purple-600 bg-purple-50 ring-1 ring-purple-600' : 'border-slate-200 hover:border-slate-300'}`}
-                >
-                  <Monitor className={`mb-3 ${formData.assetType === 'Digital' ? 'text-purple-600' : 'text-slate-400'}`} />
-                  <div className="font-bold text-slate-900">Digital Asset</div>
-                  <div className="text-xs text-slate-500 mt-1">SaaS, E-com, Content, Agency</div>
+                <button onClick={() => setFormData({...formData, assetType: 'Digital'})} className={`p-4 border-2 rounded-xl flex items-center gap-3 ${formData.assetType === 'Digital' ? 'border-purple-600 bg-purple-50' : 'border-slate-200'}`}>
+                  <Monitor className={formData.assetType === 'Digital' ? 'text-purple-600' : 'text-slate-400'} />
+                  <div className="text-left"><p className="font-bold text-sm">Digital Asset</p></div>
                 </button>
               </div>
 
-              {/* Dynamic Categories */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Main Category</label>
-                  <select 
-                    value={formData.mainCategory}
-                    onChange={(e) => setFormData({...formData, mainCategory: e.target.value, subCategory: ''})}
-                    className="w-full p-3 border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-blue-600 outline-none"
-                  >
-                    <option value="">Select Category...</option>
-                    {currentCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                  </select>
-                </div>
+                 <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Category</label>
+                    <select value={formData.mainCategory} onChange={e => setFormData({...formData, mainCategory: e.target.value})} className="w-full p-3 border rounded-lg bg-white">
+                       <option value="">Select...</option>
+                       {currentCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                 </div>
+                 <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Subcategory</label>
+                    <select value={formData.subCategory} onChange={e => setFormData({...formData, subCategory: e.target.value})} className="w-full p-3 border rounded-lg bg-white">
+                       <option value="">Select...</option>
+                       {currentSubCategories.map((c: string) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                 </div>
+                 
+                 <div className="col-span-2">
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Business Title</label>
+                    <input type="text" value={formData.businessName} onChange={e => setFormData({...formData, businessName: e.target.value})} className="w-full p-3 border rounded-lg" placeholder="e.g. Established SaaS in Fintech" />
+                 </div>
 
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Subcategory</label>
-                  <select 
-                    value={formData.subCategory}
-                    disabled={!formData.mainCategory}
-                    onChange={(e) => setFormData({...formData, subCategory: e.target.value})}
-                    className="w-full p-3 border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-blue-600 outline-none disabled:bg-slate-100 disabled:text-slate-400"
-                  >
-                    <option value="">Select Subcategory...</option>
-                    {currentSubCategories.map((sub: string) => <option key={sub} value={sub}>{sub}</option>)}
-                  </select>
-                </div>
+                 <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Website URL</label>
+                    <div className="relative">
+                      <Globe className="absolute left-3 top-3.5 text-slate-400" size={16} />
+                      <input type="text" value={formData.websiteUrl} onChange={e => setFormData({...formData, websiteUrl: e.target.value})} className="w-full p-3 pl-10 border rounded-lg" placeholder="https://..." />
+                    </div>
+                 </div>
+
+                 <div className="grid grid-cols-2 gap-4">
+                    <div>
+                       <label className="block text-sm font-bold text-slate-700 mb-2">Year Founded</label>
+                       <input type="number" value={formData.foundedYear} onChange={e => setFormData({...formData, foundedYear: e.target.value})} className="w-full p-3 border rounded-lg" placeholder="2015" />
+                    </div>
+                    <div>
+                       <label className="block text-sm font-bold text-slate-700 mb-2">Employees</label>
+                       <input type="number" value={formData.employees} onChange={e => setFormData({...formData, employees: e.target.value})} className="w-full p-3 border rounded-lg" placeholder="0" />
+                    </div>
+                 </div>
+                 
+                 <div className="col-span-2">
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Location</label>
+                    <input type="text" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="w-full p-3 border rounded-lg" placeholder="City, Country" />
+                 </div>
               </div>
 
-              <div>
-                 <label className="block text-sm font-bold text-slate-700 mb-2">Business Name</label>
-                 <input 
-                    type="text" 
-                    value={formData.businessName}
-                    onChange={(e) => setFormData({...formData, businessName: e.target.value})}
-                    className="w-full p-3 border border-slate-200 rounded-lg"
-                    placeholder="e.g. Downtown Coffee Co."
-                  />
-              </div>
-
-              <div className="flex justify-end pt-4">
-                <button onClick={() => setStep(2)} className="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold flex items-center gap-2">
-                  Next Step <ArrowRight size={18} />
+              <div className="flex justify-end pt-6">
+                <button onClick={() => setStep(2)} className="bg-slate-900 text-white px-8 py-3 rounded-lg font-bold flex items-center gap-2 hover:bg-slate-800">
+                   Next: Financials <ArrowRight size={18} />
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 2: FINANCIALS (Same as before but with asset-aware labels) */}
+          {/* STEP 2: FINANCIALS */}
           {step === 2 && (
-             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                <h1 className="text-3xl font-bold text-slate-900">Key Metrics</h1>
-                
-                <div className="grid grid-cols-2 gap-6 p-6 bg-slate-100 rounded-xl border border-slate-200">
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+               <h1 className="text-3xl font-bold text-slate-900">Financial Performance</h1>
+               <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm text-blue-800">
+                  <span className="font-bold">Pro Tip:</span> Buyers require at least Revenue and Cash Flow to consider a deal.
+               </div>
+
+               <div className="grid grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-2">
-                      {formData.assetType === 'Digital' ? 'Annual ARR / Revenue' : 'Annual Gross Revenue'}
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-3 text-slate-400">$</span>
-                      <input type="number" value={formData.revenue} onChange={e => setFormData({...formData, revenue: e.target.value})} className="w-full p-3 pl-8 border border-slate-200 rounded-lg"/>
-                    </div>
+                     <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Annual Revenue</label>
+                     <input type="number" value={formData.revenue} onChange={e => setFormData({...formData, revenue: e.target.value})} className="w-full p-3 border rounded-lg font-mono" placeholder="$0.00" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-2">
-                      {formData.assetType === 'Digital' ? 'SDE / EBITDA' : 'Cash Flow (SDE)'}
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-3 text-slate-400">$</span>
-                      <input type="number" value={formData.cashflow} onChange={e => setFormData({...formData, cashflow: e.target.value})} className="w-full p-3 pl-8 border border-slate-200 rounded-lg"/>
-                    </div>
+                     <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Annual Cash Flow (SDE)</label>
+                     <input type="number" value={formData.cashflow} onChange={e => setFormData({...formData, cashflow: e.target.value})} className="w-full p-3 border rounded-lg font-mono text-green-700 font-bold" placeholder="$0.00" />
                   </div>
-                </div>
-
-                {/* AI WRITER */}
-                <div className="pt-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="block text-sm font-bold text-slate-700">Description</label>
-                    <button onClick={handleAIGenerate} className="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-bold flex items-center gap-1">
-                      <Sparkles size={12} /> {isGeneratingAI ? "Writing..." : "AI Write"}
-                    </button>
+                  <div>
+                     <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Total Expenses</label>
+                     <input type="number" value={formData.expenses} onChange={e => setFormData({...formData, expenses: e.target.value})} className="w-full p-3 border rounded-lg font-mono text-red-600" placeholder="$0.00" />
                   </div>
-                  <textarea rows={6} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full p-4 border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Describe the business..." />
-                </div>
+                  <div>
+                     <label className="block text-xs font-bold uppercase text-slate-500 mb-2">Asking Price</label>
+                     <input type="number" value={formData.askingPrice} onChange={e => setFormData({...formData, askingPrice: e.target.value})} className="w-full p-3 border rounded-lg font-mono font-bold" placeholder="$0.00" />
+                  </div>
+               </div>
 
-                <div className="flex justify-between mt-8">
-                  <button onClick={() => setStep(1)} className="text-slate-500 font-bold px-4">Back</button>
-                  <button onClick={() => setStep(3)} className="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold flex items-center gap-2">Next <ArrowRight size={18} /></button>
-                </div>
-             </div>
-          )}
-
-          {/* STEP 3: REVIEW (Same as before) */}
-          {step === 3 && (
-             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                <h1 className="text-3xl font-bold text-slate-900">Review Listing</h1>
-                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-lg max-w-sm mx-auto">
-                   <div className="aspect-video bg-slate-100 rounded-lg mb-4 relative overflow-hidden">
-                      <div className="absolute top-2 left-2 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded">PREVIEW</div>
-                   </div>
-                   <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[10px] font-bold uppercase bg-slate-100 px-2 py-1 rounded text-slate-600">{formData.assetType}</span>
-                      <span className="text-[10px] font-bold uppercase bg-blue-50 px-2 py-1 rounded text-blue-600">{formData.mainCategory}</span>
-                   </div>
-                   <h3 className="font-bold text-xl mb-2">{formData.businessName || 'Untitled'}</h3>
-                   <p className="text-sm text-slate-500 line-clamp-3">{formData.description}</p>
-                </div>
-                
-                <div className="flex justify-between mt-8">
-                  <button onClick={() => setStep(2)} className="text-slate-500 font-bold px-4">Back</button>
-                  <button onClick={handlePublish} disabled={isPublishing} className="bg-[#EA580C] text-white px-8 py-4 rounded-lg font-bold shadow-lg hover:bg-orange-700 w-full md:w-auto">
-                    {isPublishing ? "Publishing..." : "Publish Listing"}
+               <div className="flex justify-between pt-6">
+                  <button onClick={() => setStep(1)} className="text-slate-500 font-bold">Back</button>
+                  <button onClick={() => setStep(3)} className="bg-slate-900 text-white px-8 py-3 rounded-lg font-bold flex items-center gap-2 hover:bg-slate-800">
+                     Next: Media <ArrowRight size={18} />
                   </button>
+               </div>
+            </div>
+          )}
+
+          {/* STEP 3: MEDIA & PUBLISH */}
+          {step === 3 && (
+             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                <h1 className="text-3xl font-bold text-slate-900">Showcase Your Business</h1>
+
+                {/* IMAGE URL INPUT */}
+                <div>
+                   <label className="block text-sm font-bold text-slate-700 mb-2">Main Image URL</label>
+                   <div className="flex gap-2">
+                     <div className="relative flex-1">
+                        <ImageIcon className="absolute left-3 top-3.5 text-slate-400" size={16} />
+                        <input type="text" value={formData.imageUrl} onChange={e => setFormData({...formData, imageUrl: e.target.value})} className="w-full p-3 pl-10 border rounded-lg" placeholder="https://example.com/image.jpg" />
+                     </div>
+                   </div>
+                   <p className="text-xs text-slate-500 mt-2">Paste a direct link to a hosted image (e.g. Unsplash, Imgur) for now.</p>
                 </div>
+
+                {/* AI DESCRIPTION */}
+                <div>
+                   <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-bold text-slate-700">Detailed Description</label>
+                      <button onClick={handleAIGenerate} disabled={isGeneratingAI} className="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-bold flex items-center gap-1 hover:bg-purple-200">
+                        <Sparkles size={12} /> {isGeneratingAI ? 'Writing...' : 'Auto-Write with AI'}
+                      </button>
+                   </div>
+                   <textarea rows={8} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full p-4 border rounded-lg leading-relaxed focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Tell the full story..." />
+                </div>
+
+                <div className="bg-slate-100 p-6 rounded-xl flex items-center justify-between">
+                   <div>
+                      <p className="font-bold text-slate-900">Ready to publish?</p>
+                      <p className="text-xs text-slate-500">Your listing score is <span className="font-bold">{qualityScore}/100</span></p>
+                   </div>
+                   <button onClick={handlePublish} disabled={isPublishing} className="bg-[#EAB308] text-slate-900 px-8 py-3 rounded-lg font-bold hover:bg-[#CA8A04] shadow-lg">
+                      {isPublishing ? 'Publishing...' : 'Launch Listing'}
+                   </button>
+                </div>
+                <button onClick={() => setStep(2)} className="text-slate-500 font-bold block">Back</button>
              </div>
           )}
+
         </div>
       </main>
     </div>

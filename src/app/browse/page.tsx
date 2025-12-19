@@ -1,122 +1,115 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { createClient } from '@/utils/supabase/client';
+import FilterSidebar from '@/components/browse/FilterSidebar'; // 👈 This was missing
+import ListingCard from '@/components/browse/ListingCard';
 import { Listing } from '@/types/database';
-import Link from 'next/link';
+import { createClient } from '@/utils/supabase/client';
 import { Search } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 
-// 1. THE LOGIC COMPONENT (Handles the search)
 function BrowseContent() {
   const searchParams = useSearchParams();
-  const query = searchParams.get('q') || '';
-  const typeFilter = searchParams.get('type') || 'All';
-  
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
+  // Extract params
+  const query = searchParams.get('q');
+  const type = searchParams.get('type');
+  const category = searchParams.get('category');
+  const sub = searchParams.get('sub');
+  const maxPrice = searchParams.get('maxPrice');
+
   useEffect(() => {
     async function fetchListings() {
       setLoading(true);
-      let dbQuery = supabase.from('listings').select('*');
+      let dbQuery = supabase.from('listings').select('*').eq('status', 'active');
 
+      // --- APPLY FILTERS ---
       if (query) {
-        dbQuery = dbQuery.or(`title.ilike.%${query}%,description.ilike.%${query}%,category.ilike.%${query}%`);
+        // Search in title OR description
+        dbQuery = dbQuery.or(`title.ilike.%${query}%,description.ilike.%${query}%`);
       }
-
-      if (typeFilter !== 'All') {
-        dbQuery = dbQuery.eq('asset_type', typeFilter);
+      if (type && type !== 'All') {
+        dbQuery = dbQuery.eq('asset_type', type);
+      }
+      if (category) {
+        dbQuery = dbQuery.eq('main_category', category);
+      }
+      if (sub) {
+        dbQuery = dbQuery.eq('sub_category', sub);
+      }
+      if (maxPrice) {
+        dbQuery = dbQuery.lte('asking_price', Number(maxPrice));
       }
 
       const { data, error } = await dbQuery;
       
-      if (error) {
-        console.error('Search error:', error);
-      } else {
-        setListings(data || []);
-      }
+      if (error) console.error(error);
+      else setListings(data || []);
+      
       setLoading(false);
     }
 
     fetchListings();
-  }, [query, typeFilter]);
+  }, [searchParams]); // Re-run whenever URL changes
 
   return (
-    <div className="max-w-7xl mx-auto px-4">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">
-          {query ? `Search Results for "${query}"` : 'All Opportunities'}
-        </h1>
-        <p className="text-slate-500">
-          Found {listings.length} listings {typeFilter !== 'All' ? `in ${typeFilter}` : ''}
-        </p>
-      </div>
+    <div className="flex flex-col md:flex-row min-h-screen bg-slate-50 pt-16">
+      
+      {/* 1. LEFT SIDEBAR (Sticky on Desktop) */}
+      {/* This ensures the sidebar is visible on the left */}
+      <aside className="hidden md:block w-64 flex-shrink-0 border-r border-slate-200 bg-white h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto">
+        <FilterSidebar />
+      </aside>
 
-      {/* Loading State */}
-      {loading && <div className="text-center py-20 text-slate-400">AI scanning opportunities...</div>}
-
-      {/* Empty State */}
-      {!loading && listings.length === 0 && (
-        <div className="text-center py-20 bg-white rounded-xl border border-slate-200">
-          <Search className="mx-auto h-12 w-12 text-slate-300 mb-4" />
-          <h3 className="text-lg font-bold text-slate-900">No listings found</h3>
-          <p className="text-slate-500">Try adjusting your search terms or filters.</p>
+      {/* 2. MAIN CONTENT AREA */}
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+        
+        {/* Header Stats */}
+        <div className="mb-6 flex items-baseline justify-between">
+          <h1 className="text-2xl font-bold text-slate-900">
+            {category ? `${category} Opportunities` : (type ? `${type} Assets` : 'All Listings')}
+          </h1>
+          <span className="text-sm text-slate-500">{listings.length} results found</span>
         </div>
-      )}
 
-      {/* Results Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {listings.map((listing) => (
-            <Link
-            href={`/listing/${listing.id}`}
-            key={listing.id}
-            className="group bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-xl transition-all hover:-translate-y-1"
-          >
-            <div className="relative aspect-video bg-slate-100">
-              <img 
-                  src={listing.metrics?.image_url as string || 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&q=80'} 
-                  className="w-full h-full object-cover"
-              />
-              <div className="absolute top-2 left-2 flex gap-1">
-                  {listing.is_ai_verified && <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded">AI VERIFIED</span>}
-              </div>
-            </div>
-            
-            <div className="p-5">
-              <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[10px] font-bold uppercase bg-slate-100 px-2 py-0.5 rounded text-slate-600">{listing.asset_type || 'Business'}</span>
-                  <span className="text-[10px] font-bold uppercase bg-blue-50 px-2 py-0.5 rounded text-blue-600">{listing.main_category}</span>
-              </div>
-              <h3 className="font-bold text-slate-900 line-clamp-1 mb-4">{listing.title}</h3>
-              
-              <div className="flex justify-between items-center pt-4 border-t border-slate-100">
-                  <div>
-                    <p className="text-[10px] uppercase font-bold text-slate-400">Price</p>
-                    <p className="font-bold text-slate-900">${listing.asking_price?.toLocaleString()}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] uppercase font-bold text-slate-400">Revenue</p>
-                    <p className="font-bold text-green-600">${listing.annual_revenue?.toLocaleString()}</p>
-                  </div>
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
+        {/* LOADING STATE */}
+        {loading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1,2,3,4,5,6].map(i => (
+              <div key={i} className="h-80 bg-white rounded-xl animate-pulse border border-slate-200"></div>
+            ))}
+          </div>
+        )}
+
+        {/* EMPTY STATE */}
+        {!loading && listings.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-dashed border-slate-300">
+            <Search className="h-10 w-10 text-slate-300 mb-4" />
+            <h3 className="text-lg font-bold text-slate-900">No listings found</h3>
+            <p className="text-slate-500 text-sm">Try adjusting your filters.</p>
+          </div>
+        )}
+
+        {/* RESULTS GRID */}
+        {!loading && listings.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {listings.map((listing) => (
+              <ListingCard key={listing.id} listing={listing} />
+            ))}
+          </div>
+        )}
+      </main>
     </div>
   );
 }
 
-// 2. THE MAIN PAGE (The Wrapper)
 export default function BrowsePage() {
   return (
-    <div className="min-h-screen bg-slate-50 py-12">
-      <Suspense fallback={<div className="text-center py-20 text-slate-400">Loading search...</div>}>
-        <BrowseContent />
-      </Suspense>
-    </div>
+    <Suspense fallback={<div>Loading marketplace...</div>}>
+      <BrowseContent />
+    </Suspense>
   );
 }

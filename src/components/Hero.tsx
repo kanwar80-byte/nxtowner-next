@@ -1,9 +1,9 @@
 'use client';
 
+import { MapPin, Search, ShieldCheck, Sparkles, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Sparkles, TrendingUp, ShieldCheck, MapPin } from 'lucide-react';
+import { useState } from 'react';
 
 export default function Hero() {
   const router = useRouter();
@@ -94,6 +94,16 @@ export default function Hero() {
               <MapPin size={14} /> Franchise Resale
             </button>
           </div>
+        </div>
+
+        {/* SELL YOUR BUSINESS LINK */}
+        <div className="mt-12">
+          <Link 
+            href="/sell/onboarding"
+            className="inline-block bg-blue-600 text-white px-8 py-3 rounded-full text-lg font-semibold shadow-md hover:bg-blue-700 transition-all"
+          >
+            Sell Your Business
+          </Link>
         </div>
       </div>
     </div>

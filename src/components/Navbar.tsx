@@ -1,11 +1,10 @@
 'use client';
 
-import Link from 'next/link';
-import Image from 'next/image';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Search, Sparkles, Menu, X, UserCircle } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
+import { Menu, Search, Sparkles, UserCircle, X } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 export default function Navbar() {
   const router = useRouter();
@@ -68,9 +67,11 @@ export default function Navbar() {
               <UserCircle size={20} />
               <span>Sign In</span>
             </Link>
+
+            {/* 👇 THIS IS THE CRITICAL UPDATE 👇 */}
             <Link 
-              href="/sell/onboarding" 
-              className="bg-white text-slate-900 hover:bg-slate-200 px-4 py-2 rounded-full font-bold text-xs transition-colors"
+              href="/sell/onboarding"  
+              className="bg-[#EAB308] text-slate-900 hover:bg-[#CA8A04] px-4 py-2 rounded-full font-bold text-xs transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
               List Your Business
             </Link>
@@ -100,7 +101,12 @@ export default function Navbar() {
           </form>
           <div className="flex flex-col space-y-3 text-slate-300 font-medium">
             <Link href="/browse" className="block py-2 hover:text-white">Buy a Business</Link>
-            <Link href="/sell" className="block py-2 hover:text-white">Sell a Business</Link>
+            <Link 
+              href="/sell/onboarding" // 👈 CHANGE THIS from '/create-listing'
+              className="block py-2 hover:text-white"
+            >
+              Sell a Business
+            </Link>
             <Link href="/valuation" className="block py-2 hover:text-white">Free Valuation</Link>
             <Link href="/dashboard" className="block py-2 text-blue-400">My Dashboard</Link>
           </div>
