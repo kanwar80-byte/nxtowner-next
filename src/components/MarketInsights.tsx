@@ -18,7 +18,7 @@ const ARTICLES: Article[] = [
     id: 1,
     title: 'How to Value a Small Business in Canada',
     description:
-      'Understand SDE, multiples, and how lenders look at cash flow when buying or selling a business.',
+      'A practical guide to SDE, market multiples, and what Canadian lenders look for in cash flow analysis.',
     image:
       'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=1200&auto=format&fit=crop',
     href: '/market-insights/how-to-value-a-business',
@@ -26,22 +26,52 @@ const ARTICLES: Article[] = [
   },
   {
     id: 2,
-    title: 'Buying a Gas Station: What Most Buyers Miss',
+    title: 'Understanding Seller Discretionary Earnings (SDE)',
     description:
-      'Fuel margins, cross-lease income, environmental risks, and how to underwrite correctly.',
+      'How SDE is calculated in Canadian deals, and why it matters for buyers, sellers, and banks.',
     image:
-      'https://images.unsplash.com/photo-1541976076758-347942db1974?q=80&w=1200&auto=format&fit=crop',
-    href: '/market-insights/gas-station-buying-guide',
-    tag: 'Operational',
+      'https://images.unsplash.com/photo-1464983953574-0892a716854b?q=80&w=1200&auto=format&fit=crop',
+    href: '/market-insights/sde-explained',
+    tag: 'Valuation',
   },
   {
     id: 3,
-    title: 'SaaS Acquisitions: Red Flags & Metrics',
+    title: 'Gas Station Margins: What Actually Drives NOI',
     description:
-      'Churn, MRR quality, customer concentration, and what matters most in SaaS diligence.',
+      'A deep dive into fuel margins, cross-leases, and environmental diligence for Canadian gas stations.',
     image:
-      'https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1200&auto=format&fit=crop',
-    href: '/market-insights/saas-acquisition-metrics',
+      'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1200&auto=format&fit=crop',
+    href: '/market-insights/gas-station-margins',
+    tag: 'Operational',
+  },
+  {
+    id: 4,
+    title: 'Due Diligence Checklist for Asset Deals',
+    description:
+      'Key documents and red flags for asset-based acquisitions in Canada, from leases to tax compliance.',
+    image:
+      'https://images.unsplash.com/photo-1515168833906-d2a3b82b302b?q=80&w=1200&auto=format&fit=crop',
+    href: '/market-insights/due-diligence-checklist',
+    tag: 'Due Diligence',
+  },
+  {
+    id: 5,
+    title: 'Lease vs Franchise: What Changes in Underwriting',
+    description:
+      'How lenders and buyers evaluate franchise vs. leased businesses in the Canadian market.',
+    image:
+      'https://images.unsplash.com/photo-1521737852567-6949f3f9f2b5?q=80&w=1200&auto=format&fit=crop',
+    href: '/market-insights/lease-vs-franchise',
+    tag: 'Underwriting',
+  },
+  {
+    id: 6,
+    title: 'Digital Acquisitions: SaaS & E-Commerce in Canada',
+    description:
+      'What to watch for in churn, MRR, and customer concentration when buying digital businesses.',
+    image:
+      'https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=1200&auto=format&fit=crop',
+    href: '/market-insights/digital-acquisitions',
     tag: 'Digital',
   },
 ];

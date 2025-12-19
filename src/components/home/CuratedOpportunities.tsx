@@ -31,15 +31,22 @@ export default function CuratedOpportunities() {
     fetchListings();
   }, []);
 
+
   if (loading) {
     return (
       <div className="w-full py-24 text-center text-slate-400 bg-white">
-        Loading opportunities...
+        Loading premium Canadian opportunities...
       </div>
     );
   }
 
-  if (listings.length === 0) return null;
+  if (listings.length === 0) {
+    return (
+      <div className="w-full py-24 text-center text-slate-400 bg-white">
+        No featured listings available. Please check back soon for new, verified Canadian opportunities.
+      </div>
+    );
+  }
 
   return (
     <section className="py-20 bg-white"> {/* Matches the clean white background in your screenshot */}

@@ -61,6 +61,40 @@ const RECENT_DEALS = [
 ];
 
 export default function RecentListings() {
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchRecent() {
+      // Fetch 6 newest active listings
+      const { data, error } = await supabase
+        .from('listings')
+        .select('*')
+        .order('created_at', { ascending: false, nullsLast: true })
+        .order('updated_at', { ascending: false, nullsLast: true })
+        .limit(6);
+
+      if (error) {
+        console.error('Error fetching recent:', error);
+      } else if (data) {
+        setListings(data);
+      }
+      setLoading(false);
+    }
+
+    fetchRecent();
+  }, []);
+
+  if (loading) return null; // or a spinner
+  if (listings.length === 0) {
+    return (
+      <div className="w-full py-24 text-center text-slate-400 bg-white">
+        No recent listings found. New Canadian opportunities are added weekly—check back soon.
+      </div>
+    );
+  }
+
   return (
     <section>
       <div className="flex justify-between items-end mb-8">
