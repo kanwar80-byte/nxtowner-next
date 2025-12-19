@@ -15,10 +15,10 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-[#0B1221]">
       {/* Navbar is rendered globally in layout.tsx */}
-      <div className="pt-10 md:pt-12 pb-14 md:pb-16">
+      <div className="pt-10 md:pt-12 pb-16">
         <Hero />
       </div>
-      <div className="py-14 md:py-16">
+      <div className="pt-8">
         <Opportunities />
       </div>
 

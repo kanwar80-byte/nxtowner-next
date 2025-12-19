@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowUpRight } from 'lucide-react';
-import Image from 'next/image';
+import SafeImage from '@/components/shared/SafeImage';
 import Link from 'next/link';
 
 type Article = {
@@ -109,7 +109,7 @@ export default function MarketInsights() {
               {/* Image / Fallback */}
               <div className="relative h-48 bg-gradient-to-br from-slate-200 to-slate-300">
                 {article.image ? (
-                  <Image
+                  <SafeImage
                     src={article.image}
                     alt={article.title}
                     fill

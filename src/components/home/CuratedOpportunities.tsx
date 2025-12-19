@@ -84,6 +84,10 @@ export default function CuratedOpportunities() {
                   src={listing.metrics?.image_url as string || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80'}
                   alt={listing.title}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/images/placeholder.jpg';
+                  }}
                 />
                 
                 {/* TOP LEFT CHIPS */}

@@ -2,6 +2,7 @@
 'use client';
 
 import { ArrowRight, CheckCircle, Globe, MapPin, Zap } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
 import Link from 'next/link';
 
 // Mock Data (Or fetch from Supabase if you have it wired up)
@@ -95,6 +96,7 @@ export default function RecentListings() {
     );
   }
 
+  // Wrap the entire section in a dark panel for visibility and consistency
   return (
     <section>
       <div className="flex justify-between items-end mb-8">
@@ -202,6 +204,151 @@ export default function RecentListings() {
             </div>
           </Link>
         ))}
+      </div>
+    </section>
+    <section className="mt-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="rounded-3xl bg-[#020617] border border-white/10 px-6 py-10">
+          <h2 className="text-2xl font-bold text-slate-50 mb-2">
+            Recent Listings
+          </h2>
+          <p className="text-slate-300 mb-8">
+            The latest opportunities added to NxtOwner — verified, curated, and ready for review.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {listings.map((item) => {
+              // Normalization layer
+              const title = item.title ?? item.name ?? "Untitled Listing";
+              const location = item.location ?? item.city ?? item.region ?? "—";
+              const price = item.asking_price ?? item.price ?? null;
+              const cashflow = item.cashflow_sde ?? item.cashflow ?? item.sde ?? null;
+              const revenue = item.revenue ?? null;
+              const image =
+                item.image ??
+                item.image_url ??
+                item.cover_image ??
+                item.main_image ??
+                item.thumbnail ??
+                null;
+              const isVerified = Boolean(item.is_verified ?? item.verified);
+              const isAiVerified = Boolean(item.is_ai_verified ?? item.ai_verified);
+              const featured = item.featured;
+              const readinessScore =
+                item.readiness_score ??
+                item.readiness?.score ??
+                item.outputs?.readiness?.score ??
+                item.meta?.readiness?.score ??
+                null;
+
+              const readinessTier =
+                item.readiness_tier ??
+                item.readiness?.tier ??
+                item.outputs?.readiness?.tier ??
+                item.meta?.readiness?.tier ??
+                null;
+
+              return (
+                <Link
+                  key={item.id}
+                  href={`/listing/${item.slug || item.id}`}
+                  className="group rounded-2xl bg-white/5 border border-white/10 hover:bg-white/7 hover:border-white/20 transition overflow-hidden flex flex-col h-full"
+                >
+                  <div className="relative aspect-[16/10] bg-white/5 flex items-center justify-center">
+                    {image ? (
+                      <img
+                        src={image}
+                        alt={title}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center w-full h-full">
+                        <span className="text-slate-400 text-xs">No image</span>
+                      </div>
+                    )}
+                    <div className="absolute top-3 left-3 flex gap-2">
+                      {isVerified && (
+                        <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-500/12 border border-emerald-500/25 text-emerald-200 backdrop-blur">
+                          Verified
+                        </span>
+                      )}
+                      {isAiVerified && (
+                        <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-500/12 border border-emerald-500/25 text-emerald-200 backdrop-blur">
+                          AI-Verified
+                        </span>
+                      )}
+                      {featured && (
+                        <span className="text-[10px] px-2 py-1 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/25 text-[#F6E7B0] backdrop-blur">
+                          Featured
+                        </span>
+                      )}
+                      {typeof readinessScore === "number" && (
+                        <span
+                          className={
+                            "text-[10px] px-2 py-1 rounded-full backdrop-blur inline-flex items-center gap-1 " +
+                            (
+                              readinessTier === "deal_ready" || readinessScore >= 80
+                                ? "bg-emerald-500/12 border border-emerald-500/25 text-emerald-200"
+                                : readinessTier === "nearly_ready" || (readinessScore >= 55 && readinessScore < 80)
+                                ? "bg-[#D4AF37]/15 border border-[#D4AF37]/25 text-[#F6E7B0]"
+                                : "bg-white/5 border border-white/10 text-slate-200"
+                            )
+                          }
+                        >
+                          Deal-Ready {readinessScore}/100
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col flex-1 p-4">
+                    <div className="mb-1">
+                      <div className="text-slate-50 font-semibold leading-snug line-clamp-2">
+                        {title}
+                      </div>
+                      {item.category && (
+                        <div className="text-xs text-slate-400 mt-1">{item.category}</div>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 mt-3">
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wide text-slate-400">Price</div>
+                        <div className="text-sm font-semibold text-slate-100">
+                          {price ? `$${price.toLocaleString()}` : <span className="text-slate-400">—</span>}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wide text-slate-400">
+                          {cashflow
+                            ? "Cash Flow"
+                            : revenue
+                            ? "Revenue"
+                            : "Cash Flow"}
+                        </div>
+                        <div className="text-sm font-semibold text-slate-100">
+                          {cashflow
+                            ? `$${cashflow.toLocaleString()}`
+                            : revenue
+                            ? `$${revenue.toLocaleString()}`
+                            : <span className="text-slate-400">—</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 text-slate-400 text-xs flex flex-wrap gap-x-3 gap-y-1">
+                      {location && <span>{location}</span>}
+                      {item.assetType && <span>{item.assetType}</span>}
+                      {/* Add more meta if present */}
+                    </div>
+                    {/* Optional: View button if already present */}
+                    {/* <div className="mt-4">
+                      <button className="bg-white/5 border border-white/10 text-slate-100 px-4 py-2 rounded-lg text-sm hover:bg-white/10 transition">
+                        View
+                      </button>
+                    </div> */}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </section>
   );
