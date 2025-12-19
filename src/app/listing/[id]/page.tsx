@@ -1,14 +1,20 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { Listing } from '@/types/database';
 import { createClient } from '@/utils/supabase/client';
-import { 
-  ArrowLeft, MapPin, CheckCircle, Lock, ShieldCheck, 
-  Globe, Calendar, Users, TrendingUp, DollarSign, PieChart 
+import {
+  ArrowLeft,
+  Calendar,
+  DollarSign,
+  Globe,
+  Lock,
+  MapPin,
+  ShieldCheck,
+  Users
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Listing } from '@/types/database';
+import { useEffect, useState } from 'react';
 
 export default function ListingDetailsPage() {
   const params = useParams();

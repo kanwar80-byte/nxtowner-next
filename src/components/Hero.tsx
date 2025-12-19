@@ -1,110 +1,138 @@
 'use client';
 
 import { MapPin, Search, ShieldCheck, Sparkles, TrendingUp } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import React, { useState } from 'react';
+
+const MESSAGING = {
+  All: {
+    headlineStart: "The Operating System for",
+    headlineGradient: "Business Acquisitions.",
+    // Exact gradient from your screenshot (Blue -> Purple -> Pink)
+    textGradientClass: "from-blue-500 via-purple-500 to-pink-500",
+    
+    subtitle: "Canada’s premier marketplace. Buy and sell verified assets with bank-grade data and AI valuations.",
+    placeholder: "Ask NxtOwner (e.g. 'SaaS under $500k with stable cash flow')",
+    glowColor: "from-blue-600/20 via-purple-600/20 to-pink-600/20"
+  },
+  Operational: {
+    headlineStart: "Institutional-Grade",
+    headlineGradient: "Operational Businesses.",
+    textGradientClass: "from-cyan-400 via-blue-500 to-indigo-500",
+    
+    subtitle: "Acquire verified brick-and-mortar businesses with real cash flow, tangible assets, and lender-ready financials.",
+    placeholder: "Search gas stations, car washes, QSRs, logistics...",
+    glowColor: "from-cyan-500/20 via-blue-500/20 to-indigo-500/20"
+  },
+  Digital: {
+    headlineStart: "Scalable",
+    headlineGradient: "Digital Businesses.",
+    textGradientClass: "from-fuchsia-400 via-pink-500 to-purple-500",
+    
+    subtitle: "Buy and sell SaaS, e-commerce, and online businesses with AI-normalized financials and verified performance.",
+    placeholder: "Search SaaS, e-commerce, agencies, content sites...",
+    glowColor: "from-fuchsia-500/20 via-pink-500/20 to-purple-500/20"
+  }
+};
+
+type TabType = 'All' | 'Operational' | 'Digital';
 
 export default function Hero() {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<TabType>('All');
   const [query, setQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('All'); // 'All', 'Operational', 'Digital'
+
+  const content = MESSAGING[activeTab];
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
-    
-    // Redirect to browse with query AND asset type
-    const typeParam = activeTab !== 'All' ? `&type=${activeTab}` : '';
-    router.push(`/browse?q=${encodeURIComponent(query)}${typeParam}`);
+    router.push(`/browse?q=${encodeURIComponent(query)}&type=${activeTab}`);
   };
 
   return (
-    <div className="relative bg-[#020617] pt-20 pb-32 overflow-hidden">
-      {/* Background Gradients */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl mix-blend-screen animate-blob"></div>
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl mix-blend-screen animate-blob animation-delay-2000"></div>
-      </div>
+    <div className="relative bg-[#050B14] overflow-hidden pt-32 pb-24 md:pt-44 md:pb-32 px-4 flex flex-col items-center">
+      
+      {/* BACKGROUND GLOW */}
+      <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] opacity-30 pointer-events-none transition-all duration-1000 bg-gradient-to-r ${content.glowColor} blur-[120px] rounded-full`}></div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-10">
+      <div className="relative max-w-5xl mx-auto text-center z-10 flex flex-col items-center">
         
-        {/* ASSET TABS */}
-        <div className="inline-flex items-center bg-white/5 border border-white/10 rounded-full p-1 mb-8 backdrop-blur-sm">
-          {['All Assets', 'Operational', 'Digital'].map((tab) => (
+        {/* 1. TABS */}
+        <div className="inline-flex bg-[#0F1623] p-1.5 rounded-full border border-slate-800 mb-10 shadow-xl">
+          {(['All', 'Operational', 'Digital'] as TabType[]).map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab.split(' ')[0])}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                activeTab === tab.split(' ')[0]
-                  ? 'bg-blue-600 text-white shadow-lg'
+              onClick={() => setActiveTab(tab)}
+              className={`px-6 py-1.5 rounded-full text-xs md:text-sm font-bold transition-all duration-300 ${
+                activeTab === tab 
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' 
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              {tab}
+              {tab === 'All' ? 'All Assets' : tab}
             </button>
           ))}
         </div>
 
-        {/* HEADLINE */}
-        <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-6">
-          The Operating System for <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-            Business Acquisitions.
+        {/* 2. HEADLINE */}
+        <h1 className="text-5xl md:text-7xl lg:text-[5rem] font-black text-white tracking-tight mb-6 leading-[1.1]">
+          {content.headlineStart} 
+          <br /> 
+          <span className={`bg-clip-text text-transparent bg-gradient-to-r ${content.textGradientClass} animate-in fade-in duration-1000`}>
+            {content.headlineGradient}
           </span>
         </h1>
-        
-        <p className="max-w-2xl mx-auto text-lg text-slate-400 mb-10">
-          Canada’s premier marketplace. Buy and sell verified assets with bank-grade data and AI valuations.
+
+        {/* 3. SUBTITLE */}
+        <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
+          {content.subtitle}
         </p>
 
-        {/* --- THE "ASK NXTOWNER" SEARCH BAR --- */}
-        <div className="max-w-2xl mx-auto">
-          <form onSubmit={handleSearch} className="relative group">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
-            </div>
-            <input
-              type="text"
+        {/* 4. SEARCH BAR */}
+        <form onSubmit={handleSearch} className="w-full max-w-2xl relative mb-8">
+          <div className="relative bg-white rounded-full p-1.5 flex items-center shadow-2xl shadow-blue-900/10 h-14 pl-5">
+            <Search className="text-slate-400 mr-3" size={20} />
+            <input 
+              type="text" 
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="block w-full pl-12 pr-40 py-4 bg-white rounded-2xl text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-2xl transition-all text-lg"
-              placeholder="Ask NxtOwner (e.g. 'SaaS under $500k with stable cash flow')..."
+              placeholder={content.placeholder}
+              className="flex-1 bg-transparent border-none focus:ring-0 text-slate-900 placeholder:text-slate-400 text-sm md:text-base h-full outline-none"
             />
-            
-            {/* THE MAGIC BUTTON */}
-            <button
+            <button 
               type="submit"
-              className="absolute right-2 top-2 bottom-2 bg-[#020617] hover:bg-slate-900 text-white px-6 rounded-xl font-bold flex items-center gap-2 transition-all hover:scale-105 border border-white/10"
+              className="bg-[#020617] text-white px-5 py-2.5 rounded-full font-bold text-xs md:text-sm flex items-center gap-2 hover:bg-slate-800 transition-all mr-1"
             >
-              <Sparkles size={16} className="text-blue-400 animate-pulse" />
+              <Sparkles size={14} className="text-[#EAB308]" /> {/* Gold Icon Accent */}
               Ask NxtOwner
             </button>
-          </form>
-
-          {/* Quick Tags */}
-          <div className="flex flex-wrap justify-center gap-3 mt-6 text-sm">
-            <button onClick={() => router.push('/browse?maxPrice=500000')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10 hover:text-white transition-colors">
-              <TrendingUp size={14} /> Under $500k
-            </button>
-            <button onClick={() => router.push('/browse?verified=true')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10 hover:text-white transition-colors">
-              <ShieldCheck size={14} /> Verified Cash Flow
-            </button>
-            <button onClick={() => router.push('/browse?q=franchise')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10 hover:text-white transition-colors">
-              <MapPin size={14} /> Franchise Resale
-            </button>
           </div>
+        </form>
+
+        {/* 5. TAGS: GREEN & ORANGE ACCENTS */}
+        <div className="flex flex-wrap justify-center gap-3 mb-12">
+          {/* GREEN: Verified / Money */}
+          <button onClick={() => router.push('/browse?maxPrice=500000')} className="flex items-center gap-2 bg-[#0F1623] border border-slate-800 text-slate-300 px-4 py-2 rounded-xl text-xs font-bold hover:border-emerald-500/60 hover:text-emerald-400 transition-colors group">
+            <TrendingUp size={14} className="text-emerald-500 group-hover:text-emerald-400" /> Under $500k
+          </button>
+          <button onClick={() => router.push('/browse?verified=true')} className="flex items-center gap-2 bg-[#0F1623] border border-slate-800 text-slate-300 px-4 py-2 rounded-xl text-xs font-bold hover:border-emerald-500/60 hover:text-emerald-400 transition-colors group">
+            <ShieldCheck size={14} className="text-emerald-500 group-hover:text-emerald-400" /> Verified Cash Flow
+          </button>
+          {/* ORANGE: Opportunity / Franchise */}
+          <button onClick={() => router.push('/browse?type=Franchise')} className="flex items-center gap-2 bg-[#0F1623] border border-slate-800 text-slate-300 px-4 py-2 rounded-xl text-xs font-bold hover:border-orange-500/60 hover:text-orange-400 transition-colors group">
+            <MapPin size={14} className="text-orange-500 group-hover:text-orange-400" /> Franchise Resale
+          </button>
         </div>
 
-        {/* SELL YOUR BUSINESS LINK */}
-        <div className="mt-12">
-          <Link 
-            href="/sell/onboarding"
-            className="inline-block bg-blue-600 text-white px-8 py-3 rounded-full text-lg font-semibold shadow-md hover:bg-blue-700 transition-all"
-          >
-            Sell Your Business
-          </Link>
-        </div>
+        {/* 6. MAIN CTA: GOLD (Matches List Your Business) */}
+        <button 
+          onClick={() => router.push('/sell/onboarding')}
+          className="bg-[#EAB308] hover:bg-[#CA8A04] text-slate-900 px-10 py-4 rounded-full font-bold text-lg shadow-xl shadow-[#EAB308]/20 transition-all transform hover:-translate-y-1 hover:scale-105"
+        >
+          Sell Your Business
+        </button>
+
       </div>
     </div>
   );

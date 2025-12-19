@@ -1,16 +1,25 @@
 'use client';
 
 import { createClient } from '@/utils/supabase/client';
-import { Menu, Search, Sparkles, UserCircle, X } from 'lucide-react';
+import { Menu, Search, Sparkles, X } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
 
 export default function Navbar() {
   const router = useRouter();
+  const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const supabase = createClient();
+
+  // Handle Scroll Effect
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,18 +29,73 @@ export default function Navbar() {
     }
   };
 
+  // Transparent on top, Dark Navy when scrolled
+  const navClasses = `fixed w-full z-50 transition-all duration-300 ${
+    isScrolled ? 'bg-[#0f172a]/95 backdrop-blur-md shadow-lg py-3' : 'bg-transparent py-5'
+  }`;
+
   return (
-    <nav className="sticky top-0 z-50 bg-[#020617] border-b border-white/10 text-white">
+    <nav className={navClasses}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-4">
+        <div className="flex justify-between items-center">
           
-          {/* 1. LOGO */}
-          <Link href="/" className="flex-shrink-0 flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white">N</div>
-            <span className="text-xl font-bold tracking-tight">NxtOwner<span className="text-blue-500">.ca</span></span>
+          {/* LOGO: Nxt(White) Owner(Gold) */}
+          <Link href="/" className="flex items-center gap-1 group">
+            <div className="bg-blue-600 text-white font-bold text-xl h-8 w-8 rounded flex items-center justify-center">N</div>
+            <span className="text-2xl font-bold tracking-tight text-white">
+              Nxt<span className="text-[#EAB308]">Owner</span>
+            </span>
           </Link>
 
-          {/* 2. THE "NXTOWNER" AI SEARCH BAR (Center) */}
+          {/* DESKTOP MENU */}
+          <div className="hidden md:flex items-center space-x-8">
+            {['Browse', 'Valuation', 'Resources', 'Partners'].map((item) => (
+               <Link key={item} href={`/${item.toLowerCase()}`} className="text-sm font-medium text-slate-300 hover:text-white transition-colors">
+                 {item}
+               </Link>
+            ))}
+            
+            <Link href="/login" className="text-sm font-bold text-white hover:text-[#EAB308] transition-colors">
+              Sign In
+            </Link>
+
+            {/* GOLD BUTTON (Primary Action) */}
+            <Link 
+              href="/sell/onboarding" 
+              className="bg-[#EAB308] hover:bg-[#CA8A04] text-slate-900 px-5 py-2.5 rounded-full font-bold text-sm transition-all shadow-lg hover:shadow-[#EAB308]/20 transform hover:-translate-y-0.5"
+            >
+              List Your Business
+            </Link>
+          </div>
+
+          {/* Mobile Menu Button */}
+          <div className="md:hidden">
+            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-white">
+              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Menu (Dropdown) */}
+      {isMenuOpen && (
+        <div className="md:hidden bg-[#0f172a] border-t border-slate-800">
+          <div className="px-4 pt-2 pb-8 space-y-1">
+             {['Browse', 'Valuation', 'Resources', 'Partners'].map((item) => (
+               <Link key={item} href={`/${item.toLowerCase()}`} className="block px-3 py-4 text-base font-medium text-slate-300 hover:text-white border-b border-slate-800">
+                 {item}
+               </Link>
+             ))}
+             <Link href="/sell/onboarding" className="block mt-4 text-center bg-[#EAB308] text-slate-900 py-3 rounded-lg font-bold">
+               List Your Business
+             </Link>
+          </div>
+        </div>
+      )}
+
+      {/* 2. THE "NXTOWNER" AI SEARCH BAR (Center) - Always Visible */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between gap-4">
           <div className="hidden md:flex flex-1 max-w-xl mx-4">
             <form onSubmit={handleSearch} className="relative w-full group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -54,64 +118,8 @@ export default function Navbar() {
               </button>
             </form>
           </div>
-
-          {/* 3. NAVIGATION LINKS (Right) */}
-          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
-            <Link href="/browse" className="hover:text-white transition-colors">Buy</Link>
-            <Link href="/sell" className="hover:text-white transition-colors">Sell</Link>
-            <Link href="/valuation" className="hover:text-white transition-colors">Valuation</Link>
-            
-            <div className="h-6 w-px bg-white/10 mx-2"></div>
-            
-            <Link href="/dashboard" className="flex items-center gap-2 hover:text-white">
-              <UserCircle size={20} />
-              <span>Sign In</span>
-            </Link>
-
-            {/* 👇 THIS IS THE CRITICAL UPDATE 👇 */}
-            <Link 
-              href="/sell/onboarding"  
-              className="bg-[#EAB308] text-slate-900 hover:bg-[#CA8A04] px-4 py-2 rounded-full font-bold text-xs transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-            >
-              List Your Business
-            </Link>
-          </div>
-
-          {/* Mobile Menu Button */}
-          <div className="md:hidden">
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-slate-300 hover:text-white">
-              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
         </div>
       </div>
-
-      {/* Mobile Menu (Dropdown) */}
-      {isMenuOpen && (
-        <div className="md:hidden bg-slate-900 border-t border-white/10 p-4 space-y-4">
-          <form onSubmit={handleSearch} className="relative">
-             <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search..."
-                className="w-full bg-slate-800 text-white p-3 pl-4 rounded-lg border border-slate-700 focus:border-blue-500 outline-none"
-             />
-             <button type="submit" className="absolute right-2 top-2 bg-blue-600 p-1.5 rounded-md text-white"><Search size={16} /></button>
-          </form>
-          <div className="flex flex-col space-y-3 text-slate-300 font-medium">
-            <Link href="/browse" className="block py-2 hover:text-white">Buy a Business</Link>
-            <Link 
-              href="/sell/onboarding" // 👈 CHANGE THIS from '/create-listing'
-              className="block py-2 hover:text-white"
-            >
-              Sell a Business
-            </Link>
-            <Link href="/valuation" className="block py-2 hover:text-white">Free Valuation</Link>
-            <Link href="/dashboard" className="block py-2 text-blue-400">My Dashboard</Link>
-          </div>
-        </div>
-      )}
     </nav>
   );
 }

@@ -52,9 +52,21 @@ export default function Home() {
                 <div className="p-8 bg-[#0B1221] rounded-3xl shadow-2xl border border-slate-800 text-white">
                   <h3 className="text-xl font-bold mb-6 flex items-center">The NxtOwner Standard <span className="ml-3 px-2 py-0.5 bg-blue-600 text-[10px] rounded uppercase tracking-wider text-white">Pro</span></h3>
                   <ul className="space-y-5">
-                    <li className="flex items-center font-medium"><CheckCircle2 className="w-5 h-5 text-yellow-400 mr-3 shrink-0" />AI-Normalized Financials</li>
-                    <li className="flex items-center font-medium"><CheckCircle2 className="w-5 h-5 text-blue-400 mr-3 shrink-0" />KYC-Verified Sellers & Buyers</li>
-                    <li className="flex items-center font-medium"><CheckCircle2 className="w-5 h-5 text-blue-400 mr-3 shrink-0" />Integrated Data Rooms with NDA</li>
+                    <li className="flex items-center font-medium">
+                      {/* GOLD CHECK for Financials */}
+                      <CheckCircle2 className="w-5 h-5 text-[#EAB308] mr-3 shrink-0" />
+                      AI-Normalized Financials
+                    </li>
+                    <li className="flex items-center font-medium">
+                      {/* EMERALD CHECK for Verification */}
+                      <CheckCircle2 className="w-5 h-5 text-[#10B981] mr-3 shrink-0" />
+                      KYC-Verified Sellers & Buyers
+                    </li>
+                    <li className="flex items-center font-medium">
+                      {/* EMERALD CHECK for Security */}
+                      <CheckCircle2 className="w-5 h-5 text-[#10B981] mr-3 shrink-0" />
+                      Integrated Data Rooms with NDA
+                    </li>
                   </ul>
                 </div>
             </div>

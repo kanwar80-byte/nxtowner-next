@@ -1,307 +1,127 @@
-type MarketplaceMode = 'all' | 'operational' | 'digital';
-type CategoryKind = 'operational' | 'digital';
+import { ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 
-interface CategoryItem {
-  id: string;
-  label: string;
-  description: string;
-  kind: CategoryKind;
-  href?: string;
-  image?: string;
-}
-
-interface CategoryGridProps {
-  mode: MarketplaceMode;
-}
-
-const CATEGORIES: CategoryItem[] = [
-  // OPERATIONAL
+const CATEGORIES = [
+  // --- OPERATIONAL (Updated to match Sidebar Taxonomy) ---
   {
-    id: "gas-stations",
-    label: "Gas Stations & C-Stores",
-    description: "Fuel retail and convenience stores across Canada.",
-    kind: "operational",
-    image: 'https://images.unsplash.com/photo-1545262810-77515befe149?w=400&h=300&fit=crop',
+    title: 'Gas Stations & Auto', // Changed Title to match broader category
+    type: 'Operational',
+    count: 'High Demand',
+    image: 'https://images.unsplash.com/photo-1569062363389-9f7926b47c0a?auto=format&fit=crop&q=80',
+    slug: 'Fuel & Auto' // 👈 FIXED: Matches Sidebar
   },
   {
-    id: "car-washes",
-    label: "Car Washes",
-    description: "Touchless, tunnel, and coin-op wash systems.",
-    kind: "operational",
-    image: 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=400&h=300&fit=crop',
+    title: 'Car Washes & Auto Service',
+    type: 'Operational',
+    count: 'Active',
+    image: 'https://images.unsplash.com/photo-1605152276897-4f618f831968?auto=format&fit=crop&q=80',
+    slug: 'Automotive & Transportation' // 👈 FIXED
   },
   {
-    id: "qsr-restaurants",
-    label: "QSRs & Restaurants",
-    description: "Quick service restaurants and foodservice brands.",
-    kind: "operational",
-    image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=300&fit=crop',
+    title: 'Restaurants & Hospitality',
+    type: 'Operational',
+    count: 'Popular',
+    image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&q=80',
+    slug: 'Food & Hospitality' // 👈 FIXED
   },
   {
-    id: "warehouses-industrial",
-    label: "Warehouses & Industrial",
-    description: "Logistics, distribution, and light industrial assets.",
-    kind: "operational",
-    image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=400&h=300&fit=crop',
+    title: 'Warehouses & Industrial',
+    type: 'Operational',
+    count: 'Growing',
+    image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80',
+    slug: 'Industrial & Logistics' // 👈 FIXED
   },
   {
-    id: "retail-franchise",
-    label: "Retail & Franchise Businesses",
-    description: "Brick-and-mortar retail and franchise resales.",
-    kind: "operational",
-    image: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=400&h=300&fit=crop',
+    title: 'Retail & Franchise',
+    type: 'Operational',
+    count: 'Steady',
+    image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&q=80',
+    slug: 'Retail & Franchise' // 👈 FIXED
+  },
+  
+  // --- DIGITAL (These usually match exactly) ---
+  {
+    title: 'SaaS (Software)',
+    type: 'Digital',
+    count: 'Digital',
+    image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80',
+    slug: 'SaaS'
   },
   {
-    id: "automotive-services",
-    label: "Automotive & Service Centers",
-    description: "Auto repair, tire shops, and service businesses.",
-    kind: "operational",
-    image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=300&fit=crop',
+    title: 'E-commerce Stores',
+    type: 'Digital',
+    count: 'Digital',
+    image: 'https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?auto=format&fit=crop&q=80',
+    slug: 'E-commerce'
   },
   {
-    id: "hospitality",
-    label: "Hospitality & Accommodation",
-    description: "Hotels, motels, and hospitality businesses.",
-    kind: "operational",
-    image: 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=300&fit=crop',
-  },
-
-  // DIGITAL
-  {
-    id: "saas",
-    label: "SaaS (Software Businesses)",
-    description: "Recurring-revenue software and micro-SaaS.",
-    kind: "digital",
-    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=300&fit=crop',
+    title: 'Content & Media',
+    type: 'Digital',
+    count: 'Digital',
+    image: 'https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?auto=format&fit=crop&q=80',
+    slug: 'Content'
   },
   {
-    id: "ecommerce",
-    label: "E-Commerce Stores",
-    description: "Shopify brands, Amazon FBA, and DTC stores.",
-    kind: "digital",
-    image: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&h=300&fit=crop',
-  },
-  {
-    id: "content-media",
-    label: "Content & Media Sites",
-    description: "Blogs, newsletters, and niche content assets.",
-    kind: "digital",
-    image: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=400&h=300&fit=crop',
-  },
-  {
-    id: "agencies-services",
-    label: "Agencies & Service Businesses",
-    description: "Marketing, dev, consulting, and online services.",
-    kind: "digital",
-    image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=400&h=300&fit=crop',
-  },
-  {
-    id: "marketplaces-platforms",
-    label: "Marketplaces & Platforms",
-    description: "Two-sided platforms and digital exchanges.",
-    kind: "digital",
-    image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=300&fit=crop',
+    title: 'Agencies & Services',
+    type: 'Digital',
+    count: 'Digital',
+    image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80',
+    slug: 'Agency'
   },
 ];
 
-export default function CategoryGrid({ mode }: CategoryGridProps) {
-  // Filter categories based on mode
-  const visibleCategories =
-    mode === 'all'
-      ? CATEGORIES
-      : CATEGORIES.filter(cat => cat.kind === mode);
-
+export default function CategoryGrid() {
   return (
-    <section className="bg-[#F8FAFC] py-12 md:py-16">
+    <section className="py-24 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-4xl font-bold text-gray-900 text-center mb-8">
-          {mode === 'all' && 'Browse by Category'}
-          {mode === 'operational' && 'Operational Business Categories'}
-          {mode === 'digital' && 'Digital Asset Categories'}
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
-          {visibleCategories.map((category: CategoryItem, index: number) => (
-            <a
-              key={category.id}
-              href="/browse"
-              className="group relative overflow-hidden rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.16)] transition-all duration-300 hover:scale-[1.02] animate-fadeInUp"
-              style={{ animationDelay: `${index * 80}ms` }}
+        
+        {/* HEADER */}
+        <div className="flex justify-between items-end mb-12">
+          <div>
+            <h2 className="text-3xl font-bold text-slate-900">Browse by Category</h2>
+            <p className="text-slate-500 mt-2">Explore opportunities by asset class and financial model.</p>
+          </div>
+          <Link href="/browse" className="text-blue-600 font-bold flex items-center gap-1 hover:gap-2 transition-all text-sm">
+            View all <ArrowRight size={16} />
+          </Link>
+        </div>
+
+        {/* GRID */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {CATEGORIES.map((cat, idx) => (
+            <Link 
+              key={idx} 
+              href={`/browse?category=${encodeURIComponent(cat.slug)}&type=${cat.type}`}
+              className="group relative h-64 rounded-xl overflow-hidden cursor-pointer"
             >
-              <div className="aspect-[4/3] bg-gray-300 overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={category.image}
-                  alt={category.label}
-                  className="w-full h-full object-cover group-hover:scale-105 group-hover:brightness-110 transition-transform duration-500"
-                />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent flex items-end">
-                <div className="p-4 w-full">
-                  <h3 className="text-white text-2xl font-semibold drop-shadow-lg">
-                    {category.label}
-                  </h3>
-                  <p className="text-white/80 text-sm mt-1">
-                    {category.description}
-                  </p>
+              {/* Background Image */}
+              <img 
+                src={cat.image} 
+                alt={cat.title} 
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+              />
+              
+              {/* Overlay Gradient */}
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent opacity-80 group-hover:opacity-90 transition-opacity"></div>
+
+              {/* Content */}
+              <div className="absolute inset-0 p-6 flex flex-col justify-end">
+                <div className="flex justify-between items-start mb-2">
+                   <h3 className="text-white font-bold text-lg leading-tight">{cat.title}</h3>
+                   <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded border border-white/10">
+                     {cat.count}
+                   </span>
                 </div>
+                
+                {/* Micro-copy based on type */}
+                <p className="text-slate-300 text-xs opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                  {cat.type === 'Operational' ? 'Real Estate backed • Cash Flow' : 'Remote • Scalable • High Margin'}
+                </p>
               </div>
-            </a>
+            </Link>
           ))}
         </div>
-      </div>
-    </section>
-  );
-}
-type MarketplaceMode = 'all' | 'operational' | 'digital';
-type CategoryKind = 'operational' | 'digital';
 
-interface CategoryItem {
-  id: string;
-  label: string;
-  description: string;
-  kind: CategoryKind;
-  href?: string;
-  image?: string;
-}
-
-interface CategoryGridProps {
-  mode: MarketplaceMode;
-}
-
-const CATEGORIES: CategoryItem[] = [
-  // OPERATIONAL
-  {
-    id: "gas-stations",
-    label: "Gas Stations & C-Stores",
-    description: "Fuel retail and convenience stores across Canada.",
-    kind: "operational",
-    image: 'https://images.unsplash.com/photo-1545262810-77515befe149?w=400&h=300&fit=crop',
-  },
-  {
-    id: "car-washes",
-    label: "Car Washes",
-    description: "Touchless, tunnel, and coin-op wash systems.",
-    kind: "operational",
-    image: 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=400&h=300&fit=crop',
-  },
-  {
-    id: "qsr-restaurants",
-    label: "QSRs & Restaurants",
-    description: "Quick service restaurants and foodservice brands.",
-    kind: "operational",
-    image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=300&fit=crop',
-  },
-  {
-    id: "warehouses-industrial",
-    label: "Warehouses & Industrial",
-    description: "Logistics, distribution, and light industrial assets.",
-    kind: "operational",
-    image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=400&h=300&fit=crop',
-  },
-  {
-    id: "retail-franchise",
-    label: "Retail & Franchise Businesses",
-    description: "Brick-and-mortar retail and franchise resales.",
-    kind: "operational",
-    image: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=400&h=300&fit=crop',
-  },
-  {
-    id: "automotive-services",
-    label: "Automotive & Service Centers",
-    description: "Auto repair, tire shops, and service businesses.",
-    kind: "operational",
-    image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=300&fit=crop',
-  },
-  {
-    id: "hospitality",
-    label: "Hospitality & Accommodation",
-    description: "Hotels, motels, and hospitality businesses.",
-    kind: "operational",
-    image: 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&h=300&fit=crop',
-  },
-
-  // DIGITAL
-  {
-    id: "saas",
-    label: "SaaS (Software Businesses)",
-    description: "Recurring-revenue software and micro-SaaS.",
-    kind: "digital",
-    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=300&fit=crop',
-  },
-  {
-    id: "ecommerce",
-    label: "E-Commerce Stores",
-    description: "Shopify brands, Amazon FBA, and DTC stores.",
-    kind: "digital",
-    image: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&h=300&fit=crop',
-  },
-  {
-    id: "content-media",
-    label: "Content & Media Sites",
-    description: "Blogs, newsletters, and niche content assets.",
-    kind: "digital",
-    image: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=400&h=300&fit=crop',
-  },
-  {
-    id: "agencies-services",
-    label: "Agencies & Service Businesses",
-    description: "Marketing, dev, consulting, and online services.",
-    kind: "digital",
-    image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=400&h=300&fit=crop',
-  },
-  {
-    id: "marketplaces-platforms",
-    label: "Marketplaces & Platforms",
-    description: "Two-sided platforms and digital exchanges.",
-    kind: "digital",
-    image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=300&fit=crop',
-  },
-];
-
-export default function CategoryGrid({ mode }: CategoryGridProps) {
-  // Filter categories based on mode
-  const visibleCategories =
-    mode === 'all'
-      ? CATEGORIES
-      : CATEGORIES.filter(cat => cat.kind === mode);
-
-  return (
-    <section className="bg-[#F8FAFC] py-12 md:py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-4xl font-bold text-gray-900 text-center mb-8">
-          {mode === 'all' && 'Browse by Category'}
-          {mode === 'operational' && 'Operational Business Categories'}
-          {mode === 'digital' && 'Digital Asset Categories'}
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
-          {visibleCategories.map((category: CategoryItem, index: number) => (
-            <a
-              key={category.id}
-              href="/browse"
-              className="group relative overflow-hidden rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.16)] transition-all duration-300 hover:scale-[1.02] animate-fadeInUp"
-              style={{ animationDelay: `${index * 80}ms` }}
-            >
-              <div className="aspect-[4/3] bg-gray-300 overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={category.image}
-                  alt={category.label}
-                  className="w-full h-full object-cover group-hover:scale-105 group-hover:brightness-110 transition-transform duration-500"
-                />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent flex items-end">
-                <div className="p-4 w-full">
-                  <h3 className="text-white text-2xl font-semibold drop-shadow-lg">
-                    {category.label}
-                  </h3>
-                  <p className="text-white/80 text-sm mt-1">
-                    {category.description}
-                  </p>
-                </div>
-              </div>
-            </a>
-          ))}
-        </div>
       </div>
     </section>
   );

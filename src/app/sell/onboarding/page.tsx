@@ -1,13 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
-import { 
-  ArrowRight, ArrowLeft, CheckCircle, Sparkles, 
-  Building2, Monitor, Image as ImageIcon, Globe, Calendar, Users
+import { createListing } from '@/app/actions/createListing';
+import { AssetType, TAXONOMY } from '@/lib/taxonomy';
+import {
+   ArrowRight,
+   Building2,
+   CheckCircle,
+   Globe,
+   Image as ImageIcon,
+   Monitor,
+   Sparkles
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { createListing } from '@/app/actions/createListing';
-import { TAXONOMY, AssetType } from '@/lib/taxonomy';
+import { useState } from 'react';
 
 export default function SellerOnboarding() {
   const router = useRouter();

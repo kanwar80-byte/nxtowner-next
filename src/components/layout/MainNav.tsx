@@ -202,10 +202,11 @@ export function MainNav() {
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
         
         {/* LOGO */}
-        <Link href="/" className="flex items-center gap-2 text-2xl font-extrabold tracking-tight text-white hover:opacity-90 transition-opacity">
-           {/* If you have the image logo working, uncomment below, otherwise text is fine for now */}
-           {/* <Image src="/logo.jpg" alt="NxtOwner" width={40} height={40} className="object-contain" /> */}
-           NxtOwner.ca
+        <Link href="/" className="flex items-center gap-1 group">
+          <div className="bg-blue-600 text-white font-bold text-xl h-8 w-8 rounded flex items-center justify-center">N</div>
+          <span className="text-2xl font-bold tracking-tight text-white">
+            Nxt<span className="text-[#EAB308]">Owner</span>
+          </span>
         </Link>
 
         {/* DESKTOP LINKS */}

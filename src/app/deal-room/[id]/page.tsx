@@ -1,24 +1,18 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { Listing } from '@/types/database';
 import { createClient } from '@/utils/supabase/client';
 import {
-  CheckCircle,
-  ChevronRight,
+  AlertTriangle,
   FileText,
   Lock,
-  Menu,
-  MessageSquare,
-  Paperclip,
-  Send,
-  ShieldCheck,
   PieChart,
-  TrendingUp,
-  AlertTriangle
+  ShieldCheck,
+  TrendingUp
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Listing } from '@/types/database';
+import { useEffect, useState } from 'react';
 
 export default function DealRoomPage() {
   const params = useParams();
