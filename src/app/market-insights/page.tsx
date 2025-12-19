@@ -1,11 +1,9 @@
 import React from 'react';
-import Navbar from '@/components/Navbar'; 
-import Footer from '@/components/Footer'; 
+
 
 export default function MarketInsights() {
   return (
     <main className="min-h-screen bg-slate-50">
-      <Navbar />
       <div className="max-w-7xl mx-auto px-4 py-20">
         <div className="text-center max-w-2xl mx-auto">
             <h1 className="text-4xl font-bold text-slate-900 mb-6">Market Insights</h1>
@@ -18,7 +16,7 @@ export default function MarketInsights() {
             </div>
         </div>
       </div>
-      <Footer />
+
     </main>
   );
 }
