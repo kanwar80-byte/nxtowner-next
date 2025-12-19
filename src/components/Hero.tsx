@@ -1,122 +1,101 @@
 'use client';
-import { Search, ShieldCheck, TrendingUp } from 'lucide-react';
+
+import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Search, Sparkles, TrendingUp, ShieldCheck, MapPin } from 'lucide-react';
 
 export default function Hero() {
-  // State to track the active asset type
-  const [activeType, setActiveType] = useState<'all' | 'operational' | 'digital'>('all');
+  const router = useRouter();
+  const [query, setQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('All'); // 'All', 'Operational', 'Digital'
 
-  // Dynamic content configuration
-  const content = {
-    all: {
-      label: "All Assets",
-      text: "Canada’s premier marketplace. Buy and sell verified assets with bank-grade data and AI valuations."
-    },
-    operational: {
-      label: "Operational Assets",
-      text: "Verified brick-and-mortar businesses with real cash flow, assets, and upside."
-    },
-    digital: {
-      label: "Digital Assets",
-      text: "Scalable online businesses with verified performance and AI-normalized financials."
-    }
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+    
+    // Redirect to browse with query AND asset type
+    const typeParam = activeTab !== 'All' ? `&type=${activeTab}` : '';
+    router.push(`/browse?q=${encodeURIComponent(query)}${typeParam}`);
   };
 
   return (
-    <section className="relative bg-[#0B1221] pt-28 pb-20 px-4 overflow-hidden min-h-[85vh] flex items-center">
-      {/* Background Ambience */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-        <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-blue-900/20 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#D4AF37]/5 rounded-full blur-[100px]" />
+    <div className="relative bg-[#020617] pt-20 pb-32 overflow-hidden">
+      {/* Background Gradients */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl mix-blend-screen animate-blob"></div>
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl mix-blend-screen animate-blob animation-delay-2000"></div>
       </div>
 
-      <div className="relative z-10 max-w-6xl mx-auto text-center">
-        {/* Dynamic Asset Toggle */}
-        <div className="inline-flex bg-white/5 p-1 rounded-full backdrop-blur-sm border border-white/10 mb-8 animate-fade-in-up">
-          <button 
-            onClick={() => setActiveType('all')}
-            className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${
-              activeType === 'all' 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' 
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            All Assets
-          </button>
-          <button 
-            onClick={() => setActiveType('operational')}
-            className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${
-              activeType === 'operational' 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' 
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Operational
-          </button>
-          <button 
-            onClick={() => setActiveType('digital')}
-            className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${
-              activeType === 'digital' 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' 
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Digital
-          </button>
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-10">
+        
+        {/* ASSET TABS */}
+        <div className="inline-flex items-center bg-white/5 border border-white/10 rounded-full p-1 mb-8 backdrop-blur-sm">
+          {['All Assets', 'Operational', 'Digital'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab.split(' ')[0])}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                activeTab === tab.split(' ')[0]
+                  ? 'bg-blue-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
 
-        {/* Main Headline */}
-        <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight mb-6 leading-tight">
-          The Operating System for <br className="hidden md:block"/>
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-slate-400">
+        {/* HEADLINE */}
+        <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-6">
+          The Operating System for <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
             Business Acquisitions.
           </span>
         </h1>
-
-        {/* Dynamic Subtitle */}
-        <p className="text-lg md:text-xl text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed min-h-[3.5rem] transition-opacity duration-300">
-          {content[activeType].text}
+        
+        <p className="max-w-2xl mx-auto text-lg text-slate-400 mb-10">
+          Canada’s premier marketplace. Buy and sell verified assets with bank-grade data and AI valuations.
         </p>
 
-        {/* Search Module */}
-        <div className="bg-white p-2 rounded-2xl shadow-2xl shadow-blue-900/20 max-w-4xl mx-auto flex flex-col md:flex-row gap-2 transform hover:scale-[1.01] transition-transform duration-300">
-          <div className="flex-1 px-6 flex items-center border-b md:border-b-0 md:border-r border-slate-100 py-3 md:py-0">
-            <Search className="w-5 h-5 text-slate-400 mr-4" />
-            <input 
-              type="text" 
-              placeholder={
-                activeType === 'digital' 
-                  ? "Search 'SaaS', 'E-commerce', 'Agency'..." 
-                  : activeType === 'operational'
-                  ? "Search 'Gas Station', 'Manufacturing', 'Retail'..."
-                  : "Search 'SaaS', 'Gas Station', 'Logistics'..."
-              }
-              className="w-full text-lg outline-none text-slate-900 placeholder:text-slate-400 bg-transparent"
+        {/* --- THE "ASK NXTOWNER" SEARCH BAR --- */}
+        <div className="max-w-2xl mx-auto">
+          <form onSubmit={handleSearch} className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
+            </div>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="block w-full pl-12 pr-40 py-4 bg-white rounded-2xl text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-2xl transition-all text-lg"
+              placeholder="Ask NxtOwner (e.g. 'SaaS under $500k with stable cash flow')..."
             />
+            
+            {/* THE MAGIC BUTTON */}
+            <button
+              type="submit"
+              className="absolute right-2 top-2 bottom-2 bg-[#020617] hover:bg-slate-900 text-white px-6 rounded-xl font-bold flex items-center gap-2 transition-all hover:scale-105 border border-white/10"
+            >
+              <Sparkles size={16} className="text-blue-400 animate-pulse" />
+              Ask NxtOwner
+            </button>
+          </form>
+
+          {/* Quick Tags */}
+          <div className="flex flex-wrap justify-center gap-3 mt-6 text-sm">
+            <button onClick={() => router.push('/browse?maxPrice=500000')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10 hover:text-white transition-colors">
+              <TrendingUp size={14} /> Under $500k
+            </button>
+            <button onClick={() => router.push('/browse?verified=true')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10 hover:text-white transition-colors">
+              <ShieldCheck size={14} /> Verified Cash Flow
+            </button>
+            <button onClick={() => router.push('/browse?q=franchise')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10 hover:text-white transition-colors">
+              <MapPin size={14} /> Franchise Resale
+            </button>
           </div>
-          <button className="bg-[#0B1221] hover:bg-[#1a253a] text-white px-10 py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2">
-            Search
-          </button>
         </div>
-
-        {/* Quick Filters */}
-        <div className="mt-8 flex flex-wrap justify-center gap-4 text-sm font-medium text-slate-400">
-          <span className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5">
-            <TrendingUp className="w-4 h-4 text-[#D4AF37]" />
-            Under $500k
-          </span>
-          <span className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5">
-            <ShieldCheck className="w-4 h-4 text-[#D4AF37]" />
-            Verified Cash Flow
-          </span>
-          {activeType !== 'digital' && (
-            <span className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5">
-              🏢 Franchise Resale
-            </span>
-          )}
-        </div>
-
       </div>
-    </section>
+    </div>
   );
 }

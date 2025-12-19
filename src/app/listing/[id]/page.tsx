@@ -1,222 +1,184 @@
+'use client';
 
-import React from 'react';
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { Listing } from '@/types/database';
 import { createClient } from '@/utils/supabase/client';
-import { MapPin, ShieldCheck, ArrowLeft, Lock, FileText, Globe, DollarSign, Zap } from 'lucide-react';
-import { getBuyerAccessTier } from '@/app/actions/userAccess';
-import { TieredContent } from '@/components/common/TieredContent';
-import Image from 'next/image';
+import {
+  ArrowLeft,
+  CheckCircle,
+  Lock,
+  MapPin,
+  ShieldCheck
+} from 'lucide-react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
-// Note: Assuming your 'PublicListing' type includes fields like cashflow_numeric, revenue, sde, etc.
-
-// Next.js 16: params is a Promise
-export default async function ListingDetailsPage({ params }: { params: Promise<{ id: string }> }) {
-  // 1. Await params before using them
-  const { id } = await params;
-  
+export default function ListingDetailsPage() {
+  const params = useParams();
+  const [listing, setListing] = useState<Listing | null>(null);
+  const [loading, setLoading] = useState(true);
   const supabase = createClient();
-  
-  // 2. Fetch the listing
-  const { data: listing, error } = await supabase
-    .from('listings')
-    .select('*')
-    .eq('id', id)
-    .single();
 
-  if (error || !listing) {
-    return notFound();
+  useEffect(() => {
+    async function fetchListing() {
+      if (!params.id) return;
+
+      const { data, error } = await supabase
+        .from('listings')
+        .select('*')
+        .eq('id', params.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching listing:', error);
+      } else {
+        setListing(data);
+      }
+      setLoading(false);
+    }
+
+    fetchListing();
+  }, [params.id]);
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center text-slate-400">Loading deal details...</div>;
   }
 
-  // 3. Format Currency Helper
-  const formatMoney = (amount: number | null) => 
-    amount ? `$${amount.toLocaleString()}` : 'Contact for Price';
+  if (!listing) {
+    return <div className="min-h-screen flex items-center justify-center text-slate-400">Listing not found.</div>;
+  }
 
-  // 4. Get user access tier (server action)
-  const userTier = await getBuyerAccessTier();
+  // Helper to safely calculate multiple
+  const multiple = listing.asking_price && listing.annual_cashflow 
+    ? (listing.asking_price / listing.annual_cashflow).toFixed(1) + 'x' 
+    : 'N/A';
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Header / Breadcrumb */}
-      <div className="bg-[#0a192f] text-white pt-24 pb-12 px-4">
-        <div className="max-w-7xl mx-auto">
-          <Link href="/browse" className="inline-flex items-center text-gray-400 hover:text-white mb-6 transition-colors">
-            <ArrowLeft size={16} className="mr-2" /> Back to Marketplace
+    <div className="min-h-screen bg-slate-50">
+      
+      {/* 1. HERO SECTION */}
+      <div className="bg-[#020617] text-white pb-24 pt-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Link href="/browse" className="inline-flex items-center text-slate-400 hover:text-white transition-colors mb-6 text-sm">
+            <ArrowLeft size={16} className="mr-2" /> Back to Listings
           </Link>
-          
-          <div className="flex flex-col md:flex-row justify-between items-start gap-6">
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <span className="bg-white/10 backdrop-blur-md text-white border border-white/20 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
-                  {listing.category || 'Business'}
-                </span>
-                {listing.is_verified && (
-                  <span className="bg-green-500/20 border border-green-500/50 text-green-300 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
-                    <ShieldCheck size={12} /> Verified
+
+          <div className="flex flex-col md:flex-row gap-8 items-start">
+            {/* Image Thumbnail */}
+            <div className="w-full md:w-1/3 aspect-video rounded-xl overflow-hidden relative border border-white/10 bg-slate-800">
+               {/* Use a placeholder if no image exists yet */}
+              <img 
+                src={(listing.metrics?.image_url as string) || "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&q=80"} 
+                alt={listing.title} 
+                className="w-full h-full object-cover" 
+              />
+              <div className="absolute top-3 left-3 flex gap-2">
+                {listing.is_ai_verified && (
+                  <span className="flex items-center gap-1.5 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm">
+                    <CheckCircle size={12} /> AI-VERIFIED
                   </span>
                 )}
               </div>
-              <h1 className="text-3xl md:text-5xl font-bold mb-4">{listing.title}</h1>
-              <div className="flex items-center text-gray-300 gap-6 text-sm">
-                <span className="flex items-center gap-2"><MapPin size={16} className="text-orange-500"/> {listing.location || 'Undisclosed'}</span>
-                <span className="flex items-center gap-2"><Globe size={16} className="text-blue-400"/> {listing.asset_type === 'digital' ? 'Online Business' : 'Physical Location'}</span>
-              </div>
+              {listing.nxt_score && (
+                <div className="absolute bottom-3 right-3 bg-[#FACC15] text-slate-900 text-xs font-bold px-2 py-1 rounded shadow-md">
+                  NxtScore: {listing.nxt_score}
+                </div>
+              )}
             </div>
-            
-            <div className="text-right hidden md:block">
-              <p className="text-gray-400 text-sm uppercase font-bold tracking-widest mb-1">Asking Price</p>
-              <p className="text-4xl font-bold text-white">{formatMoney(listing.price)}</p>
+
+            {/* Title & Metrics */}
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="bg-white/10 text-white text-xs font-bold px-2 py-1 rounded">{listing.category || 'Business'}</span>
+                <span className="flex items-center text-slate-400 text-sm">
+                  <MapPin size={14} className="mr-1" /> {listing.location || 'Remote'}
+                </span>
+              </div>
+              
+              <h1 className="text-3xl md:text-4xl font-bold mb-6 leading-tight">
+                {listing.title}
+              </h1>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 border-t border-white/10 pt-6">
+                <div>
+                  <p className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Asking Price</p>
+                  <p className="text-2xl font-bold">
+                    {listing.asking_price ? `$${listing.asking_price.toLocaleString()}` : 'Contact'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Cash Flow</p>
+                  <p className="text-2xl font-bold text-green-400">
+                    {listing.annual_cashflow ? `$${listing.annual_cashflow.toLocaleString()}` : '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Revenue</p>
+                  <p className="text-xl font-bold text-slate-200">
+                    {listing.annual_revenue ? `$${listing.annual_revenue.toLocaleString()}` : '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Multiple</p>
+                  <p className="text-xl font-bold text-slate-200">{multiple}</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 -mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* LEFT COLUMN: Main Content */}
-        <div className="lg:col-span-2 space-y-8">
+      {/* 2. MAIN CONTENT GRID */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 pb-20">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* Main Image */}
-          <div className="bg-white rounded-3xl overflow-hidden shadow-xl h-[400px] md:h-[500px] relative">
-             <Image 
-                src={listing.image_url || 'https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?auto=format&fit=crop&q=80'} 
-                alt={listing.title}
-                fill
-                className="w-full h-full object-cover"
-                priority
-             />
-          </div>
-
-          {/* Description (FREE ACCESS) */}
-          <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-            <h2 className="text-2xl font-bold text-[#0a192f] mb-6">Investment Highlights (Explorer View)</h2>
-            <div className="prose max-w-none text-gray-600 leading-relaxed">
-              <p>{listing.description || listing.short_description || "A detailed description is available upon signing the NDA."}</p>
-              <ul className="mt-4 space-y-2 list-disc pl-5">
-                <li>Primary category: {listing.category}</li>
-                <li>Location: {listing.location}</li>
-                <li>Asset Type: {listing.asset_type}</li>
-              </ul>
+          {/* LEFT COLUMN: DETAILS */}
+          <div className="lg:col-span-2 space-y-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+              <h2 className="text-xl font-bold text-slate-900 mb-4">Executive Summary</h2>
+              <p className="text-slate-600 leading-relaxed mb-6">
+                {listing.description || "No description provided for this listing yet."}
+              </p>
             </div>
           </div>
-          
-          {/* ---------------------------------------------------- */}
-          {/* 1. FINANCIAL DEEP-DIVE (Requires PRO Access) */}
-          {/* ---------------------------------------------------- */}
-          <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-            <h2 className="text-2xl font-bold text-[#0a192f] mb-6">Financial Summary & Metrics</h2>
-            
-            <TieredContent userTier={userTier} requiredTier="PRO">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center border-b border-gray-100 pb-6 mb-6">
-                <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-500 uppercase font-medium">Annual Revenue</p>
-                    <p className="text-3xl font-extrabold text-blue-600">{formatMoney(listing.revenue)}</p>
-                </div>
-                <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-500 uppercase font-medium">Seller's Discretionary Earnings (SDE)</p>
-                    <p className="text-3xl font-extrabold text-green-600">{formatMoney(listing.cashflow_numeric)}</p>
-                </div>
-                <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-500 uppercase font-medium">Asking Price</p>
-                    <p className="text-3xl font-extrabold text-orange-600">{formatMoney(listing.price)}</p>
-                </div>
-              </div>
 
-              {/* Detailed Financials */}
-              <h3 className="text-xl font-bold mb-4">Key Operating Metrics</h3>
-              <ul className="space-y-3">
-                <li className="flex justify-between border-b border-dashed pb-2">
-                    <span className="font-medium text-gray-700">Annual Rent Expense</span>
-                    <span className="font-bold">{formatMoney(listing.annual_rent_expense || 0)}</span>
-                </li>
-                 <li className="flex justify-between border-b border-dashed pb-2">
-                    <span className="font-medium text-gray-700">Staff Count</span>
-                    <span className="font-bold">{listing.staff_count || 'Varies'}</span>
-                </li>
-                {listing.annual_salary_expense && (
-                    <li className="flex justify-between border-b border-dashed pb-2">
-                        <span className="font-medium text-gray-700">Annual Salary Expense</span>
-                        <span className="font-bold">{formatMoney(listing.annual_salary_expense)}</span>
-                    </li>
-                )}
-                <li className="flex justify-between pt-2">
-                    <span className="text-lg font-bold text-[#0a192f]">Normalized Cash Flow (Lender Ready)</span>
-                    <span className="text-lg font-bold text-green-700">{formatMoney(listing.normalized_cashflow || listing.cashflow_numeric)}</span>
-                </li>
-              </ul>
-            </TieredContent>
-          </div>
-          
-          {/* ---------------------------------------------------- */}
-          {/* 2. AI VALUATION & BENCHMARKING (Requires ELITE Access) */}
-          {/* ---------------------------------------------------- */}
-          <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-             <h2 className="text-2xl font-bold text-[#0a192f] mb-6">AI Valuation & Market Analysis</h2>
-             <TieredContent userTier={userTier} requiredTier="ELITE" upgradeTitle="Elite Investor Access Required">
-                <div className="flex justify-between items-center p-4 mb-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                    <p className="text-lg font-bold text-yellow-800 flex items-center gap-2">
-                        <Zap size={20}/> AI Estimated Valuation Range:
-                    </p>
-                    <p className="text-2xl font-extrabold text-yellow-800">
-                         {formatMoney(listing.ai_min_valuation || 0)} - {formatMoney(listing.ai_max_valuation || 0)}
-                    </p>
-                </div>
-
-                <h3 className="text-xl font-bold mb-4">Market Benchmarking</h3>
-                <p className="text-gray-600 mb-4">
-                    This listing's asking price multiple (Cash Flow / Price) is currently **3.2x**.
-                    The industry average for {listing.category} assets in this region is **2.8x - 3.5x**. 
+          {/* RIGHT COLUMN: ACTION SIDEBAR */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 sticky top-24">
+              <div className="mb-6 pb-6 border-b border-slate-100">
+                <p className="text-sm text-slate-500 mb-1">Asking Price</p>
+                <p className="text-3xl font-extrabold text-slate-900">
+                  {listing.asking_price ? `$${listing.asking_price.toLocaleString()}` : 'Contact'}
                 </p>
-                <button className="text-blue-600 font-medium text-sm hover:underline">Download Full Risk & Margin Report</button>
-             </TieredContent>
-          </div>
-        </div>
+              </div>
 
-        {/* RIGHT COLUMN: The "Deal Room" CTA */}
-        <div className="lg:col-span-1">
-          {/* Mobile Price (Visible only on small screens) */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-4 md:hidden">
-            <p className="text-gray-500 text-xs uppercase font-bold tracking-widest mb-1">Asking Price</p>
-            <p className="text-3xl font-bold text-[#0a192f]">{formatMoney(listing.price)}</p>
-          </div>
+              <div className="space-y-3 mb-6">
+                <Link 
+                  href={`/deal-room/${listing.id}`} 
+                  className="w-full flex items-center justify-center gap-2 bg-[#EA580C] hover:bg-orange-700 text-white font-bold py-4 rounded-xl transition-all shadow-md hover:shadow-lg"
+                >
+                  <Lock size={18} /> Unlock Deal Room
+                </Link>
+                <button className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition-colors">
+                  Contact Broker
+                </button>
+              </div>
 
-          {/* The "Buy Box" with TieredContent protection */}
-          <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100 sticky top-24">
-            <TieredContent userTier={userTier} requiredTier="PRO" upgradeTitle="Pro or Elite Access Required">
-              <h3 className="text-xl font-bold text-[#0a192f] mb-2">Unlock Deal Room</h3>
-              <p className="text-gray-500 text-sm mb-6">
-                Access full financials, tax returns, and legal documents.
-              </p>
-              <div className="space-y-4 mb-8">
-                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg text-sm text-blue-900 font-medium">
-                  <FileText size={18} /> P&L Statements (3 Years)
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg text-sm text-blue-900 font-medium">
-                  <FileText size={18} /> Staff & Payroll Data
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg text-sm text-blue-900 font-medium">
-                  <FileText size={18} /> Lease / Property Details
+              <div className="bg-blue-50 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="text-blue-600 shrink-0 mt-0.5" size={18} />
+                  <div>
+                    <p className="text-xs font-bold text-blue-900 mb-1">Verified Listing</p>
+                    <p className="text-xs text-blue-700 leading-relaxed">
+                      NDA required for full access.
+                    </p>
+                  </div>
                 </div>
               </div>
-              <button className="w-full bg-[#0a192f] hover:bg-[#142642] text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl mb-4">
-                <Lock size={18} /> Sign NDA & View
-              </button>
-              <p className="text-center text-xs text-gray-400">
-                Protected by NxtOwner Secure Vault™
-              </p>
-            </TieredContent>
-          </div>
-
-          {/* Broker Card */}
-          <div className="mt-6 bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center gap-4">
-            <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center text-xl">👤</div>
-            <div>
-              <p className="text-xs text-gray-500 uppercase font-bold">Listed By</p>
-              <p className="font-bold text-[#0a192f]">NxtOwner Brokerage</p>
             </div>
           </div>
-        </div>
 
+        </div>
       </div>
     </div>
   );

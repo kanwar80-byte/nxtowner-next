@@ -1,89 +1,111 @@
-
-
 'use client';
 
-'use client';
-import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react'; // Keeping state for mobile menu if you have it
+import Image from 'next/image';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Search, Sparkles, Menu, X, UserCircle } from 'lucide-react';
+import { createClient } from '@/utils/supabase/client';
 
 export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const supabase = createClient();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      // Redirect to browse with the search query
+      router.push(`/browse?q=${encodeURIComponent(searchQuery)}`);
+    }
+  };
 
   return (
-    // CHANGE 1: Main Bar Background -> Navy Blue (#0B1221)
-    <nav
-      className="fixed top-0 left-0 right-0 w-full z-50 h-20 transition-all border-b"
-      style={{
-        background: 'linear-gradient(90deg, var(--nx-nav-bg) 80%, #101a2e 100%)',
-        color: 'var(--nx-nav-text)',
-        borderBottom: '1px solid var(--nx-nav-border)',
-        boxShadow: '0 2px 8px 0 rgba(0,0,0,0.08)'
-      }}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
-        <div className="flex items-center justify-between h-full">
+    <nav className="sticky top-0 z-50 bg-[#020617] border-b border-white/10 text-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16 gap-4">
           
-          {/* LOGO SECTION */}
-          <div className="flex-shrink-0 flex items-center gap-2">
-            <Link href="/" className="flex items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nx-nav-ring)]">
-              <Image 
-                src="/logo.jpg" 
-                alt="NxtOwner" 
-                width={140} 
-                height={45} 
-                className="object-contain"
-                priority
+          {/* 1. LOGO */}
+          <Link href="/" className="flex-shrink-0 flex items-center gap-2">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white">N</div>
+            <span className="text-xl font-bold tracking-tight">NxtOwner<span className="text-blue-500">.ca</span></span>
+          </Link>
+
+          {/* 2. THE "NXTOWNER" AI SEARCH BAR (Center) */}
+          <div className="hidden md:flex flex-1 max-w-xl mx-4">
+            <form onSubmit={handleSearch} className="relative w-full group">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search size={16} className="text-slate-500 group-focus-within:text-blue-500 transition-colors" />
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Ask NxtOwner (e.g. 'SaaS under $1M with high cashflow')..."
+                className="block w-full pl-10 pr-32 py-2.5 border border-slate-700 rounded-full leading-5 bg-slate-900/50 text-slate-300 placeholder-slate-500 focus:outline-none focus:bg-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 sm:text-sm transition-all shadow-inner"
               />
-            </Link>
-          </div>
-
-          {/* DESKTOP LINKS - PRESERVING YOUR WIRED LINKS */}
-          <div className="hidden lg:flex items-center gap-8">
-            {['About', 'FAQ', 'How It Works', 'Buyers', 'Sellers', 'Resources'].map((item) => (
-              <Link 
-                key={item}
-                href={`/${item.toLowerCase().replace(/\s+/g, '-')}`}
-                className="group text-sm font-semibold transition-colors relative text-[color:var(--nx-nav-text)] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nx-nav-ring)]"
+              {/* THE "NXTOWNER" BUTTON */}
+              <button 
+                type="submit"
+                className="absolute inset-y-1 right-1 px-4 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-full flex items-center gap-2 transition-all shadow-md hover:shadow-lg hover:scale-105"
               >
-                {item}
-                <span className="absolute left-0 -bottom-1 h-0.5 w-full scale-x-0 bg-white/70 transition-transform group-hover:scale-x-100" />
-              </Link>
-            ))}
+                <Sparkles size={12} className="animate-pulse" />
+                Ask NxtOwner
+              </button>
+            </form>
           </div>
 
-          {/* ACTION BUTTONS (Admin / Dashboard) */}
-          <div className="hidden lg:flex items-center gap-2 sm:gap-3">
-            <Link 
-              href="/admin" 
-              className="inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold text-[color:var(--nx-nav-text)] border-[color:var(--nx-nav-border)] hover:bg-[color:var(--nx-nav-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nx-nav-ring)] transition-all"
-            >
-              Admin
+          {/* 3. NAVIGATION LINKS (Right) */}
+          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
+            <Link href="/browse" className="hover:text-white transition-colors">Buy</Link>
+            <Link href="/sell" className="hover:text-white transition-colors">Sell</Link>
+            <Link href="/valuation" className="hover:text-white transition-colors">Valuation</Link>
+            
+            <div className="h-6 w-px bg-white/10 mx-2"></div>
+            
+            <Link href="/dashboard" className="flex items-center gap-2 hover:text-white">
+              <UserCircle size={20} />
+              <span>Sign In</span>
             </Link>
             <Link 
-              href="/dashboard" 
-              className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold text-white bg-[color:var(--nx-nav-cta)] border border-[color:var(--nx-nav-border)] shadow-md hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nx-nav-ring)] transition-all"
+              href="/sell/onboarding" 
+              className="bg-white text-slate-900 hover:bg-slate-200 px-4 py-2 rounded-full font-bold text-xs transition-colors"
             >
-              Dashboard
+              List Your Business
             </Link>
           </div>
 
-          {/* MOBILE MENU BUTTON (If needed) */}
-          <div className="-mr-2 flex lg:hidden">
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="text-[color:var(--nx-nav-text)] hover:text-white p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--nx-nav-ring)]"
-            >
-              <span className="sr-only">Open menu</span>
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+          {/* Mobile Menu Button */}
+          <div className="md:hidden">
+            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-slate-300 hover:text-white">
+              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
       </div>
-      
-      {/* Mobile Menu Logic would go here (styled with bg-[#0B1221]) */}
+
+      {/* Mobile Menu (Dropdown) */}
+      {isMenuOpen && (
+        <div className="md:hidden bg-slate-900 border-t border-white/10 p-4 space-y-4">
+          <form onSubmit={handleSearch} className="relative">
+             <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search..."
+                className="w-full bg-slate-800 text-white p-3 pl-4 rounded-lg border border-slate-700 focus:border-blue-500 outline-none"
+             />
+             <button type="submit" className="absolute right-2 top-2 bg-blue-600 p-1.5 rounded-md text-white"><Search size={16} /></button>
+          </form>
+          <div className="flex flex-col space-y-3 text-slate-300 font-medium">
+            <Link href="/browse" className="block py-2 hover:text-white">Buy a Business</Link>
+            <Link href="/sell" className="block py-2 hover:text-white">Sell a Business</Link>
+            <Link href="/valuation" className="block py-2 hover:text-white">Free Valuation</Link>
+            <Link href="/dashboard" className="block py-2 text-blue-400">My Dashboard</Link>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

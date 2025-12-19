@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function CuratedListings() {
   const listings = [
     {
@@ -44,31 +46,36 @@ export default function CuratedListings() {
   ];
 
   return (
-    <section className="bg-[#F8FAFC] py-12 md:py-16">
+    <section className="py-16 bg-[#F8FAFC]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900">Curated Opportunities</h2>
-            <p className="mt-3 max-w-2xl text-slate-600">
+            <div className="text-xs uppercase tracking-widest text-orange-400/90 font-bold mb-2">
+              Featured Collection
+            </div>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-[#0A122A]">
+              Curated Opportunities
+            </h2>
+            <p className="text-sm md:text-base text-slate-600 mt-3 max-w-2xl">
               Hand-picked operational and digital assets that match what acquisition-focused buyers are looking for right now.
             </p>
           </div>
-          <a
+          <Link
             href="/browse"
-            className="hidden sm:inline-block px-6 py-3 border-2 border-[#0A122A] text-[#0A122A] rounded-full font-semibold hover:bg-[#0A122A] hover:text-white hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"
+            className="inline-flex items-center gap-1 text-sm font-semibold text-orange-500 hover:text-orange-600 transition"
           >
-            View All
-          </a>
+            View all <span aria-hidden>→</span>
+          </Link>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-7">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {listings.map((listing, idx) => (
-            <a
+            <Link
               key={listing.id}
               href={`/listing/${listing.id}`}
-              className="bg-white rounded-2xl border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.16)] hover:-translate-y-1 transition-all duration-300 overflow-hidden group animate-fadeInUp flex flex-col h-full"
+              className="bg-white rounded-2xl border border-white/10 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 overflow-hidden group flex flex-col h-full"
               style={{ animationDelay: `${idx * 80}ms` }}
             >
-              <div className="relative aspect-[4/3] bg-gray-200 overflow-hidden">
+              <div className="relative aspect-[16/9] bg-gray-200 overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={listing.image}
@@ -88,7 +95,7 @@ export default function CuratedListings() {
                   )}
                 </div>
               </div>
-              <div className="p-5 space-y-3 flex-1 flex flex-col">
+              <div className="p-5 flex flex-col flex-1 min-h-[160px]">
                 <div className="text-2xl font-semibold text-[#F97316]">{listing.price}</div>
                 <h3 className="font-semibold text-gray-900 leading-snug line-clamp-2">{listing.title}</h3>
                 <div className="text-sm text-gray-600 space-y-1 pt-1">
@@ -102,22 +109,14 @@ export default function CuratedListings() {
                   </div>
                   <div className="text-gray-500 pt-1">📍 {listing.location}</div>
                 </div>
-                <div className="pt-3">
+                <div className="pt-3 mt-auto">
                   <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#0A122A]">
                     View Details <span aria-hidden>→</span>
                   </span>
                 </div>
               </div>
-            </a>
+            </Link>
           ))}
-        </div>
-        <div className="text-center mt-8 sm:hidden">
-          <a
-            href="/browse"
-            className="inline-block px-6 py-3 border-2 border-[#0A122A] text-[#0A122A] rounded-full font-semibold hover:bg-[#0A122A] hover:text-white hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"
-          >
-            View All
-          </a>
         </div>
       </div>
     </section>

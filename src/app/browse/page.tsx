@@ -1,210 +1,118 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-// Fix: Import the correct type we defined in the server action
-import { getFilteredListings, type SearchFilters } from "@/app/actions/getFilteredListings";
-import Link from "next/link";
-import { PublicListing } from "@/types/listing";
-import { WatchlistButton } from "@/components/listings/WatchlistButton";
-import Image from "next/image";
-
-// Fix: Define the local state type exactly as we want it
-type BrowseFiltersState = {
-  assetType: string; // Matches 'deal_type'
-  category: string;
-  sort: string;
-  minPrice?: number;
-  maxPrice?: number;
-  minCashflow?: number;
-  minRevenue?: number;
-  query: string;
-  location: string; // Added location to state
-};
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { createClient } from '@/utils/supabase/client';
+import { Listing } from '@/types/database';
+import Link from 'next/link';
+import { CheckCircle, Lock, Search } from 'lucide-react';
 
 export default function BrowsePage() {
-  const [listings, setListings] = useState<PublicListing[]>([]);
+  const searchParams = useSearchParams();
+  const query = searchParams.get('q') || '';
+  const typeFilter = searchParams.get('type') || 'All';
+  
+  const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
+  const supabase = createClient();
 
-  // Fix: Initialize state with all required fields
-  const [filters, setFilters] = useState<BrowseFiltersState>({
-    assetType: "all",
-    category: "All Categories",
-    sort: "newest",
-    minPrice: undefined,
-    maxPrice: undefined,
-    minCashflow: undefined,
-    minRevenue: undefined,
-    query: "",
-    location: "", // Initialize location
-  });
-
-  // Debounce helper to prevent too many API calls while typing
   useEffect(() => {
-    const fetchListings = async () => {
+    async function fetchListings() {
       setLoading(true);
-      try {
-        // Fix: Map local state to Server Action payload
-        // This removes any extra fields that might confuse the server
-        const payload: SearchFilters = {
-          assetType: filters.assetType === "all" ? undefined : filters.assetType,
-          category: filters.category === "All Categories" ? undefined : filters.category,
-          sort: filters.sort,
-          minPrice: filters.minPrice,
-          maxPrice: filters.maxPrice,
-          minCashflow: filters.minCashflow,
-          minRevenue: filters.minRevenue,
-          query: filters.query || undefined,
-          location: filters.location || undefined,
-        };
+      let dbQuery = supabase.from('listings').select('*');
 
-        const data = await getFilteredListings(payload);
-        setListings(data as PublicListing[]);
-      } catch (error) {
-        console.error("Failed to fetch listings:", error);
-      } finally {
-        setLoading(false);
+      // 1. Apply Text Search
+      if (query) {
+        // Search in title OR description OR category
+        // Note: For simple 'ilike' to work on multiple columns, use 'or'
+        dbQuery = dbQuery.or(`title.ilike.%${query}%,description.ilike.%${query}%,category.ilike.%${query}%`);
       }
-    };
 
-    const debounceTimer = setTimeout(() => {
-      fetchListings();
-    }, 500); // Wait 500ms after last change
+      // 2. Apply Type Filter (Operational/Digital)
+      if (typeFilter !== 'All') {
+        dbQuery = dbQuery.eq('asset_type', typeFilter);
+      }
 
-    return () => clearTimeout(debounceTimer);
-  }, [filters]);
+      // 3. Execute
+      const { data, error } = await dbQuery;
+      
+      if (error) {
+        console.error('Search error:', error);
+      } else {
+        setListings(data || []);
+      }
+      setLoading(false);
+    }
 
-  const handleFilterChange = (key: keyof BrowseFiltersState, value: any) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-  };
+    fetchListings();
+  }, [query, typeFilter]);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 pt-24">
-      <div className="container mx-auto px-4">
+    <div className="min-h-screen bg-slate-50 py-12">
+      <div className="max-w-7xl mx-auto px-4">
         
-        {/* HEADER & FILTERS */}
-        <div className="mb-8 rounded-xl bg-white p-6 shadow-sm">
-          <h1 className="mb-6 text-3xl font-bold text-gray-900">Browse Listings</h1>
-          
-          {/* Top Row: Search & Location */}
-          <div className="mb-4 grid gap-4 md:grid-cols-2">
-            <input
-              type="text"
-              placeholder="Search by keyword..."
-              className="rounded-lg border border-gray-300 p-3"
-              value={filters.query}
-              onChange={(e) => handleFilterChange("query", e.target.value)}
-            />
-            <input
-              type="text"
-              placeholder="Location (e.g. Toronto, Remote)"
-              className="rounded-lg border border-gray-300 p-3"
-              value={filters.location}
-              onChange={(e) => handleFilterChange("location", e.target.value)}
-            />
-          </div>
-
-          {/* Bottom Row: Dropdowns */}
-          <div className="grid gap-4 md:grid-cols-4">
-            <select
-              className="rounded-lg border border-gray-300 p-3"
-              value={filters.assetType}
-              onChange={(e) => handleFilterChange("assetType", e.target.value)}
-            >
-              <option value="all">All Types</option>
-              <option value="asset">Physical Business</option>
-              <option value="digital">Digital / Online</option>
-            </select>
-
-            <select
-              className="rounded-lg border border-gray-300 p-3"
-              value={filters.category}
-              onChange={(e) => handleFilterChange("category", e.target.value)}
-            >
-              <option value="All Categories">All Categories</option>
-              <option value="Retail">Retail</option>
-              <option value="SaaS">SaaS</option>
-              <option value="E-commerce">E-commerce</option>
-              <option value="Service">Service</option>
-              <option value="Restaurant">Restaurant</option>
-            </select>
-
-            <select
-              className="rounded-lg border border-gray-300 p-3"
-              value={filters.sort}
-              onChange={(e) => handleFilterChange("sort", e.target.value)}
-            >
-              <option value="newest">Newest Listed</option>
-              <option value="oldest">Oldest Listed</option>
-              <option value="lowest_price">Lowest Price</option>
-              <option value="highest_price">Highest Price</option>
-            </select>
-          </div>
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900">
+            {query ? `Search Results for "${query}"` : 'All Opportunities'}
+          </h1>
+          <p className="text-slate-500">
+            Found {listings.length} listings {typeFilter !== 'All' ? `in ${typeFilter}` : ''}
+          </p>
         </div>
 
-        {/* LISTINGS GRID */}
-        {loading ? (
-          <div className="py-20 text-center text-gray-500">Loading listings...</div>
-        ) : listings.length === 0 ? (
-          <div className="py-20 text-center text-gray-500">
-            No listings found matching your criteria.
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {listings.map((listing) => (
-              <Link
-                key={listing.id}
-                href={`/listings/${listing.id}`}
-                className="group relative block overflow-hidden rounded-xl bg-white shadow-sm transition hover:shadow-md"
-              >
-                {/* Image Area */}
-                <div className="relative h-48 bg-gray-200">
-                  {listing.image_url ? (
-                    <Image
-                      src={listing.image_url}
-                      alt={listing.title}
-                      fill
-                      className="object-cover transition group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-gray-400">
-                      No Image
-                    </div>
-                  )}
-                  <div className="absolute top-2 right-2">
-                    <WatchlistButton listingId={listing.id} />
-                  </div>
-                </div>
+        {/* Loading State */}
+        {loading && <div className="text-center py-20 text-slate-400">AI scanning opportunities...</div>}
 
-                {/* Content Area */}
-                <div className="p-5">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">
-                      {listing.category}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {listing.deal_type === 'digital' ? '🌐 Online' : '🏢 ' + listing.location}
-                    </span>
-                  </div>
-                  
-                  <h3 className="mb-2 text-lg font-bold text-gray-900 group-hover:text-blue-600">
-                    {listing.title}
-                  </h3>
-
-                  <div className="mt-4 border-t border-gray-100 pt-4">
-                    <p className="text-xl font-bold text-gray-900">
-                      ${listing.price?.toLocaleString() ?? "Contact"}
-                    </p>
-                    {listing.cashflow_numeric && (
-                      <p className="text-sm text-green-600">
-                        Cashflow: ${listing.cashflow_numeric.toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            ))}
+        {/* Empty State */}
+        {!loading && listings.length === 0 && (
+          <div className="text-center py-20 bg-white rounded-xl border border-slate-200">
+            <Search className="mx-auto h-12 w-12 text-slate-300 mb-4" />
+            <h3 className="text-lg font-bold text-slate-900">No listings found</h3>
+            <p className="text-slate-500">Try adjusting your search terms or filters.</p>
           </div>
         )}
+
+        {/* Results Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {listings.map((listing) => (
+             <Link
+              href={`/listing/${listing.id}`}
+              key={listing.id}
+              className="group bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-xl transition-all hover:-translate-y-1"
+            >
+              <div className="relative aspect-video bg-slate-100">
+                <img 
+                   src={listing.metrics?.image_url as string || 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&q=80'} 
+                   className="w-full h-full object-cover"
+                />
+                <div className="absolute top-2 left-2 flex gap-1">
+                   {listing.is_ai_verified && <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded">AI VERIFIED</span>}
+                </div>
+              </div>
+              
+              <div className="p-5">
+                <div className="flex items-center gap-2 mb-2">
+                   <span className="text-[10px] font-bold uppercase bg-slate-100 px-2 py-0.5 rounded text-slate-600">{listing.asset_type || 'Business'}</span>
+                   <span className="text-[10px] font-bold uppercase bg-blue-50 px-2 py-0.5 rounded text-blue-600">{listing.main_category}</span>
+                </div>
+                <h3 className="font-bold text-slate-900 line-clamp-1 mb-4">{listing.title}</h3>
+                
+                <div className="flex justify-between items-center pt-4 border-t border-slate-100">
+                   <div>
+                      <p className="text-[10px] uppercase font-bold text-slate-400">Price</p>
+                      <p className="font-bold text-slate-900">${listing.asking_price?.toLocaleString()}</p>
+                   </div>
+                   <div className="text-right">
+                      <p className="text-[10px] uppercase font-bold text-slate-400">Revenue</p>
+                      <p className="font-bold text-green-600">${listing.annual_revenue?.toLocaleString()}</p>
+                   </div>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+
       </div>
     </div>
   );

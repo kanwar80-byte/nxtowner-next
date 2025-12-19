@@ -1,51 +1,85 @@
-import Link from "next/link";
-import { AuthGate } from "@/components/auth/AuthGate";
-import { SellForm } from "@/components/sell/SellForm";
+'use client';
 
-export default function SellPage() {
+import { ArrowRight, BadgeDollarSign, BarChart3, Link as LinkIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
+export default function SellLandingPage() {
+  const [domain, setDomain] = useState('');
+  const router = useRouter();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (domain.trim()) {
+      router.push(`/sell/onboarding?domain=${encodeURIComponent(domain.trim())}`);
+    }
+  }
+
   return (
-    <main className="bg-brand-bg min-h-screen">
-      <section className="bg-[#0A122A] text-white py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-          <div className="space-y-4">
-            <p className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 text-xs uppercase tracking-wide">Seller workspace</p>
-            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">Sell your business on NxtOwner</h1>
-            <p className="text-lg text-gray-200 max-w-2xl">
-              Draft your listing, save as a draft, and submit for review when you are ready. Our team will publish it to the marketplace once approved.
-            </p>
-            <div className="flex flex-wrap gap-3 text-sm text-gray-200">
-              <span className="px-3 py-1 rounded-full bg-white/10">Save as draft</span>
-              <span className="px-3 py-1 rounded-full bg-white/10">Submit for review</span>
-              <span className="px-3 py-1 rounded-full bg-white/10">Track status</span>
-            </div>
-            <Link
-              href="/dashboard/seller"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-white underline underline-offset-4"
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* HERO */}
+      <section className="flex-1 flex flex-col justify-center items-center px-4 py-20 bg-gradient-to-b from-[#f8fafc] to-white">
+        <div className="max-w-xl w-full mx-auto text-center">
+          <h1 className="text-3xl md:text-5xl font-extrabold text-slate-900 mb-4">
+            Sell your business for what it's worth.
+          </h1>
+          <p className="text-lg text-slate-600 mb-10">
+            Get an AI valuation and reach 10,000+ verified buyers in minutes.
+          </p>
+          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-center gap-3 w-full">
+            <input
+              type="text"
+              className="flex-1 px-5 py-4 rounded-xl border border-slate-300 text-lg focus:outline-none focus:ring-2 focus:ring-blue-600 transition"
+              placeholder="Enter your business URL (e.g. mybusiness.com)"
+              value={domain}
+              onChange={e => setDomain(e.target.value)}
+              autoFocus
+            />
+            <button
+              type="submit"
+              className="flex items-center gap-2 px-7 py-4 rounded-xl bg-[#EA580C] hover:bg-orange-700 text-white font-bold text-lg shadow transition"
             >
-              View your listings
-              <span aria-hidden>→</span>
-            </Link>
-          </div>
-          <div className="bg-white/10 border border-white/20 rounded-2xl p-6 space-y-4 text-sm">
-            <p className="font-semibold text-white">What you will need</p>
-            <ul className="space-y-2 text-gray-200 list-disc list-inside">
-              <li>Basic business overview and category</li>
-              <li>Location and asking price</li>
-              <li>Optional revenue and profit figures</li>
-              <li>Time to complete: under 10 minutes</li>
-            </ul>
-            <p className="text-gray-200">You can always save as draft and continue later.</p>
-          </div>
+              Start Free Valuation <ArrowRight size={20} />
+            </button>
+          </form>
         </div>
       </section>
 
-      <section className="py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <AuthGate>
-            <SellForm />
-          </AuthGate>
+      {/* TRUST SECTION */}
+      <section className="bg-white py-12 border-t border-slate-100">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+            {/* Step 1 */}
+            <div className="flex flex-col items-center text-center flex-1">
+              <div className="bg-blue-50 text-blue-600 rounded-full p-4 mb-3">
+                <LinkIcon size={32} />
+              </div>
+              <div className="font-bold text-slate-900 mb-1">Connect Data</div>
+              <div className="text-slate-500 text-sm">We pull key info from your website and public sources.</div>
+            </div>
+            {/* Arrow */}
+            <ArrowRight className="hidden md:block text-slate-200 w-8 h-8" />
+            {/* Step 2 */}
+            <div className="flex flex-col items-center text-center flex-1">
+              <div className="bg-yellow-50 text-yellow-500 rounded-full p-4 mb-3">
+                <BarChart3 size={32} />
+              </div>
+              <div className="font-bold text-slate-900 mb-1">Get NxtScore</div>
+              <div className="text-slate-500 text-sm">AI analyzes your business for valuation and readiness.</div>
+            </div>
+            {/* Arrow */}
+            <ArrowRight className="hidden md:block text-slate-200 w-8 h-8" />
+            {/* Step 3 */}
+            <div className="flex flex-col items-center text-center flex-1">
+              <div className="bg-green-50 text-green-600 rounded-full p-4 mb-3">
+                <BadgeDollarSign size={32} />
+              </div>
+              <div className="font-bold text-slate-900 mb-1">Receive Offers</div>
+              <div className="text-slate-500 text-sm">Get matched with buyers and receive offers securely.</div>
+            </div>
+          </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

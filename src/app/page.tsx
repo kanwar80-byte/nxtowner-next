@@ -37,7 +37,7 @@ export default function Home() {
       </div>
 
       {/* Re-adding the 'The NxtOwner Standard' Section */}
-      <section className="bg-white py-14 md:py-16 border-b border-slate-200">
+        <section className="bg-white py-16 border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 text-center">
             <h2 className="text-3xl font-bold text-slate-900 mb-8">Stop Guessing. Start Closing.</h2>
             <div className="grid md:grid-cols-2 gap-8 md:gap-10">
@@ -52,7 +52,7 @@ export default function Home() {
                 <div className="p-8 bg-[#0B1221] rounded-3xl shadow-2xl border border-slate-800 text-white">
                   <h3 className="text-xl font-bold mb-6 flex items-center">The NxtOwner Standard <span className="ml-3 px-2 py-0.5 bg-blue-600 text-[10px] rounded uppercase tracking-wider text-white">Pro</span></h3>
                   <ul className="space-y-5">
-                    <li className="flex items-center font-medium"><CheckCircle2 className="w-5 h-5 text-blue-400 mr-3 shrink-0" />AI-Normalized Financials</li>
+                    <li className="flex items-center font-medium"><CheckCircle2 className="w-5 h-5 text-yellow-400 mr-3 shrink-0" />AI-Normalized Financials</li>
                     <li className="flex items-center font-medium"><CheckCircle2 className="w-5 h-5 text-blue-400 mr-3 shrink-0" />KYC-Verified Sellers & Buyers</li>
                     <li className="flex items-center font-medium"><CheckCircle2 className="w-5 h-5 text-blue-400 mr-3 shrink-0" />Integrated Data Rooms with NDA</li>
                   </ul>
