@@ -118,6 +118,38 @@ export default function Navbar() {
               </button>
             </form>
           </div>
+<<<<<<< HEAD
+=======
+
+          {/* 3. NAVIGATION LINKS (Right) */}
+          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
+            <Link href="/browse" className="hover:text-white transition-colors">Buy</Link>
+            <Link href="/sell" className="hover:text-white transition-colors">Sell</Link>
+            <Link href="/valuation" className="hover:text-white transition-colors">Valuation</Link>
+            
+            <div className="h-6 w-px bg-white/10 mx-2"></div>
+            
+            <Link href="/dashboard" className="flex items-center gap-2 hover:text-white">
+              <UserCircle size={20} />
+              <span>Sign In</span>
+            </Link>
+
+            {/* 👇 THIS IS THE CRITICAL UPDATE 👇 */}
+            <Link 
+              href="/sell/onboarding"  
+              className="bg-[#EAB308] text-slate-900 hover:bg-[#CA8A04] px-4 py-2 rounded-full font-bold text-xs transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            >
+              Sell Your Business
+            </Link>
+          </div>
+
+          {/* Mobile Menu Button */}
+          <div className="md:hidden">
+            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-slate-300 hover:text-white">
+              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
+>>>>>>> 611d1ff (STABLE CHECKPOINT: Baseline structure restored. Ready for canonical cleanup.)
         </div>
       </div>
     </nav>
