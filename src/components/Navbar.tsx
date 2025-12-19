@@ -73,7 +73,7 @@ export default function Navbar() {
               href="/sell/onboarding"  
               className="bg-[#EAB308] text-slate-900 hover:bg-[#CA8A04] px-4 py-2 rounded-full font-bold text-xs transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
-              List Your Business
+              Sell Your Business
             </Link>
           </div>
 
