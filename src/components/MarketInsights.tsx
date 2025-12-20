@@ -1,7 +1,7 @@
 'use client';
 
-import { ArrowUpRight } from 'lucide-react';
 import SafeImage from '@/components/shared/SafeImage';
+import { ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 
 type Article = {
