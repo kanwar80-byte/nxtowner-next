@@ -12,7 +12,7 @@ const MESSAGING = {
     textGradientClass: "from-blue-500 via-purple-500 to-pink-500",
     
     subtitle: "Canada’s premier marketplace. Buy and sell verified assets with bank-grade data and AI valuations.",
-    placeholder: "Ask NxtOwner (e.g. 'SaaS under $500k with stable cash flow')",
+    placeholder: "NxtSearch (e.g. SaaS under $500k with stable cash flow)", // updated placeholder
     glowColor: "from-blue-600/20 via-purple-600/20 to-pink-600/20"
   },
   Operational: {

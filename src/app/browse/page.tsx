@@ -2,8 +2,8 @@
 
 import FilterSidebar from '@/components/browse/FilterSidebar'; // 👈 This was missing
 import ListingCard from '@/components/browse/ListingCard';
-import { Listing } from '@/types/database';
-import { createClient } from '@/utils/supabase/client';
+import { Listing } from '@/lib/types/listing';
+import { supabase } from '@/utils/supabase/client';
 import { Search } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
@@ -12,7 +12,6 @@ function BrowseContent() {
   const searchParams = useSearchParams();
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   // Extract params
   const query = searchParams.get('q');
@@ -24,7 +23,10 @@ function BrowseContent() {
   useEffect(() => {
     async function fetchListings() {
       setLoading(true);
-      let dbQuery = supabase.from('listings').select('*').eq('status', 'active');
+      let dbQuery = supabase
+        .from('listings')
+        .select('id,slug,title,asset_type,status,verification_level,is_verified,is_ai_verified')
+        .eq('status', 'live');
 
       // --- APPLY FILTERS ---
       if (query) {
@@ -112,4 +114,17 @@ export default function BrowsePage() {
       <BrowseContent />
     </Suspense>
   );
+}
+
+function getVerificationBadge(listing: Listing) {
+  if (listing.verification_level !== null && listing.verification_level > 0) {
+    return <span title="Verified">✔️</span>;
+  }
+  if (listing.is_verified) {
+    return <span title="Legacy Verified">✔️</span>;
+  }
+  if (listing.is_ai_verified) {
+    return <span title="AI Verified">🤖</span>;
+  }
+  return null;
 }

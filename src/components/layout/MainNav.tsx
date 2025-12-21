@@ -277,7 +277,7 @@ export function MainNav() {
                 href="/sell/onboarding"
                 className="inline-flex items-center rounded-lg px-5 py-2.5 text-sm font-bold bg-[#D4AF37] text-[#0B1221] shadow-lg hover:bg-[#C5A028] hover:shadow-yellow-500/20 transition-all"
               >
-                List Your Business
+                Sell Your Business
               </Link>
             </>
           ) : (
