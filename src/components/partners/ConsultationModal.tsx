@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { createConsultationRequest } from "@/app/actions/partners";
 import type { PartnerProfile } from "@/types/database";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/utils/supabase/client";
+import { useState } from "react";
 
 interface ConsultationModalProps {
   partner: PartnerProfile;

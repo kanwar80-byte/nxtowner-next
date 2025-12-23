@@ -1,9 +1,9 @@
 "use client";
 
 import { useUserProfile } from "@/hooks/useProfile";
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/utils/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
+import { useEffect, useState } from "react";
 
 interface RawData {
   data: unknown;

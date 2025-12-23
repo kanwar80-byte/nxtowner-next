@@ -1,10 +1,10 @@
 "use client";
 
 import { useUserProfile } from "@/hooks/useProfile";
+import { supabase } from "@/utils/supabase/client";
+import type { User } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import type { User } from "@supabase/supabase-js";
 
 interface AuthGateProps {
   children: React.ReactNode;

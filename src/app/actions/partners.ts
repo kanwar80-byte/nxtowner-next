@@ -1,15 +1,15 @@
 "use server";
 
-import { supabase } from "@/lib/supabase";
-import { revalidatePath } from "next/cache";
 import type {
-  PartnerProfile,
-  PartnerProfileInsert,
-  PartnerProfileUpdate,
   ConsultationRequest,
   ConsultationRequestInsert,
   ConsultationRequestUpdate,
+  PartnerProfile,
+  PartnerProfileInsert,
+  PartnerProfileUpdate,
 } from "@/types/database";
+import { supabase } from "@/utils/supabase/client";
+import { revalidatePath } from "next/cache";
 
 // consultation_requests tables don't exist in Supabase until the migration is run.
 // After running the migration, regenerate types with: npx supabase gen types typescript

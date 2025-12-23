@@ -1,10 +1,10 @@
 "use client";
 
 import { AuthGate } from "@/components/auth/AuthGate";
-import { completeNdaAndCreateDealRoom } from "./actions";
-import { supabase } from "@/lib/supabase";
-import { useState } from "react";
+import { supabase } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { completeNdaAndCreateDealRoom } from "./actions";
 
 interface NDAPageProps {
   params: {
