@@ -1,23 +1,9 @@
-'use client';
+// src/app/deal-room/[id]/page.tsx
+// Bridge route: keep buyer dashboard links working (/deal-room/:id)
+// while implementation lives at /(platform)/deals/[id].
 
-import { Listing } from '@/types/database';
-import { createClient } from '@/utils/supabase/client';
-import {
-  AlertTriangle,
-  FileText,
-  Lock,
-  PieChart,
-  ShieldCheck,
-  TrendingUp
-} from 'lucide-react';
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-
-export default function DealRoomPage() {
-  const params = useParams();
-  const [listing, setListing] = useState<Listing | null>(null);
-  const [isNDA_Signed, setIsNDA_Signed] = useState(false); // Mock NDA state
+export { default } from "@/app/(platform)/deals/[id]/page";
+export { revalidate } from "@/app/(platform)/deals/[id]/page";
   const [activeTab, setActiveTab] = useState('financials'); // 'financials', 'traffic', 'docs'
   const supabase = createClient();
 
