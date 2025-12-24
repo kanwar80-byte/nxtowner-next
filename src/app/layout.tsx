@@ -1,5 +1,5 @@
 import Footer from "@/components/layout/Footer";
-import { MainNav } from "@/components/layout/MainNav";
+import MainNav from "@/components/Navbar";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
