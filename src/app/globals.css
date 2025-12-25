@@ -3,7 +3,6 @@
 @theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  
   /* Explicitly define the border color for the utility engine */
   --color-border: hsl(var(--border));
   --color-background: hsl(var(--background));
@@ -37,11 +36,16 @@
 
 @layer base {
   * {
-    /* Use the variable directly to avoid utility resolution errors */
     border-color: hsl(var(--border));
   }
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
   }
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
 }

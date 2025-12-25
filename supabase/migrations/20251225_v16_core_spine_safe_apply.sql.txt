@@ -1,0 +1,388 @@
+-- ============================================================
+-- NxtOwner V16 Deal OS Spine — SAFE APPLY
+-- Purpose:
+--   - Create enums/tables/triggers/RLS/policies if missing
+--   - Skip anything that already exists
+--   - Avoid partial manual edits + repeat-run safe
+-- Notes:
+--   - Does NOT drop anything.
+--   - Safe to run multiple times.
+-- ============================================================
+
+-- Extensions (safe)
+create extension if not exists pgcrypto;
+
+-- ----------------------------
+-- 1) ENUMS (idempotent)
+-- ----------------------------
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'asset_type') THEN
+    CREATE TYPE asset_type AS ENUM ('operational','digital');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'listing_status') THEN
+    CREATE TYPE listing_status AS ENUM ('draft','published','paused','archived');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'nda_status') THEN
+    CREATE TYPE nda_status AS ENUM ('requested','signed','revoked');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'deal_stage') THEN
+    CREATE TYPE deal_stage AS ENUM (
+      'discover','interest','nda','deal_room','due_diligence','negotiation','closing','post_close'
+    );
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'event_type') THEN
+    CREATE TYPE event_type AS ENUM (
+      'listing_created','listing_published','nda_requested','nda_signed','deal_room_created',
+      'doc_uploaded','note_added','message_sent','stage_changed','score_updated','deal_closed','deal_paused'
+    );
+  END IF;
+END $$;
+
+-- ----------------------------
+-- 2) UPDATED_AT trigger function (safe)
+-- ----------------------------
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ----------------------------
+-- 3) TABLES (safe create)
+-- ----------------------------
+
+-- profiles
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name text,
+  role_intent text[] NOT NULL DEFAULT '{}'::text[],
+  postal_code text,
+  city text,
+  province text,
+  country text NOT NULL DEFAULT 'CA',
+  meta jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- listings
+CREATE TABLE IF NOT EXISTS public.listings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
+  asset_type asset_type NOT NULL,
+  status listing_status NOT NULL DEFAULT 'draft',
+  title text NOT NULL,
+  asking_price numeric,
+  currency text NOT NULL DEFAULT 'CAD',
+  postal_code text,
+  city text,
+  province text,
+  country text NOT NULL DEFAULT 'CA',
+  category text,
+  subcategory text,
+  revenue_annual numeric,
+  cashflow_annual numeric,
+  ebitda_annual numeric,
+  verification jsonb NOT NULL DEFAULT '{}'::jsonb,
+  meta jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- ndas
+CREATE TABLE IF NOT EXISTS public.ndas (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  listing_id uuid NOT NULL REFERENCES public.listings(id) ON DELETE CASCADE,
+  buyer_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  status nda_status NOT NULL DEFAULT 'requested',
+  signed_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (listing_id, buyer_id)
+);
+
+-- deal_rooms
+CREATE TABLE IF NOT EXISTS public.deal_rooms (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  listing_id uuid NOT NULL REFERENCES public.listings(id) ON DELETE CASCADE,
+  buyer_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  stage deal_stage NOT NULL DEFAULT 'deal_room',
+  is_active boolean NOT NULL DEFAULT true,
+  opened_at timestamptz NOT NULL DEFAULT now(),
+  closed_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (listing_id, buyer_id)
+);
+
+-- events
+CREATE TABLE IF NOT EXISTS public.events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  deal_room_id uuid REFERENCES public.deal_rooms(id) ON DELETE CASCADE,
+  listing_id uuid REFERENCES public.listings(id) ON DELETE CASCADE,
+  actor_id uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
+  type event_type NOT NULL,
+  payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- scores
+CREATE TABLE IF NOT EXISTS public.scores (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  entity_type text NOT NULL,
+  entity_id uuid NOT NULL,
+  scope text NOT NULL DEFAULT 'private',
+  score_key text NOT NULL,
+  score_value numeric NOT NULL DEFAULT 0,
+  breakdown jsonb NOT NULL DEFAULT '{}'::jsonb,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (entity_type, entity_id, scope, score_key)
+);
+
+-- Helpful indexes (safe)
+CREATE INDEX IF NOT EXISTS idx_listings_status ON public.listings(status);
+CREATE INDEX IF NOT EXISTS idx_listings_asset_type ON public.listings(asset_type);
+CREATE INDEX IF NOT EXISTS idx_ndas_listing_buyer ON public.ndas(listing_id, buyer_id);
+CREATE INDEX IF NOT EXISTS idx_deal_rooms_listing_buyer ON public.deal_rooms(listing_id, buyer_id);
+CREATE INDEX IF NOT EXISTS idx_events_deal_room ON public.events(deal_room_id);
+CREATE INDEX IF NOT EXISTS idx_scores_entity ON public.scores(entity_type, entity_id);
+
+-- ----------------------------
+-- 4) TRIGGERS (safe create)
+-- ----------------------------
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_profiles_updated_at') THEN
+    CREATE TRIGGER set_profiles_updated_at BEFORE UPDATE ON public.profiles
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_listings_updated_at') THEN
+    CREATE TRIGGER set_listings_updated_at BEFORE UPDATE ON public.listings
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_ndas_updated_at') THEN
+    CREATE TRIGGER set_ndas_updated_at BEFORE UPDATE ON public.ndas
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_deal_rooms_updated_at') THEN
+    CREATE TRIGGER set_deal_rooms_updated_at BEFORE UPDATE ON public.deal_rooms
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+  END IF;
+END $$;
+
+-- ----------------------------
+-- 5) RLS + POLICIES (safe)
+-- ----------------------------
+
+-- Enable RLS (safe)
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.listings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ndas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.deal_rooms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.scores ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they conflict (safe via DO blocks)
+DO $$
+DECLARE
+  pol text;
+BEGIN
+  -- profiles
+  FOR pol IN SELECT policyname FROM pg_policies WHERE schemaname='public' AND tablename='profiles'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.profiles', pol);
+  END LOOP;
+
+  -- listings
+  FOR pol IN SELECT policyname FROM pg_policies WHERE schemaname='public' AND tablename='listings'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.listings', pol);
+  END LOOP;
+
+  -- ndas
+  FOR pol IN SELECT policyname FROM pg_policies WHERE schemaname='public' AND tablename='ndas'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.ndas', pol);
+  END LOOP;
+
+  -- deal_rooms
+  FOR pol IN SELECT policyname FROM pg_policies WHERE schemaname='public' AND tablename='deal_rooms'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.deal_rooms', pol);
+  END LOOP;
+
+  -- events
+  FOR pol IN SELECT policyname FROM pg_policies WHERE schemaname='public' AND tablename='events'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.events', pol);
+  END LOOP;
+
+  -- scores
+  FOR pol IN SELECT policyname FROM pg_policies WHERE schemaname='public' AND tablename='scores'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.scores', pol);
+  END LOOP;
+END $$;
+
+-- Create fresh minimal policies (V16 baseline)
+
+-- profiles: user can select/update/insert own profile row
+CREATE POLICY profiles_self_select
+ON public.profiles FOR SELECT
+USING (id = auth.uid());
+
+CREATE POLICY profiles_self_upsert
+ON public.profiles FOR INSERT
+WITH CHECK (id = auth.uid());
+
+CREATE POLICY profiles_self_update
+ON public.profiles FOR UPDATE
+USING (id = auth.uid())
+WITH CHECK (id = auth.uid());
+
+-- listings:
+-- anyone can select published listings
+CREATE POLICY listings_public_select_published
+ON public.listings FOR SELECT
+USING (status = 'published');
+
+-- owner can select their own listings (any status)
+CREATE POLICY listings_owner_select
+ON public.listings FOR SELECT
+USING (owner_id = auth.uid());
+
+-- owner can insert/update their own listings
+CREATE POLICY listings_owner_insert
+ON public.listings FOR INSERT
+WITH CHECK (owner_id = auth.uid());
+
+CREATE POLICY listings_owner_update
+ON public.listings FOR UPDATE
+USING (owner_id = auth.uid())
+WITH CHECK (owner_id = auth.uid());
+
+-- ndas:
+-- buyer can select/insert/update their own NDAs
+CREATE POLICY ndas_buyer_select
+ON public.ndas FOR SELECT
+USING (buyer_id = auth.uid());
+
+CREATE POLICY ndas_buyer_insert
+ON public.ndas FOR INSERT
+WITH CHECK (buyer_id = auth.uid());
+
+CREATE POLICY ndas_buyer_update
+ON public.ndas FOR UPDATE
+USING (buyer_id = auth.uid())
+WITH CHECK (buyer_id = auth.uid());
+
+-- listing owner can select NDAs for their listing
+CREATE POLICY ndas_owner_select
+ON public.ndas FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM public.listings l
+    WHERE l.id = ndas.listing_id AND l.owner_id = auth.uid()
+  )
+);
+
+-- deal_rooms:
+-- buyer can select deal rooms where they are buyer
+CREATE POLICY deal_rooms_buyer_select
+ON public.deal_rooms FOR SELECT
+USING (buyer_id = auth.uid());
+
+-- listing owner can select deal rooms for their listing
+CREATE POLICY deal_rooms_owner_select
+ON public.deal_rooms FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM public.listings l
+    WHERE l.id = deal_rooms.listing_id AND l.owner_id = auth.uid()
+  )
+);
+
+-- events:
+-- buyer or owner can select events related to their deal rooms/listings
+CREATE POLICY events_buyer_or_owner_select
+ON public.events FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1
+    FROM public.deal_rooms dr
+    JOIN public.listings l ON l.id = dr.listing_id
+    WHERE dr.id = events.deal_room_id
+      AND (dr.buyer_id = auth.uid() OR l.owner_id = auth.uid())
+  )
+);
+
+-- Allow inserts only when actor is auth user AND they are buyer or listing owner
+CREATE POLICY events_buyer_or_owner_insert
+ON public.events FOR INSERT
+WITH CHECK (
+  actor_id = auth.uid()
+  AND EXISTS (
+    SELECT 1
+    FROM public.deal_rooms dr
+    JOIN public.listings l ON l.id = dr.listing_id
+    WHERE dr.id = events.deal_room_id
+      AND (dr.buyer_id = auth.uid() OR l.owner_id = auth.uid())
+  )
+);
+
+-- scores:
+-- private scores visible only to:
+-- profiles: self
+-- listings: owner
+-- deal_rooms: buyer or listing owner
+CREATE POLICY scores_select_private
+ON public.scores FOR SELECT
+USING (
+  (entity_type = 'profile' AND entity_id = auth.uid())
+  OR (entity_type = 'listing' AND EXISTS (
+        SELECT 1 FROM public.listings l WHERE l.id = entity_id AND l.owner_id = auth.uid()
+      ))
+  OR (entity_type = 'deal_room' AND EXISTS (
+        SELECT 1
+        FROM public.deal_rooms dr
+        JOIN public.listings l ON l.id = dr.listing_id
+        WHERE dr.id = entity_id
+          AND (dr.buyer_id = auth.uid() OR l.owner_id = auth.uid())
+      ))
+);
+
+-- Allow score inserts/updates only for authenticated users (server-side is recommended),
+-- but keep baseline workable:
+CREATE POLICY scores_insert_authed
+ON public.scores FOR INSERT
+WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY scores_update_authed
+ON public.scores FOR UPDATE
+USING (auth.uid() IS NOT NULL)
+WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Done
+SELECT 'V16 SAFE APPLY COMPLETE' AS status;

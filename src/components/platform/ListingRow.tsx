@@ -36,7 +36,7 @@ export default function ListingRow({ listing }: { listing: any }) {
         "flex items-center gap-6 px-4 py-4 border-b hover:bg-slate-50 transition-colors cursor-pointer group",
         isChecked && "bg-blue-50/50 border-blue-100"
       )}
-      onClick={() => router.push(`/platform/deals/${listing.id}`)}
+      onClick={() => router.push(`/deals/${listing.id}`)}
     >
       {/* Selection & Thumbnail */}
       <div className="flex items-center gap-4 flex-shrink-0">

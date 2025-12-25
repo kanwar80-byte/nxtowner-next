@@ -1,128 +1,106 @@
+import { supabaseServer } from "@/lib/supabase/server";
+import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 
-'use client';
+type Listing = {
+  id: string;
+  title: string | null;
+  city: string | null;
+  province: string | null;
+  asking_price: number | null;
+  cash_flow: number | null;
+  hero_image_url: string | null;
+  created_at: string | null;
+  subcategory: string | null;
+  category: string | null;
+};
 
-import { ArrowRight, CheckCircle, Globe, MapPin, Zap } from 'lucide-react';
-import Link from 'next/link';
+export default async function RecentListings() {
+  const supabase = await supabaseServer();
 
-// Mock Data (Or fetch from Supabase if you have it wired up)
-const RECENT_DEALS = [
-  {
-    id: '1',
-    title: 'High-Volume Chevron Gas Station & C-Store',
-    location: 'Surrey, BC',
-    price: 2450000,
-    cashflow: 350000,
-    revenue: 3500000,
-    category: 'Gas Station',
-    type: 'Operational',
-    verified: true,
-    score: 92,
-    image: 'https://images.unsplash.com/photo-1569062363389-9f7926b47c0a?auto=format&fit=crop&q=80'
-  },
-  {
-    id: '2',
-    title: 'B2B SaaS Project Tool ($400k ARR)',
-    location: 'Remote',
-    price: 1200000,
-    cashflow: 158000,
-    revenue: 400000,
-    category: 'SaaS',
-    type: 'Digital',
-    verified: true,
-    score: 88,
-    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80'
-  },
-  {
-    id: '3',
-    title: 'Precision Metal Fabrication Plant',
-    location: 'Hamilton, ON',
-    price: 2800000,
-    cashflow: 650000,
-    revenue: 3200000,
-    category: 'Manufacturing',
-    type: 'Operational',
-    verified: true,
-    score: 95,
-    image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80'
-  },
-  {
-    id: '4',
-    title: 'Established Eco-Subscription Brand',
-    location: 'Remote',
-    price: 450000,
-    cashflow: 85000,
-    revenue: 140000,
-    category: 'E-commerce',
-    type: 'Digital',
-    verified: false, // Example of unverified
-    score: 75,
-    image: 'https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?auto=format&fit=crop&q=80'
-  }
-];
+  const { data } = await supabase
+    .from("listings")
+    .select("id,title,city,province,asking_price,cash_flow,hero_image_url,created_at,subcategory,category")
+    .order("created_at", { ascending: false })
+    .limit(4);
 
-export default function RecentListings() {
-  return (
-    <section>
-      <div className="flex justify-between items-end mb-8">
-        <div>
-          <h2 className="text-3xl font-bold text-slate-900">Featured Opportunities</h2>
-          <p className="text-slate-500 mt-2">Hand-picked businesses with verified financials.</p>
-        </div>
-        <Link href="/browse" className="text-blue-600 font-bold flex items-center gap-1 hover:gap-2 transition-all text-sm">
-          View All <ArrowRight size={16} />
-        </Link>
-      </div>
+  const rows = (data || []) as Listing[];
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {RECENT_DEALS.map((listing) => (
-          <Link key={listing.id} href={`/listing/${listing.id}`} className="group block bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-2xl transition-all hover:-translate-y-1 flex flex-col">
-            {/* IMAGE AREA */}
-            <div className="relative h-48 overflow-hidden bg-slate-100">
-              <img src={listing.image} alt={listing.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-              {/* Category Badge */}
-              <div className="absolute top-3 left-3">
-                 <span className="bg-white/95 backdrop-blur text-slate-900 text-[10px] font-bold px-2 py-1 rounded shadow-sm border border-slate-200 uppercase tracking-wide">
-                   {listing.category}
-                 </span>
-              </div>
-              {/* VERIFIED BADGE -> EMERALD GREEN */}
-              {listing.verified && (
-                <div className="absolute top-3 right-3 bg-[#10B981] text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm flex items-center gap-1">
-                  <CheckCircle size={10} className="text-white" /> VERIFIED
-                </div>
-              )}
-            </div>
-            {/* CONTENT AREA */}
-            <div className="p-5 flex flex-col flex-1">
-              <div className="flex items-center text-xs text-slate-500 mb-3 gap-2">
-                 {listing.type === 'Digital' ? <Globe size={12} className="text-blue-500"/> : <MapPin size={12} className="text-orange-500"/>}
-                 <span className="font-medium">{listing.location}</span>
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 leading-snug mb-4 line-clamp-2 group-hover:text-blue-600">
-                {listing.title}
-              </h3>
-              <div className="flex-1"></div>
-              <div className="grid grid-cols-2 gap-y-3 gap-x-4 border-t border-slate-100 pt-4 mt-2">
-                <div>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Revenue</p>
-                  <p className="text-sm font-bold text-slate-900">${listing.revenue.toLocaleString()}</p>
-                </div>
-                <div>
-                  {/* CASH FLOW -> EMERALD GREEN */}
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Cash Flow</p>
-                  <p className="text-sm font-bold text-[#10B981]">${listing.cashflow.toLocaleString()}</p>
-                </div>
-                <div className="col-span-2 pt-2 flex items-center justify-between">
-                  <p className="text-xl font-extrabold text-slate-900">${listing.price.toLocaleString()}</p>
-                  {/* SCORE -> GOLD */}
-                  <span className="bg-[#EAB308]/10 text-[#a16207] text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 border border-[#EAB308]/20">
-                    <Zap size={12} className="text-[#EAB308]" fill="#EAB308" /> {listing.score}
-                  </span>
-                </div>
-              </div>
-            </div>
+  if (rows.length === 0) {
+    return (
+      <section className="py-12 border-b border-slate-100 bg-white">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Fresh This Week</h2>
+          <p className="text-slate-500 mb-6">No new listings found this week.</p>
+          <Link
+            href="/browse"
+            className="inline-block px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+          >
+            Browse All Listings
           </Link>
-        ))}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="py-12 border-b border-slate-100 bg-white">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl font-bold text-slate-900">Fresh This Week</h2>
+          <Link
+            href="/browse?sort=newest"
+            className="text-blue-600 text-sm font-bold flex items-center gap-1 hover:gap-2 transition-all"
+          >
+            View All <ArrowRight size={16} />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {rows.map((item) => (
+            <Link
+              key={item.id}
+              href={`/listing/${item.id}`}
+              className="block bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-lg transition-all h-full"
+            >
+              <div className="aspect-[4/3] bg-slate-100 relative overflow-hidden w-full">
+                {item.hero_image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.hero_image_url} alt={item.title || "Listing"} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-200 to-slate-400 text-slate-500 text-sm">
+                    No Image
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4">
+                <h3 className="font-bold text-slate-900 mb-1 line-clamp-1">
+                  {item.title || "Untitled Listing"}
+                </h3>
+                {(() => {
+                  const loc = [item.city, item.province].filter(Boolean).join(", ");
+                  return <p className="text-xs text-slate-500 mb-2">{loc || "Canada"}</p>;
+                })()}
+
+                <div className="flex justify-between items-center border-t border-slate-100 pt-2">
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase">Price</p>
+                    <p className="text-sm font-bold">
+                      {typeof item.asking_price === "number" ? `$${item.asking_price.toLocaleString()}` : "Confidential"}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase">Cash Flow</p>
+                    <p className="text-sm font-bold text-green-600">
+                      {typeof item.cash_flow === "number" ? `$${item.cash_flow.toLocaleString()}` : "-"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
     </section>
   );

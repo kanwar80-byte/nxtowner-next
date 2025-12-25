@@ -1,21 +1,25 @@
-'use server';
+﻿'use server';
 
 /**
  * Server actions for deal room messages and offers
  */
 
 import { supabase } from '@/lib/supabase';
-import type { Message, Offer, DealRoom } from '@/types/database';
+import type { DealRoom, Message, Offer } from '@/types/database';
 import { revalidatePath } from 'next/cache';
+import { createClient } from "@/utils/supabase/server";
 
 // ============================================================================
 // MESSAGES
 // ============================================================================
 
-export async function sendMessage(roomId: string, body: string): Promise<{ success: boolean; error?: string }> {
+export async function sendMessage(
+  roomId: string,
+  body: string
+): Promise<{ success: boolean; error?: string }> {
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+
     if (authError || !user) {
       return { success: false, error: 'Not authenticated' };
     }
@@ -32,20 +36,13 @@ export async function sendMessage(roomId: string, body: string): Promise<{ succe
       return { success: false, error: 'Not authorized to send messages in this room' };
     }
 
-    const messagePayload = {
-      deal_room_id: roomId,
-      sender_id: user.id,
-      body,
-    };
-
     const { error } = await supabase
       .from('messages')
-      .insert(messagePayload as never);
+      .insert({ deal_room_id: roomId, sender_id: user.id, body } as never);
 
     if (error) throw error;
 
     revalidatePath(`/deal-room/${roomId}`);
-    
     return { success: true };
   } catch (error) {
     console.error('sendMessage error:', error);
@@ -93,7 +90,7 @@ export async function submitOffer(
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+
     if (authError || !user) {
       return { success: false, error: 'Not authenticated' };
     }
@@ -130,7 +127,6 @@ export async function submitOffer(
     const typedData = data as { id: string };
 
     revalidatePath(`/deal-room/${roomId}`);
-    
     return { success: true, id: typedData.id };
   } catch (error) {
     console.error('submitOffer error:', error);
@@ -144,7 +140,7 @@ export async function updateOfferStatus(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
+
     if (authError || !user) {
       return { success: false, error: 'Not authenticated' };
     }
@@ -180,7 +176,6 @@ export async function updateOfferStatus(
     if (error) throw error;
 
     revalidatePath(`/deal-room/${offerWithListing.deal_room_id}`);
-    
     return { success: true };
   } catch (error) {
     console.error('updateOfferStatus error:', error);
@@ -243,40 +238,31 @@ export async function getDealRoomById(roomId: string): Promise<DealRoom | null> 
       .single();
 
     if (error) throw error;
-    return data;
+    return data as DealRoom;
   } catch (error) {
     console.error('getDealRoomById error:', error);
     return null;
   }
 }
 
-export async function getUserDealRooms(): Promise<DealRoom[]> {
+export async function getUserDealRooms(userId: string): Promise<DealRoom[]> {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
+    const supabaseServer = await createClient();
 
-    // Get rooms where user is a member
-    const { data: memberships, error: memberError } = await supabase
-      .from('deal_room_members')
-      .select('deal_room_id')
-      .eq('user_id', user.id);
+    const { data, error } = await supabaseServer
+      .from("deal_rooms")
+      .select("id, listing_id, status, created_at")
+      .eq("buyer_id", userId)
+      .order("created_at", { ascending: false });
 
-    if (memberError) throw memberError;
-    if (!memberships || memberships.length === 0) return [];
+    if (error) {
+      console.error("getUserDealRooms error:", error);
+      return [];
+    }
 
-    const typedMemberships = memberships as Array<{ deal_room_id: string }>;
-    const roomIds = typedMemberships.map((m) => m.deal_room_id);
-
-    const { data, error } = await supabase
-      .from('deal_rooms')
-      .select('*')
-      .in('id', roomIds)
-      .order('updated_at', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
-    console.error('getUserDealRooms error:', error);
+    return (data || []) as DealRoom[];
+  } catch (err) {
+    console.error("getUserDealRooms fatal:", err);
     return [];
   }
 }

@@ -1,11 +1,10 @@
-import { requireAuth } from '@/lib/auth';
-import { getWatchlistForUser } from '@/app/actions/watchlist';
 import { getUserDealRooms } from '@/app/actions/dealroom';
-import { supabase } from '@/lib/supabase';
+import { getWatchlistForUser } from '@/app/actions/watchlist';
+import { requireAuth } from '@/lib/auth';
+import { createClient } from "@/utils/supabase/server";
 import Link from 'next/link';
-import { PlanStatus } from '@/components/billing/PlanStatus';
 
-export const revalidate = 0; // Render on demand, not at build time
+export const revalidate = 0; // Render on demand
 
 type ListingData = {
   id: string;
@@ -23,75 +22,73 @@ type WatchlistWithDetails = {
 
 export default async function BuyerDashboardPage() {
   const user = await requireAuth();
-  
-  // Fetch all buyer data
-  const [watchlistItems, dealRooms, ndas] = await Promise.all([
-    getWatchlistForUser(),
-    getUserDealRooms(),
-    fetchUserNDAs(user.id)
-  ]);
+  const supabase = await createClient();
 
-  // Fetch profile with plan info
+  // 1. Fetch Profile (Fixed: Was missing before)
   const { data: profile } = await supabase
     .from('profiles')
-    .select('plan, plan_renews_at')
+    .select('*')
     .eq('id', user.id)
     .single();
 
-  // Fetch listing details for watchlist
+  // 2. Fetch all buyer data
+  const [watchlistItems, dealRooms, ndas] = await Promise.all([
+    getWatchlistForUser(),
+    getUserDealRooms(user.id).catch(() => []), // Catch errors if table missing
+    fetchUserNDAs(user.id)
+  ]);
+
+  // 3. Fetch listing details for watchlist
   const watchlistWithDetails: WatchlistWithDetails[] = await Promise.all(
-    watchlistItems.map(async (item) => {
+    (watchlistItems || []).map(async (item) => {
       const { data: listing } = await supabase
         .from('listings')
         .select('id, title, asking_price, status, type')
         .eq('id', item.listing_id)
         .single();
-      return { 
+      return {
         listing_id: item.listing_id,
         created_at: item.created_at,
-        listing: listing as ListingData | null 
+        listing: listing as ListingData | null
       };
     })
   );
 
   return (
-    <main className="bg-brand-bg min-h-screen py-16">
+    <main className="bg-[#0f172a] min-h-screen py-16 text-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-10">
-          <h1 className="text-3xl font-bold text-brand-text">Buyer Dashboard</h1>
-          <p className="text-brand-muted mt-2">
+          <h1 className="text-3xl font-bold text-white">Buyer Dashboard</h1>
+          <p className="text-slate-400 mt-2">
             Manage your saved listings, deal rooms, and NDAs
           </p>
         </div>
 
         {/* Plan Status */}
         {profile && (
-          <div className="mb-8">
-            <PlanStatus 
-              plan={
-                // @ts-expect-error - plan fields added in migration
-                profile.plan || 'free'
-              } 
-              planRenewsAt={
-                // @ts-expect-error - plan fields added in migration
-                profile.plan_renews_at
-              }
-            />
+          <div className="mb-8 p-6 bg-slate-800/50 rounded-xl border border-slate-700">
+            <h2 className="text-lg font-semibold text-white mb-2">Current Plan</h2>
+            <div className="flex items-center gap-2">
+                <span className="capitalize text-blue-400 font-bold">{profile.plan || 'Free Tier'}</span>
+                {profile.plan_renews_at && (
+                    <span className="text-sm text-slate-500">Renews: {new Date(profile.plan_renews_at).toLocaleDateString()}</span>
+                )}
+            </div>
           </div>
         )}
 
         {/* Saved Listings Section */}
         <section className="mb-12">
-          <h2 className="text-2xl font-semibold text-brand-text mb-4">
+          <h2 className="text-2xl font-semibold text-white mb-4">
             Your Saved Listings
           </h2>
           
           {watchlistWithDetails.length === 0 ? (
-            <div className="bg-white rounded-lg border border-brand-border p-8 text-center">
-              <p className="text-brand-muted">No saved listings yet.</p>
+            <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-8 text-center">
+              <p className="text-slate-400">No saved listings yet.</p>
               <Link
                 href="/browse"
-                className="inline-block mt-4 px-6 py-2 bg-brand-orange text-white rounded-md hover:bg-orange-600 transition"
+                className="inline-block mt-4 px-6 py-2 bg-[#EAB308] text-slate-900 font-bold rounded-md hover:bg-[#CA8A04] transition"
               >
                 Browse Listings
               </Link>
@@ -103,20 +100,20 @@ export default async function BuyerDashboardPage() {
                   <Link
                     key={item.listing.id}
                     href={`/listing/${item.listing.id}`}
-                    className="bg-white rounded-lg border border-brand-border p-6 hover:shadow-md transition"
+                    className="bg-white rounded-lg border border-slate-200 p-6 hover:shadow-xl transition"
                   >
-                    <h3 className="font-semibold text-lg text-brand-text mb-2">
+                    <h3 className="font-bold text-lg text-slate-900 mb-2">
                       {item.listing.title}
                     </h3>
-                    <p className="text-brand-muted text-sm mb-2">
+                    <p className="text-slate-500 text-sm mb-2">
                       {item.listing.type === 'asset' ? 'Physical Asset' : 'Digital Business'}
                     </p>
-                    <p className="font-semibold text-brand-text">
+                    <p className="font-bold text-blue-600">
                       {item.listing.asking_price
                         ? `$${item.listing.asking_price.toLocaleString()}`
                         : 'Price on request'}
                     </p>
-                    <p className="text-xs text-brand-muted mt-2">
+                    <p className="text-xs text-slate-400 mt-2">
                       Saved {new Date(item.created_at).toLocaleDateString()}
                     </p>
                   </Link>
@@ -128,43 +125,41 @@ export default async function BuyerDashboardPage() {
 
         {/* Deal Rooms Section */}
         <section className="mb-12">
-          <h2 className="text-2xl font-semibold text-brand-text mb-4">
+          <h2 className="text-2xl font-semibold text-white mb-4">
             Your Deal Rooms
           </h2>
           
-          {dealRooms.length === 0 ? (
-            <div className="bg-white rounded-lg border border-brand-border p-8 text-center">
-              <p className="text-brand-muted">No active deal rooms.</p>
-              <p className="text-sm text-brand-muted mt-2">
+          {dealRooms?.length === 0 ? (
+            <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-8 text-center">
+              <p className="text-slate-400">No active deal rooms.</p>
+              <p className="text-sm text-slate-500 mt-2">
                 Deal rooms are created when you sign an NDA for a listing
               </p>
             </div>
           ) : (
             <div className="space-y-4">
-              {dealRooms.map((room) => (
+              {dealRooms?.map((room) => (
                 <Link
                   key={room.id}
                   href={`/deal-room/${room.id}`}
-                  className="block bg-white rounded-lg border border-brand-border p-6 hover:shadow-md transition"
+                  className="block bg-slate-800 rounded-lg border border-slate-700 p-6 hover:border-blue-500 transition"
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-lg text-brand-text mb-1">
+                      <h3 className="font-semibold text-lg text-white mb-1">
                         Deal Room #{room.id.slice(0, 8)}
                       </h3>
-                      <p className="text-sm text-brand-muted">
-                        Listing ID: {room.listing_id.slice(0, 8)}...
+                      <p className="text-sm text-slate-400">
+                        Listing ID: {room.listing_id}
                       </p>
-                      <p className="text-xs text-brand-muted mt-2">
+                      <p className="text-xs text-slate-500 mt-2">
                         Created {new Date(room.created_at).toLocaleDateString()}
                       </p>
                     </div>
                     <div>
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        room.status === 'open' ? 'bg-green-100 text-green-800' :
-                        room.status === 'under_offer' ? 'bg-blue-100 text-blue-800' :
-                        room.status === 'closed' ? 'bg-gray-100 text-gray-800' :
-                        'bg-yellow-100 text-yellow-800'
+                        room.status === 'open' ? 'bg-green-900/30 text-green-400 border border-green-900' :
+                        'bg-yellow-900/30 text-yellow-400 border border-yellow-900'
                       }`}>
                         {room.status.replace('_', ' ')}
                       </span>
@@ -178,32 +173,32 @@ export default async function BuyerDashboardPage() {
 
         {/* NDAs Section */}
         <section className="mb-12">
-          <h2 className="text-2xl font-semibold text-brand-text mb-4">
+          <h2 className="text-2xl font-semibold text-white mb-4">
             Your Signed NDAs
           </h2>
           
           {ndas.length === 0 ? (
-            <div className="bg-white rounded-lg border border-brand-border p-8 text-center">
-              <p className="text-brand-muted">No signed NDAs yet.</p>
+            <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-8 text-center">
+              <p className="text-slate-400">No signed NDAs yet.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {ndas.map((nda) => (
                 <Link
                   key={nda.id}
-                  href={`/listing/${nda.listing.id}`}
-                  className="block bg-white rounded-lg border border-brand-border p-4 hover:shadow-md transition"
+                  href={`/listing/${nda.listing_id}`}
+                  className="block bg-slate-800 rounded-lg border border-slate-700 p-4 hover:border-blue-500 transition"
                 >
                   <div className="flex justify-between items-center">
                     <div>
-                      <h3 className="font-semibold text-brand-text">
-                        {nda.listing.title}
+                      <h3 className="font-semibold text-white">
+                        {nda.listing?.title || 'Unknown Listing'}
                       </h3>
-                      <p className="text-xs text-brand-muted mt-1">
+                      <p className="text-xs text-slate-400 mt-1">
                         Signed on {new Date(nda.signed_at).toLocaleDateString()}
                       </p>
                     </div>
-                    <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
+                    <span className="px-3 py-1 bg-green-900/30 text-green-400 border border-green-900 rounded-full text-xs font-semibold">
                       {nda.status}
                     </span>
                   </div>
@@ -217,6 +212,8 @@ export default async function BuyerDashboardPage() {
   );
 }
 
+// --- HELPER FUNCTIONS ---
+
 type NDARow = {
   id: string;
   listing_id: string;
@@ -226,37 +223,37 @@ type NDARow = {
 };
 
 async function fetchUserNDAs(userId: string) {
-  const { data, error } = await supabase
-    .from('ndas')
-    .select(`
-      id,
-      listing_id,
-      signed_at,
-      status,
-      listings:listing_id (
-        id,
-        title
-      )
-    `)
-    .eq('buyer_id', userId)
-    .order('signed_at', { ascending: false });
+  const supabase = await createClient();
 
-  if (error) {
-    console.error('Error fetching NDAs:', error);
+  // Try fetching. If table doesn't exist, this throws an error that we catch.
+  try {
+    const { data, error } = await supabase
+      .from("ndas")
+      .select(`
+        id,
+        listing_id,
+        signed_at,
+        status,
+        listings:listing_id ( id, title )
+      `)
+      .eq("buyer_id", userId)
+      .order("signed_at", { ascending: false });
+
+    if (error) {
+      console.error("Supabase NDA Error:", error.message);
+      return [];
+    }
+
+    return (data as any[] || []).map((nda) => ({
+      id: nda.id,
+      listing_id: nda.listing_id,
+      signed_at: nda.signed_at,
+      status: nda.status,
+      // Handle array vs object response from Supabase joins
+      listing: Array.isArray(nda.listings) ? nda.listings[0] : nda.listings
+    }));
+  } catch (err) {
+    console.error("Critical NDA Fetch Error (Table likely missing):", err);
     return [];
   }
-
-  return (data as NDARow[] || []).map((nda) => ({
-    id: nda.id,
-    listing_id: nda.listing_id,
-    signed_at: nda.signed_at,
-    status: nda.status,
-    listing: Array.isArray(nda.listings) ? nda.listings[0] : nda.listings
-  })) as Array<{
-    id: string;
-    listing_id: string;
-    signed_at: string;
-    status: string;
-    listing: { id: string; title: string };
-  }>;
 }

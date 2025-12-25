@@ -8,7 +8,7 @@ import type {
   PartnerProfileInsert,
   PartnerProfileUpdate,
 } from "@/types/database";
-import { supabase } from "@/utils/supabase/client";
+import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 
 // consultation_requests tables don't exist in Supabase until the migration is run.
@@ -26,6 +26,7 @@ export async function getApprovedPartners(filters?: {
   regions?: string[];
   specialties?: string[];
 }) {
+  const supabase = await createClient();
   let query = supabase
     .from("partner_profiles")
     .select(`

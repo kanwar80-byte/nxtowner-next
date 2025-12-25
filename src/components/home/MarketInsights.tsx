@@ -1,6 +1,5 @@
-import React from 'react';
-import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 
 const ARTICLES = [
   {
@@ -43,27 +42,27 @@ export default function MarketInsights() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {ARTICLES.map((article, index) => (
-                <div key={index} className="flex flex-col h-full bg-white border border-gray-200 rounded-2xl p-6 hover:border-blue-200 hover:shadow-md transition-all group cursor-pointer">
-                    <div className="mb-4">
-                        <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded uppercase tracking-wide">
-                            {article.tag}
-                        </span>
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-3 group-hover:text-blue-800 leading-snug">
-                        {article.title}
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-6 flex-grow">
-                        {article.desc}
-                    </p>
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                        <span className="text-xs text-gray-400 font-medium">{article.readTime}</span>
-                        <span className="text-orange-600 text-sm font-semibold flex items-center gap-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all">
-                            Read <ArrowRight size={14} />
-                        </span>
-                    </div>
-                </div>
-            ))}
+          {ARTICLES.map((article, index) => (
+            <Link key={index} href="/resources" className="flex flex-col h-full bg-white border border-gray-200 rounded-2xl p-6 hover:border-blue-200 hover:shadow-md transition-all group cursor-pointer">
+              <div className="mb-4">
+                <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded uppercase tracking-wide">
+                  {article.tag}
+                </span>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-3 group-hover:text-blue-800 leading-snug">
+                {article.title}
+              </h3>
+              <p className="text-sm text-gray-500 mb-6 flex-grow">
+                {article.desc}
+              </p>
+              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                <span className="text-xs text-gray-400 font-medium">{article.readTime}</span>
+                <span className="text-orange-600 text-sm font-semibold flex items-center gap-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all">
+                  Read <ArrowRight size={14} />
+                </span>
+              </div>
+            </Link>
+          ))}
         </div>
     </div>
   );
