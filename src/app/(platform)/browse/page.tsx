@@ -1,6 +1,6 @@
 ﻿import BrowseClientShell from "@/components/platform/BrowseClientShell";
 import FilterSidebar from "@/components/platform/FilterSidebar";
-import { supabaseServer } from "@/lib/supabase/server";
+import { fetchListings } from "@/lib/db/listings";
 import { Suspense } from "react";
 
 type BrowseSearchParams = {
@@ -39,35 +39,8 @@ function truthy(v?: string) {
   return s === "1" || s === "true" || s === "yes";
 }
 
-export default async function BrowsePage({ searchParams }: { searchParams: Promise<BrowseSearchParams> }) {
-  const sp = await searchParams;
-  const supabase = await supabaseServer();
-
-  const asset_type = normalizeAssetType(sp);
-  const q = (sp.q || "").trim();
-  const categoryLabel = normalizeCategory(sp.category);
-  const isAiVerified = truthy(sp.ai_verified);
-
-  let query = supabase
-    .from("listings")
-    .select("*")
-    .in("status", ["live", "published"])
-    .order("created_at", { ascending: false });
-
-  if (asset_type !== "all") {
-    query = query.eq("asset_type", asset_type);
-  }
-  // category, subcategory, city, province, ai fields are not present in v16_listings minimal seed
-  if (q) {
-    const like = `%${q.replace(/\s+/g, "%")}%`;
-    query = query.or([
-      `title.ilike.${like}`
-    ].join(","));
-  }
-
-  const { data: listings, error } = await query;
-
-  console.log("BROWSE listings:", listings?.length, "error:", error);
+  // NOTE: Adapter currently only supports full fetch. Filtering can be added to adapter if needed.
+  const { data: listings, error } = await fetchListings();
   if (error) console.error(error);
 
   return (
