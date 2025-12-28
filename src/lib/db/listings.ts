@@ -1,18 +1,16 @@
-// Listings DB adapter (read-only, V15/V16 switchable)
-import { supabase } from './supabaseClient';
-import { getBackendMode } from '../config/backend';
+// DEPRECATED: public reads must go through src/lib/v16/listings.repo.ts (V17 Phase 3.1.1).
 
-// V15 table: listings
-// V16 table: listings_v16
+import { getListingByIdV16, searchListingsV16 } from "@/lib/v16/listings.repo";
 
-export async function fetchListings() {
-  const mode = getBackendMode();
-  const table = mode === 'v16' ? 'listings_v16' : 'listings';
-  return supabase.from(table).select('*');
+
+// Thin wrapper for canonical V16 detail read
+export async function fetchListingById(id: string) {
+  return getListingByIdV16(id);
 }
 
-export async function fetchListingById(id: string) {
-  const mode = getBackendMode();
-  const table = mode === 'v16' ? 'listings_v16' : 'listings';
-  return supabase.from(table).select('*').eq('id', id).single();
+
+// Thin wrapper for canonical V16 teaser list
+export async function fetchListings(filters = {}) {
+  const data = await searchListingsV16(filters);
+  return { data, error: null };
 }
