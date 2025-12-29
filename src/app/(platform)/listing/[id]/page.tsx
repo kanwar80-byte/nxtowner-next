@@ -2,7 +2,7 @@
 import { getListingByIdV16 } from "@/lib/v16/listings.repo";
 import { notFound } from "next/navigation";
 
-import HeroGallery from "@/components/listings/v16/HeroGallery";
+// import HeroGallery from "@/components/listings/v16/HeroGallery";
 
 
 
@@ -70,11 +70,7 @@ export default async function ListingPage({ params }: PageProps) {
       </div>
 
       {/* Hero Image + Gallery */}
-      <HeroGallery
-        title={listing.title ?? "Listing"}
-        heroUrl={heroUrl}
-        galleryUrls={gallery}
-      />
+      <div>Image Gallery Placeholder</div>
 
       {/* Key Details Panel */}
       <div className="mb-6 bg-slate-50 border border-slate-200 rounded-lg p-4">
