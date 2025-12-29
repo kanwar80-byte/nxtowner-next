@@ -1,67 +1,72 @@
+
 "use server";
+import { sendMessage as sendDealRoomMessage } from "@/app/actions/dealroom";
+import { supabaseServer } from "@/lib/supabase/server";
 
-import { revalidatePath } from "next/cache";
+// --- getDealState for deal-room page ---
+export async function getDealState(dealRoomId: string) {
+  const supabase = await supabaseServer();
+  // Example: fetch NDA and LOI status for the deal room
+  // Replace with your actual logic as needed
+  const { data: nda, error: ndaError } = await supabase
+    .from("ndas_v16")
+    .select("id, signed_at")
+    .eq("deal_room_id", dealRoomId)
+    .maybeSingle();
+  const { data: loi, error: loiError } = await supabase
+    .from("lois_v16")
+    .select("id, submitted_at")
+    .eq("deal_room_id", dealRoomId)
+    .maybeSingle();
+  return {
+    ndaSigned: !!nda?.signed_at,
+    loiSubmitted: !!loi?.submitted_at,
+  };
+}
 
-// --- MOCK DATABASE (Persists while server is running) ---
-const mockDb: Record<string, { ndaSigned: boolean; loiSubmitted: boolean }> = {};
+
+
+// --- Real NDA/LOI actions using canonical API ---
 
 /**
- * Gets the current deal state (NDA/LOI status)
+ * Signs the NDA for a listing by calling the canonical API route.
  */
-export async function getDealState(dealId: string) {
-  // Return existing state or default to false
-  return mockDb[dealId] || { ndaSigned: false, loiSubmitted: false };
+export async function signNDA(listingId: string): Promise<{ roomId: string }> {
+  const res = await fetch("/api/nda/sign", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ listingId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error || "Failed to sign NDA");
+  }
+  const data = await res.json();
+  if (!data.roomId) throw new Error("No roomId returned");
+  return { roomId: data.roomId };
 }
 
 /**
- * Signs the NDA and updates the "Database"
+ * LOI submission is not implemented yet.
  */
-export async function signNDA(dealId: string) {
-  console.log(`[Server] Signing NDA for deal ${dealId}`);
-  
-  // Get current state or default
-  const current = mockDb[dealId] || { ndaSigned: false, loiSubmitted: false };
-
-  // Update state to SIGNED
-  mockDb[dealId] = { ...current, ndaSigned: true };
-
-  // Revalidate the page so the UI updates immediately
-  revalidatePath(`/deals/${dealId}`);
-  return { success: true };
+export async function submitLOI(formData: FormData) {
+  throw new Error("LOI submission is not implemented yet.");
 }
 
 /**
  * Sends a message
  */
 export async function sendMessage(formData: FormData) {
-  const message = formData.get("message");
-  const dealId = formData.get("dealId");
-  
-  console.log(`[Server] Message for deal ${dealId}:`, message);
-  
-  // Simulate network delay
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  
+  const body = String(formData.get("message") ?? "").trim();
+  const roomId = String(
+    formData.get("dealRoomId") ??
+    formData.get("roomId") ??
+    formData.get("dealId") ?? ""
+  ).trim();
+  if (!roomId) throw new Error("Missing dealRoomId (or roomId/dealId) in formData");
+  if (!body) throw new Error("Missing message in formData");
+  await sendDealRoomMessage(roomId, body);
   return { success: true };
 }
 
 
-/**
- * Submits a Letter of Intent (LOI)
- */
-export async function submitLOI(formData: FormData) {
-  const dealId = formData.get("dealId") as string;
-  const amount = formData.get("amount");
-  const terms = formData.get("terms");
-  
-  console.log(`[Server] LOI Submitted for ${dealId}: $${amount}`);
-
-  // 1. Update Mock DB
-  const current = mockDb[dealId] || { ndaSigned: false, loiSubmitted: false };
-  mockDb[dealId] = { ...current, loiSubmitted: true };
-
-  // 2. Revalidate Page
-  revalidatePath(`/deals/${dealId}`);
-  
-  return { success: true };
-}

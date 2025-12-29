@@ -114,7 +114,7 @@ export default function AdminListingsPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-3xl font-bold text-orange-600">
-                          {formatCurrency(listing.asking_price)}
+                          {formatCurrency(listing.asking_price ?? 0)}
                         </p>
                       </div>
                     </div>
@@ -129,7 +129,7 @@ export default function AdminListingsPage() {
                       <div>
                         <p className="text-xs text-slate-500 mb-1">Annual Revenue</p>
                         <p className="text-lg font-semibold text-slate-900">
-                          {formatCurrency(listing.annual_revenue)}
+                          {formatCurrency(listing.revenue_annual ?? null)}
                         </p>
                       </div>
                       <div>

@@ -33,22 +33,21 @@ export async function GET() {
 
         // 2. Create the "Perfect Data" Sample
         const isDigital = type === 'Digital';
-        
+
         const sampleListing = {
           title: `Demo: Premier ${subCat} Opportunity`,
           description: `This is a verified sample listing for a ${subCat} business. It features strong unit economics, a loyal customer base, and consistent year-over-year growth. Perfect for an investor looking for ${isDigital ? 'scalable digital assets' : 'stable operational cash flow'}.`,
-          
           // Taxonomy Consistency (CRITICAL)
           asset_type: type,
           main_category: mainCat,
           sub_category: subCat,
           category: mainCat, // Fallback
-          
+
           // Financials (Randomized for realism)
           asking_price: isDigital ? 500000 + Math.floor(Math.random() * 2000000) : 1500000 + Math.floor(Math.random() * 3000000),
           annual_revenue: 1000000 + Math.floor(Math.random() * 500000),
           annual_cashflow: 200000 + Math.floor(Math.random() * 150000),
-          
+
           // Meta
           location: isDigital ? 'Remote / Global' : 'Toronto, ON',
           status: 'active',
@@ -58,8 +57,17 @@ export async function GET() {
           owner_id: null // Anonymous for demo
         };
 
-        const { error } = await supabase.from('listings').insert(sampleListing);
-        
+        // --- Legacy key compatibility mapping ---
+        const payload: any = { ...sampleListing };
+        if (payload.ebitda_annual != null && payload.ebitda == null) payload.ebitda = payload.ebitda_annual;
+        if (payload.cash_flow_annual != null && payload.cash_flow == null) payload.cash_flow = payload.cash_flow_annual;
+        if (payload.noi_annual != null && payload.noi == null) payload.noi = payload.noi_annual;
+        delete payload.ebitda_annual;
+        delete payload.cash_flow_annual;
+        delete payload.noi_annual;
+
+        const { error } = await supabase.from('listings_v16').insert(payload);
+
         if (error) {
           console.error(`Failed to create ${subCat}:`, error);
           errors.push(subCat);

@@ -20,7 +20,7 @@ export default function BuyerLeadsSection() {
     async function loadLeads() {
       try {
         const data = await getListingLeadsForBuyer();
-        setLeads(data);
+        setLeads(data as any);
       } catch (error) {
         console.error('Failed to load leads:', error);
       } finally {

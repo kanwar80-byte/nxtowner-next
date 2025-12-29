@@ -25,8 +25,8 @@ export default function ListingCard({ listing }: { listing: Listing }) {
 
   // Use meta?.image_url if present, else fallback by category
   const bgImage = (listing.meta && typeof listing.meta.image_url === 'string' && listing.meta.image_url)
-    || (listing.category && FALLBACK_IMAGES[listing.category])
-    || FALLBACK_IMAGES['Default'];
+    || listing.image_url || (listing.category && FALLBACK_IMAGES[listing.category])
+    || FALLBACK_IMAGES['Default'] || "/images/placeholder.jpg";
 
   return (
     <Link href={`/listing/${listing.id}`} className="group block bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-xl transition-all hover:-translate-y-1 h-full flex flex-col">
@@ -35,7 +35,7 @@ export default function ListingCard({ listing }: { listing: Listing }) {
       <div className="relative h-48 overflow-hidden bg-slate-100">
         <img 
           src={bgImage} 
-          alt={listing.title} 
+          alt={listing.title || 'Business Listing'} 
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
         />
         

@@ -63,7 +63,7 @@ export function ConsultationRequestsList({
                 {request.requester_phone && ` • ${request.requester_phone}`}
               </p>
               <p className="text-xs text-brand-muted mt-1">
-                {new Date(request.created_at).toLocaleDateString("en-US", {
+                {new Date(request.created_at || Date.now()).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                   year: "numeric",
@@ -74,7 +74,7 @@ export function ConsultationRequestsList({
             </div>
             <span
               className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                STATUS_COLORS[request.status]
+                (STATUS_COLORS as any)[request.status || 'pending']
               }`}
             >
               {request.status}

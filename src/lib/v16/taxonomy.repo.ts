@@ -1,3 +1,26 @@
+// Get category UUID by code
+export async function getCategoryIdByCode(code: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("tax_categories")
+    .select("id")
+    .eq("code", code)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data.id ?? null;
+}
+
+// Get subcategory UUID by code
+export async function getSubcategoryIdByCode(code: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("tax_subcategories")
+    .select("id")
+    .eq("code", code)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data.id ?? null;
+}
 import { createClient } from "@/utils/supabase/server";
 
 export async function getCategoryNameById(categoryId: string): Promise<string | null> {

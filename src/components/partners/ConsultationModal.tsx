@@ -102,7 +102,7 @@ export function ConsultationModal({ partner, onClose }: ConsultationModalProps) 
                   {partner.firm_name}
                 </h3>
                 <p className="text-sm text-brand-muted mb-2">
-                  {partner.partner_type.toUpperCase()}
+                  {partner?.partner_type?.toUpperCase()}
                 </p>
                 <p className="text-xs text-brand-muted">
                   You&apos;ll receive a response at the email you provide below

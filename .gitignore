@@ -42,3 +42,11 @@ next-env.d.ts
 
 .vercel
 .env*.local
+
+# local audit / backups
+_audit/
+*.bak
+
+src/components/listings/v16/
+src/instrumentation.ts
+

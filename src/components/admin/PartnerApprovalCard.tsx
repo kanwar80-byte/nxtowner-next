@@ -88,7 +88,7 @@ export function PartnerApprovalCard({ partner }: PartnerApprovalCardProps) {
           {partner.firm_name}
         </h3>
         <p className="text-sm text-brand-muted">
-          {PARTNER_TYPE_LABELS[partner.partner_type] || partner.partner_type}
+          {(PARTNER_TYPE_LABELS as any)[partner.partner_type || 'default'] || partner.partner_type}
         </p>
       </div>
 

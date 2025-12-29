@@ -1,7 +1,6 @@
 "use server";
 
 import { supabaseServer } from "@/lib/supabase/server";
-import { PublicListing } from "@/types/listing";
 
 /**
  * MOCK: Simulates the two core AI Pillars running on a listing.

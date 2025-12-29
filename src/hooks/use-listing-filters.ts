@@ -6,18 +6,15 @@ export function useListingFilters() {
   // Text search
   const [query, setQuery] = useQueryState('query', parseAsString.withDefault(''));
 
-  // Asset type enum
-  const [assetType, setAssetType] = useQueryState<AssetType | undefined>(
-    'asset_type',
-    parseAsString.withDefault(undefined)
-  );
+  // Asset type enum (loose type)
+  const [assetType, setAssetType] = useQueryState('asset_type', parseAsString.withDefault(''));
 
   // Main category
   const [category, setCategory] = useQueryState('category', parseAsString.withDefault(''));
 
-  // Price range
-  const [minPrice, setMinPrice] = useQueryState('min_price', parseAsInteger.withDefault(undefined));
-  const [maxPrice, setMaxPrice] = useQueryState('max_price', parseAsInteger.withDefault(undefined));
+  // Price range (loose type)
+  const [minPrice, setMinPrice] = useQueryState('min_price', parseAsInteger.withDefault(0));
+  const [maxPrice, setMaxPrice] = useQueryState('max_price', parseAsInteger.withDefault(0));
 
   // Pagination
   const [page, setPage] = useQueryState('page', parseAsInteger.withDefault(1));

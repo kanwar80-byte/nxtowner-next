@@ -52,7 +52,7 @@ export function BuyerPreferencesForm() {
         setPreferences(prev => ({
             ...prev,
             targetMainCategories: prev.targetMainCategories.includes(category)
-                ? prev.targetMainCategories.filter(c => c !== category)
+                ? prev.targetMainCategories.filter((c: string) => c !== category)
                 : [...prev.targetMainCategories, category],
         }));
     };
@@ -74,7 +74,7 @@ export function BuyerPreferencesForm() {
                 setPreferences(finalPreferences); 
             } else {
                 setStatus('error');
-                console.error("Save failed:", result.message);
+                console.error("Save failed:", (result as any).message);
             }
         } catch (error) {
             setStatus('error');

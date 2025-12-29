@@ -7,7 +7,7 @@ export const revalidate = 0;
 
 export default async function AdminPartnersPage() {
   await requireAuth();
-  const { profile } = await getUserProfile();
+  const profile = await getUserProfile();
 
   if (!profile || profile.role !== "admin") {
     redirect("/dashboard");

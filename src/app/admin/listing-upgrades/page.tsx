@@ -85,7 +85,7 @@ export default function AdminListingUpgradesPage() {
 
       const { error } = await supabase
         .from('listings')
-        // @ts-expect-error - Column added in migration, not yet reflected in generated types
+        // @ts-ignore - Column added in migration, not yet reflected in generated types
         .update({
           is_featured: !currentFeatured,
           featured_until: featuredUntil,
@@ -118,7 +118,6 @@ export default function AdminListingUpgradesPage() {
 
       const { error } = await supabase
         .from('listings')
-        // @ts-expect-error - Column added in migration, not yet reflected in generated types
         .update({
           is_ai_verified: !currentVerified,
           ai_verified_at: aiVerifiedAt,
@@ -149,7 +148,6 @@ export default function AdminListingUpgradesPage() {
     try {
       const { error } = await supabase
         .from('listings')
-        // @ts-expect-error - Column added in migration, not yet reflected in generated types
         .update({
           is_featured: false,
           featured_until: null,

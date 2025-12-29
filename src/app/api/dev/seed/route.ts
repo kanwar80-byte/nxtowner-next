@@ -41,7 +41,7 @@ export async function GET(req: Request) {
     const status = 'published';
     const created_at = new Date().toISOString();
     // Insert into v16_listings
-    const { data: listing, error: listingError } = await supabase.from(TABLES.listings).insert({
+    const { data: listing, error: listingError } = await (supabase as any).from(TABLES.listings).insert({
       owner_id,
       asset_type,
       status,
@@ -51,13 +51,13 @@ export async function GET(req: Request) {
     if (listing) {
       listings.push(listing.id);
       // Insert into v16_listing_details
-      await supabase.from(TABLES.listing_details).insert({
+      await (supabase as any).from(TABLES.listing_details).insert({
         listing_id: listing.id,
         description: `Seeded description for ${title}`,
         details_json: { seeded: true, batch: 'v16', idx: i },
       });
       // Insert into v16_scores
-      await supabase.from(TABLES.scores).insert({
+      await (supabase as any).from(TABLES.scores).insert({
         listing_id: listing.id,
         score: 55 + Math.floor(Math.random() * 30),
         updated_at: new Date().toISOString(),

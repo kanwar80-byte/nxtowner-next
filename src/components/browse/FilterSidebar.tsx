@@ -6,7 +6,13 @@ import { ChevronDown, ChevronRight, Filter } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
-export default function FilterSidebar() {
+import type { BrowseFacetsV16 } from '@/lib/v16/facets.repo';
+
+type Props = {
+  facets?: BrowseFacetsV16 | null;
+};
+
+export default function FilterSidebar({ facets }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -72,13 +78,16 @@ export default function FilterSidebar() {
                 <div className="ml-2 pl-2 border-l border-slate-200 space-y-1 mt-1">
                   {Object.keys(TAXONOMY[type as AssetType]).map((cat) => (
                     <div key={cat}>
-                       <button
+                      <button
                         onClick={() => updateFilter('category', cat)}
                         className={`w-full text-left px-3 py-1.5 rounded-md text-xs transition-colors truncate ${
                           currentCategory === cat ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-900'
                         }`}
                       >
                         {cat}
+                        {facets && facets.categoryCounts && facets.categoryCounts[cat] !== undefined ? (
+                          <span className="ml-2 text-xs text-slate-400 font-normal">({facets.categoryCounts[cat]})</span>
+                        ) : null}
                       </button>
                     </div>
                   ))}

@@ -4,12 +4,34 @@
  * Server actions for listing management
  */
 
+import { handleEvent } from '@/lib/automation/eventHandler';
 import { supabase } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import type { ListingInsert, ListingUpdate, Listing } from '@/types/database';
-import type { PublicListing } from '@/types/listing';
 import { revalidatePath } from 'next/cache';
-import { handleEvent } from '@/lib/automation/eventHandler';
+
+type Listing = {
+  id: string;
+  owner_id?: string | null;
+  status?: string | null;
+  asset_type?: string | null;
+  title?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  [key: string]: any;
+};
+
+type ListingInsert = Partial<Listing>;
+type ListingUpdate = Partial<Listing>;
+
+type PublicListing = {
+  id: string;
+  title?: string | null;
+  asset_type?: string | null;
+  status?: string | null;
+  hero_image_url?: string | null;
+  created_at?: string | null;
+  [key: string]: any;
+};
 
 // ============================================================================
 // BROWSE & FILTER QUERIES

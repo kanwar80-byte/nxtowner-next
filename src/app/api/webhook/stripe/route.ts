@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
         // Update user profile
         await supabase
           .from('profiles')
-          // @ts-expect-error - stripe_subscription_id added in migration
+          // @ts-ignore - stripe_subscription_id added in migration
           .update({
             stripe_subscription_id: subscription.id,
             plan,
@@ -97,7 +97,6 @@ export async function POST(req: NextRequest) {
         // Reset to free plan
         await supabase
           .from('profiles')
-          // @ts-expect-error - stripe_subscription_id added in migration
           .update({
             plan: 'free',
             stripe_subscription_id: null,

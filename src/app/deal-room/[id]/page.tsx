@@ -3,6 +3,8 @@ import AIAnalysisSection from "@/components/platform/AIAnalysisSection";
 import AnalysisWrapper from "@/components/platform/AnalysisWrapper";
 import SecureVault from "@/components/platform/SecureVault";
 import SmartActionCenter from "@/components/platform/SmartActionCenter";
+import { requireAuth } from "@/lib/auth";
+import { TABLES } from "@/lib/spine/constants";
 import { supabaseServer } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 
@@ -12,21 +14,45 @@ type PageProps = {
 
 export default async function DealRoomPage({ params }: PageProps) {
   const { id } = await params;
+
+  // 1. Fetch listing with NEW schema joins
+  // Require auth for deal room access
+  const user = await requireAuth();
+
   const dealState = await getDealState(id);
   const supabase = await supabaseServer();
 
-  // 1. Fetch listing with NEW schema joins
-  const { data: listing, error } = await supabase
-    .from("listings")
-    .select(`*, operational_data(*), digital_data(*), ai_analysis(*)`)
+  // 0) Fetch deal room (canonical) and ensure access
+  const { data: room, error: roomError } = await supabase
+    .from(TABLES.deal_rooms)
+    .select("id, listing_id, status")
     .eq("id", id)
+    .single();
+
+  if (roomError || !room) return notFound();
+
+  // Minimal access check (canonical members table if present)
+  const { data: member } = await supabase
+    .from(TABLES.deal_room_members)
+    .select("id")
+    .eq("deal_room_id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!member) return notFound();
+
+  // 1. Fetch listing using room.listing_id
+  const { data: listing, error } = await supabase
+    .from("listings_v16")
+    .select(`*, operational_data(*), digital_data(*), ai_analysis(*)`)
+    .eq("id", room.listing_id)
     .single();
 
   if (error || !listing) return notFound();
 
   // 2. Fetch benchmarks for comparison
   const { data: benchmarks } = await supabase
-    .from("listings")
+    .from("listings_v16")
     .select("asking_price, gross_revenue, ebitda")
     .eq("subcategory", listing.subcategory);
 

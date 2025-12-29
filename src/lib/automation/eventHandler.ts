@@ -61,6 +61,6 @@ export async function handleEvent(event: PlatformEvent) {
             break;
 
         default:
-            console.warn(`[EVENT HANDLER] Unknown event type: ${event.type}`);
+            console.warn(`[EVENT HANDLER] Unknown event type: ${(event as any).type}`);
     }
 }

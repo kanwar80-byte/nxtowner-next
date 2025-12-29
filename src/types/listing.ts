@@ -34,3 +34,13 @@ export interface Listing {
     executive_summary: string;
   } | null;
 }
+
+export type PublicListing = {
+  id: string;
+  title?: string | null;
+  status?: string | null;
+  asset_type?: string | null;
+  hero_image_url?: string | null;
+  asking_price?: number | null;
+  [key: string]: any;
+};

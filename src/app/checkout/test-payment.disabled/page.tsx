@@ -161,7 +161,7 @@ export default function BrowsePage() {
                   {listing.image_url ? (
                     <Image
                       src={listing.image_url}
-                      alt={listing.title}
+                      alt={listing.title || "Listing"}
                       fill
                       className="object-cover transition group-hover:scale-105"
                     />
@@ -187,7 +187,7 @@ export default function BrowsePage() {
                   </div>
                   
                   <h3 className="mb-2 text-lg font-bold text-gray-900 group-hover:text-blue-600">
-                    {listing.title}
+                    {listing.title || "Listing"}
                   </h3>
 
                   <div className="mt-4 border-t border-gray-100 pt-4">

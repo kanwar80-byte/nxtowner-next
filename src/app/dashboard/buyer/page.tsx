@@ -11,7 +11,7 @@ type ListingData = {
   title: string;
   asking_price: number | null;
   status: string;
-  type: string;
+  asset_type: string;
 };
 
 type WatchlistWithDetails = {
@@ -42,8 +42,8 @@ export default async function BuyerDashboardPage() {
   const watchlistWithDetails: WatchlistWithDetails[] = await Promise.all(
     (watchlistItems || []).map(async (item) => {
       const { data: listing } = await supabase
-        .from('listings')
-        .select('id, title, asking_price, status, type')
+        .from('listings_v16')
+        .select('id, title, asking_price, status, asset_type')
         .eq('id', item.listing_id)
         .single();
       return {
@@ -71,7 +71,7 @@ export default async function BuyerDashboardPage() {
             <div className="flex items-center gap-2">
                 <span className="capitalize text-blue-400 font-bold">{profile.plan || 'Free Tier'}</span>
                 {profile.plan_renews_at && (
-                    <span className="text-sm text-slate-500">Renews: {new Date(profile.plan_renews_at).toLocaleDateString()}</span>
+                    <span className="text-sm text-slate-500">Renews: {new Date(profile.plan_renews_at || Date.now()).toLocaleDateString()}</span>
                 )}
             </div>
           </div>
@@ -106,7 +106,7 @@ export default async function BuyerDashboardPage() {
                       {item.listing.title}
                     </h3>
                     <p className="text-slate-500 text-sm mb-2">
-                      {item.listing.type === 'asset' ? 'Physical Asset' : 'Digital Business'}
+                      {item.listing.asset_type === 'operational' ? 'Physical Asset' : 'Digital Business'}
                     </p>
                     <p className="font-bold text-blue-600">
                       {item.listing.asking_price
@@ -114,7 +114,7 @@ export default async function BuyerDashboardPage() {
                         : 'Price on request'}
                     </p>
                     <p className="text-xs text-slate-400 mt-2">
-                      Saved {new Date(item.created_at).toLocaleDateString()}
+                      Saved {new Date(item.created_at || Date.now()).toLocaleDateString()}
                     </p>
                   </Link>
                 )
@@ -153,7 +153,7 @@ export default async function BuyerDashboardPage() {
                         Listing ID: {room.listing_id}
                       </p>
                       <p className="text-xs text-slate-500 mt-2">
-                        Created {new Date(room.created_at).toLocaleDateString()}
+                        Created {new Date(room.created_at || Date.now()).toLocaleDateString()}
                       </p>
                     </div>
                     <div>
@@ -161,7 +161,7 @@ export default async function BuyerDashboardPage() {
                         room.status === 'open' ? 'bg-green-900/30 text-green-400 border border-green-900' :
                         'bg-yellow-900/30 text-yellow-400 border border-yellow-900'
                       }`}>
-                        {room.status.replace('_', ' ')}
+                        {(room.status || 'pending').replace('_', ' ')}
                       </span>
                     </div>
                   </div>
@@ -183,9 +183,9 @@ export default async function BuyerDashboardPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {ndas.map((nda) => (
+              {(ndas as any[]).map((nda) => (
                 <Link
-                  key={nda.id}
+                  key={nda.listing_id}
                   href={`/listing/${nda.listing_id}`}
                   className="block bg-slate-800 rounded-lg border border-slate-700 p-4 hover:border-blue-500 transition"
                 >
@@ -195,7 +195,7 @@ export default async function BuyerDashboardPage() {
                         {nda.listing?.title || 'Unknown Listing'}
                       </h3>
                       <p className="text-xs text-slate-400 mt-1">
-                        Signed on {new Date(nda.signed_at).toLocaleDateString()}
+                        Signed on {new Date(nda.signed_at || Date.now()).toLocaleDateString()}
                       </p>
                     </div>
                     <span className="px-3 py-1 bg-green-900/30 text-green-400 border border-green-900 rounded-full text-xs font-semibold">
@@ -224,36 +224,25 @@ type NDARow = {
 
 async function fetchUserNDAs(userId: string) {
   const supabase = await createClient();
-
-  // Try fetching. If table doesn't exist, this throws an error that we catch.
+  const NDA_TABLE = "ndas";
   try {
-    const { data, error } = await supabase
-      .from("ndas")
-      .select(`
-        id,
-        listing_id,
-        signed_at,
-        status,
-        listings:listing_id ( id, title )
-      `)
+    const { data: ndaRows, error: ndaError } = await supabase
+      .from(NDA_TABLE)
+      .select("listing_id,signed_at,status")
       .eq("buyer_id", userId)
       .order("signed_at", { ascending: false });
-
-    if (error) {
-      console.error("Supabase NDA Error:", error.message);
+    if (ndaError) {
+      console.log("Supabase NDA Error:", {
+        message: (ndaError as any)?.message,
+        code: (ndaError as any)?.code,
+        details: (ndaError as any)?.details,
+        hint: (ndaError as any)?.hint,
+      });
       return [];
     }
-
-    return (data as any[] || []).map((nda) => ({
-      id: nda.id,
-      listing_id: nda.listing_id,
-      signed_at: nda.signed_at,
-      status: nda.status,
-      // Handle array vs object response from Supabase joins
-      listing: Array.isArray(nda.listings) ? nda.listings[0] : nda.listings
-    }));
+    return ndaRows || [];
   } catch (err) {
-    console.error("Critical NDA Fetch Error (Table likely missing):", err);
+    console.log("Critical NDA Fetch Error (Table likely missing):", err);
     return [];
   }
 }

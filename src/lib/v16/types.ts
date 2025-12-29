@@ -1,3 +1,15 @@
+// Canonical browse/search filter type for V16
+export interface BrowseFiltersV16 {
+  query?: string;
+  assetType?: string;
+  category?: string; // legacy string code
+  subcategory?: string; // legacy string code
+  categoryId?: string; // UUID
+  subcategoryId?: string; // UUID
+  minPrice?: number;
+  maxPrice?: number;
+  sort?: string;
+}
 // Domain types for V16 adapter
 
 export type AssetType = "Operational" | "Digital";

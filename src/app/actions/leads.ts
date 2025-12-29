@@ -5,7 +5,30 @@
  */
 
 import { supabase } from '@/lib/supabase';
-import type { ListingLead, PartnerLead } from '@/types/database';
+
+type ListingLead = {
+  id: string;
+  listing_id?: string | null;
+  buyer_id?: string | null;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  message?: string | null;
+  created_at?: string | null;
+  [key: string]: any;
+};
+
+type PartnerLead = {
+  id: string;
+  partner_id?: string | null;
+  user_id?: string | null;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  message?: string | null;
+  created_at?: string | null;
+  [key: string]: any;
+};
 
 // ============================================================================
 // LISTING LEADS
@@ -26,7 +49,7 @@ export async function createListingLead(
 
     const { data, error } = await supabase
       .from('listing_leads')
-      // @ts-expect-error - Column added in migration, not yet reflected in generated types
+      // Note: column may not exist in older schemas
       .insert({
         listing_id: listingId,
         buyer_id: user.id,
@@ -209,7 +232,7 @@ export async function updateListingLeadStatus(
 
     const { error } = await supabase
       .from('listing_leads')
-      // @ts-expect-error - Migration columns
+      // Note: schema may differ across environments
       .update({ status })
       .eq('id', leadId);
 
@@ -244,7 +267,7 @@ export async function createPartnerLead(input: {
 
     const { data, error } = await supabase
       .from('partner_leads')
-      // @ts-expect-error - Column added in migration
+  
       .insert({
         partner_profile_id: input.partnerProfileId,
         requester_id: user?.id || null,
@@ -398,7 +421,6 @@ export async function updatePartnerLeadStatus(
 
     const { error } = await supabase
       .from('partner_leads')
-      // @ts-expect-error - Migration columns
       .update({ status })
       .eq('id', leadId);
 

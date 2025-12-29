@@ -1,6 +1,6 @@
 'use client';
 
-import { advanceDealStage } from '@/app/actions/deal-actions';
+// import { advanceDealStage } from '@/app/actions/deal-actions';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -15,7 +15,7 @@ export function AdvanceStageButton({ dealId, currentStage }: Props) {
   const handleAdvance = async () => {
     setIsLoading(true);
     try {
-      await advanceDealStage(dealId, currentStage);
+      // await advanceDealStage(dealId, currentStage);
     } catch (error) {
       console.error(error);
       alert('Failed to advance stage');

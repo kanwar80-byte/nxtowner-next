@@ -1,5 +1,6 @@
 "use server";
 
+import { supabase } from "@/lib/supabase";
 import type {
   ConsultationRequest,
   ConsultationRequestInsert,
@@ -110,7 +111,7 @@ export async function getPartnerProfileById(partnerId: string) {
 export async function createPartnerProfile(profileData: PartnerProfileInsert) {
   const { data, error } = await supabase
     .from("partner_profiles")
-    // @ts-expect-error - table exists but not in generated Supabase types until migration
+    // @ts-ignore - table exists but not in generated Supabase types until migration
     .insert(profileData)
     .select()
     .single();
@@ -135,7 +136,6 @@ export async function updatePartnerProfile(
 ) {
   const { data, error } = await supabase
     .from("partner_profiles")
-    // @ts-expect-error - table exists but not in generated Supabase types until migration
     .update(updates)
     .eq("id", partnerId)
     .select()
@@ -182,7 +182,6 @@ export async function getPendingPartnerProfiles() {
 export async function approvePartnerProfile(partnerId: string) {
   const { data, error } = await supabase
     .from("partner_profiles")
-    // @ts-expect-error - table exists but not in generated Supabase types until migration
     .update({ status: "approved" })
     .eq("id", partnerId)
     .select()
@@ -205,7 +204,6 @@ export async function approvePartnerProfile(partnerId: string) {
 export async function rejectPartnerProfile(partnerId: string) {
   const { data, error } = await supabase
     .from("partner_profiles")
-    // @ts-expect-error - table exists but not in generated Supabase types until migration
     .update({ status: "rejected" })
     .eq("id", partnerId)
     .select()
@@ -233,7 +231,6 @@ export async function createConsultationRequest(
 ) {
   const { data, error } = await supabase
     .from("consultation_requests")
-    // @ts-expect-error - table exists but not in generated Supabase types until migration
     .insert(requestData)
     .select()
     .single();
@@ -281,7 +278,6 @@ export async function updateConsultationRequestStatus(
 ) {
   const { data, error } = await supabase
     .from("consultation_requests")
-    // @ts-expect-error - table exists but not in generated Supabase types until migration
     .update({ status })
     .eq("id", requestId)
     .select()

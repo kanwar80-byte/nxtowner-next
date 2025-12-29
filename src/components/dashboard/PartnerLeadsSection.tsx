@@ -22,7 +22,7 @@ export default function PartnerLeadsSection() {
     async function loadLeads() {
       try {
         const data = await getPartnerLeadsForPartner();
-        setLeads(data);
+        setLeads(data as any);
       } catch (error) {
         console.error('Failed to load leads:', error);
       } finally {

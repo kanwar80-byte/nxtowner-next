@@ -4,7 +4,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { Listing } from "@/types/listing";
 import { MapPin } from "lucide-react";
 import Link from "next/link";
 import { parseAsArrayOf, parseAsString, useQueryState } from 'nuqs';
@@ -13,16 +12,20 @@ import { parseAsArrayOf, parseAsString, useQueryState } from 'nuqs';
 const FALLBACK_IMAGE =
   "https://nxtowner-public.s3.amazonaws.com/placeholders/listing-placeholder.webp";
 
-export default function ListingCard(listing: Listing) {
+export default function ListingCard(listing: any) {
+  // V16 field mapping
   const {
     id,
     title,
-    hero_image_url,
-    asset_type,
-    category,
+    heroImageUrl,
+    assetType,
+    categoryLabel,
     city,
     province,
-    asking_price,
+    country,
+    askingPrice,
+    revenueAnnual,
+    cashFlowAnnual,
   } = listing;
   // Use nuqs to sync selectedIds in the URL
   const [selectedIds, setSelectedIds] = useQueryState(
@@ -37,14 +40,18 @@ export default function ListingCard(listing: Listing) {
     );
   };
 
+  // Compose location string
+  const location = [city, province, country].filter(Boolean).join(", ") || "-";
+  // Image fix: support both camelCase and snake_case
+  const imageUrl = heroImageUrl || listing.hero_image_url || FALLBACK_IMAGE;
   return (
-    <Link href={`/deals/${id}`} className="block group">
+    <Link href={`/listing/${id}`} className="block group">
       <Card
         className={`overflow-hidden flex flex-col h-full transition-shadow hover:shadow-lg relative ${checked ? "ring-2 ring-blue-500" : ""}`}
       >
         <div className="relative aspect-video bg-muted flex items-center justify-center">
           <img
-            src={hero_image_url || FALLBACK_IMAGE}
+            src={imageUrl}
             alt={title}
             className="object-cover w-full h-full transition-transform group-hover:scale-105"
             loading="lazy"
@@ -54,7 +61,7 @@ export default function ListingCard(listing: Listing) {
             <Checkbox
               checked={checked}
               onClick={handleCheckbox}
-              onChange={handleCheckbox}
+              onChange={handleCheckbox as any}
               aria-label="Select for comparison"
             />
           </div>
@@ -62,15 +69,15 @@ export default function ListingCard(listing: Listing) {
             <Badge
               variant="outline"
               className={
-                asset_type === "Operational"
+                assetType === "Operational"
                   ? "bg-blue-100 text-blue-800 border-blue-200"
                   : "bg-purple-100 text-purple-800 border-purple-200"
               }
             >
-              {asset_type}
+              {assetType}
             </Badge>
             <Badge variant="secondary" className="bg-muted/80 text-xs px-2 py-0.5">
-              {category}
+              {categoryLabel}
             </Badge>
           </div>
         </div>
@@ -78,12 +85,21 @@ export default function ListingCard(listing: Listing) {
           <div className="font-semibold text-base line-clamp-2 mb-1">{title}</div>
           <div className="text-sm text-muted-foreground flex items-center gap-1">
             <MapPin className="w-4 h-4 mr-1 opacity-70" />
-            {city || "-"}, {province || "-"}
+            {location}
+          </div>
+          {/* Revenue and Cash Flow badges */}
+          <div className="flex gap-2 mt-2">
+            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+              Revenue: {revenueAnnual !== undefined ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(revenueAnnual) : '-'}
+            </Badge>
+            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+              Cash Flow: {cashFlowAnnual !== undefined ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(cashFlowAnnual) : '-'}
+            </Badge>
           </div>
         </div>
         <div className="px-4 pb-3 pt-1 mt-auto">
           <div className="font-bold text-lg text-primary">
-            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(asking_price)}
+            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(askingPrice)}
           </div>
         </div>
       </Card>

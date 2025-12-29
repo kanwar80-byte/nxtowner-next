@@ -53,14 +53,14 @@ export default function AIComparisonChart({ dealMetrics, marketBenchmarks }: AIC
           <YAxis axisLine={false} tickLine={false} fontSize={13} />
           <Tooltip
             contentStyle={{ borderRadius: 8, fontSize: 14 }}
-            formatter={(value: number) => value.toFixed(2)}
+            formatter={(value: number | undefined) => (value || 0).toFixed(2)}
           />
           <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ fontSize: 14, marginBottom: 8 }} />
           <Bar dataKey="This Deal" fill="#2563eb" radius={[6, 6, 0, 0]} maxBarSize={48}>
-            <LabelList dataKey="This Deal" position="top" formatter={(v: number) => v.toFixed(2)} />
+            <LabelList dataKey="This Deal" position="top" formatter={(v: any) => (Number(v) || 0).toFixed(2)} />
           </Bar>
           <Bar dataKey="Subcategory Average" fill="#cbd5e1" radius={[6, 6, 0, 0]} maxBarSize={48}>
-            <LabelList dataKey="Subcategory Average" position="top" formatter={(v: number) => v.toFixed(2)} />
+            <LabelList dataKey="Subcategory Average" position="top" formatter={(v: any) => (Number(v) || 0).toFixed(2)} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>

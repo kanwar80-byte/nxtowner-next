@@ -30,7 +30,7 @@ export function ListingRow({ listing }: { listing: PublicListing }) {
                 {imageUrl ? (
                     <Image 
                         src={imageUrl} 
-                        alt={listing.title} 
+                        alt={listing.title || "Untitled Listing"} 
                         fill 
                         className="object-cover transition-all duration-300 group-hover:scale-105" 
                         // IMPORTANT: Add priority for faster loading on the browse page
@@ -83,7 +83,7 @@ export function ListingRow({ listing }: { listing: PublicListing }) {
 
                 {/* Title */}
                 <h3 className="text-xl font-bold text-gray-900 truncate group-hover:text-blue-600">
-                    {listing.title}
+                    {listing.title || "Untitled"}
                 </h3>
                 
                 {/* Summary */}

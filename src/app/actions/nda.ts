@@ -37,7 +37,7 @@ export async function signNdaAndCreateDealRoom(input: SignNdaInput): Promise<Sig
     const { roomId } = await createDealRoomWithNda({
       listingId,
       buyerId: user.id,
-      signedPdfUrl,
+      ...(signedPdfUrl ? { signedPdfUrl } : {}),
       initialMessage,
     });
 

@@ -41,16 +41,16 @@ export async function POST(req: NextRequest) {
     // Get or create Stripe customer
     const customerId = await getOrCreateStripeCustomer(
       user.email || '',
-      // @ts-expect-error - stripe_customer_id added in migration
+      // @ts-ignore - stripe_customer_id added in migration
       profile.stripe_customer_id || undefined
     );
 
     // Update profile with Stripe customer ID if new
-    // @ts-expect-error - stripe_customer_id added in migration
+    // @ts-ignore - stripe_customer_id added in migration
     if (!profile.stripe_customer_id) {
       await supabase
         .from('profiles')
-        // @ts-expect-error - stripe_customer_id type not in generated types
+        // @ts-ignore - stripe_customer_id type not in generated types
         .update({ stripe_customer_id: customerId })
         .eq('id', user.id);
     }

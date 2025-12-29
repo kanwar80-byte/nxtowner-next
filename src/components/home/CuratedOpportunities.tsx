@@ -1,4 +1,5 @@
-﻿import { supabaseServer } from "@/lib/supabase/server";
+﻿import { fetchListings } from "@/lib/db/listings";
+import { getFeaturedListingsV16 } from "@/lib/v16/listings.repo";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
@@ -16,21 +17,34 @@ type Listing = {
 };
 
 export default async function CuratedOpportunities() {
-  const supabase = await supabaseServer();
-
-  const { data } = await supabase
-    .from("listings")
-    .select("id,title,city,province,asking_price,cash_flow,category,subcategory,hero_image_url,created_at")
-    .order("created_at", { ascending: false })
-    .limit(3);
-
-  const rows = (data || []) as Listing[];
+  const useV16 = process.env.NEXT_PUBLIC_USE_V16 === "1";
+  let rows: Listing[] = [];
+  if (useV16) {
+    // V16 fetch, map to V15 Listing shape
+    const v16Rows = await getFeaturedListingsV16();
+    rows = v16Rows.map((item) => ({
+      id: item.id,
+      title: item.title ?? null,
+      city: item.city ?? null,
+      province: item.province ?? null,
+      asking_price: typeof item.askingPrice === "number" ? item.askingPrice : null,
+      cash_flow: typeof item.cashFlowAnnual === "number" ? item.cashFlowAnnual : null,
+      category: item.categoryLabel ?? null,
+      subcategory: item.subcategoryLabel ?? null,
+      hero_image_url: item.heroImageUrl ?? null,
+      created_at: null,
+    }));
+  } else {
+    const { data, error } = await fetchListings();
+    if (error) console.error(error);
+    rows = (data || []).slice(0, 6) as Listing[];
+  }
 
   if (rows.length === 0) {
     return (
       <section className="py-12 bg-[#0B1221]">
         <div className="max-w-7xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">Curated Opportunities</h2>
+          <h2 className="text-3xl font-bold text-white mb-4">Featured Opportunities</h2>
           <p className="text-slate-400 mb-6">No curated listings found right now.</p>
           <Link
             href="/browse"
@@ -48,7 +62,7 @@ export default async function CuratedOpportunities() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-end mb-8">
           <div>
-            <h2 className="text-3xl font-bold text-white">Curated Opportunities</h2>
+            <h2 className="text-3xl font-bold text-white">Featured Opportunities</h2>
             <p className="text-slate-400 mt-2">Hand-picked for financial health and readiness.</p>
           </div>
           <Link

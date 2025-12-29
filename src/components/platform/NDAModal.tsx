@@ -2,18 +2,23 @@
 
 "use client";
 
-import { signNDA } from "@/app/actions/deal-actions"; // <--- IMPORT REAL ACTION
+import { signNDA } from "@/app/actions/deal-actions";
 import { Lock, ShieldCheck, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { UIEvent, useRef, useState } from "react";
 
-type Props = {
+export type NDAModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSigned: () => void;
-  dealId: string;
+  listingId?: string;
+  dealId?: string;
+  onSigned?: () => void;
+  [key: string]: any;
 };
 
-export default function NDAModal({ isOpen, onClose, onSigned, dealId }: Props) {
+export default function NDAModal(props: NDAModalProps) {
+  const { isOpen, onClose, listingId } = props;
+  const router = useRouter();
   const [hasScrolled, setHasScrolled] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [isSigning, setIsSigning] = useState(false);
@@ -30,15 +35,15 @@ export default function NDAModal({ isOpen, onClose, onSigned, dealId }: Props) {
   };
 
   const handleSign = async () => {
+    if (!listingId) {
+      console.error("Missing listing ID");
+      return;
+    }
     setIsSigning(true);
-    
     try {
-      // 1. CALL THE REAL SERVER ACTION
-      await signNDA(dealId);
-      
-      // 2. Success! Notify parent to refresh UI
-      onSigned(); 
+      const { roomId } = await signNDA(listingId);
       onClose();
+      router.push(`/deal-room/${roomId}`);
     } catch (error) {
       console.error("Failed to sign NDA:", error);
       alert("Something went wrong. Please try again.");
@@ -75,7 +80,7 @@ export default function NDAModal({ isOpen, onClose, onSigned, dealId }: Props) {
         >
           <div className="prose prose-sm max-w-none">
             <p className="font-bold text-gray-900 uppercase">Mutual Non-Disclosure Agreement</p>
-            <p>This Agreement allows you to access confidential information about the business listing #{dealId}.</p>
+            <p>This Agreement allows you to access confidential information about the business listing #{listingId}.</p>
             
             <h4 className="font-bold text-gray-800 mt-4">1. Confidentiality</h4>
             <p>You agree to keep all financial data, customer lists, and operational details strictly confidential. You will not share this information with third parties without express written consent.</p>

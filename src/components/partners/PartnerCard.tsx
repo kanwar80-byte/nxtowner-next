@@ -44,7 +44,7 @@ export function PartnerCard({ partner }: PartnerCardProps) {
               )}
             </div>
             <p className="text-sm text-brand-muted">
-              {PARTNER_TYPE_LABELS[partner.partner_type] || partner.partner_type}
+              {(PARTNER_TYPE_LABELS as any)[partner.partner_type || ''] || partner.partner_type}
             </p>
             {partner.years_experience && (
               <p className="text-xs text-brand-muted mt-1">

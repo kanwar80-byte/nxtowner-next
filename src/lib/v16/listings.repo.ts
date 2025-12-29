@@ -1,17 +1,19 @@
+
 import { createClient } from "@/utils/supabase/server";
+import type { BrowseFiltersV16 } from "./types";
 
 // Centralized public status list for all public listing reads (V17 Phase 3.1.2)
-export const PUBLIC_VISIBLE_STATUSES = ["published", "live"] as const;
+export const PUBLIC_VISIBLE_STATUSES = ["published", "teaser"] as const;
 // Canonical facets fetch for browse (V17 Phase 3.1.1)
-export async function getBrowseFacetsV16(filters) {
+export async function getBrowseFacetsV16(filters: BrowseFiltersV16): Promise<any> {
   const supabase = await createClient();
   let query = supabase
     .from("listings_v16")
     .select("category, asset_type, subcategory, status")
     .in("status", PUBLIC_VISIBLE_STATUSES);
 
-  if (filters.q) {
-    query = query.ilike("title", `%${filters.q}%`);
+  if (filters.query) {
+    query = query.ilike("title", `%${filters.query}%`);
   }
   if (filters.assetType) {
     query = query.eq("asset_type", filters.assetType);
@@ -34,14 +36,14 @@ export async function getBrowseFacetsV16(filters) {
     };
   }
 
-  function inc(map, key) {
+  function inc(map: Record<string, number>, key: string | null | undefined): void {
     if (!key) return;
     map[key] = (map[key] || 0) + 1;
   }
   const assetTypeCounts = {};
   const categoryCounts = {};
   const subcategoryCounts = {};
-  for (const row of data) {
+  for (const row of data as any[]) {
     inc(assetTypeCounts, row.asset_type);
     inc(categoryCounts, row.category);
     inc(subcategoryCounts, row.subcategory);
@@ -55,8 +57,9 @@ export async function getBrowseFacetsV16(filters) {
 }
 // Canonical public read API for listings_v16 (V17 Phase 3.1.1)
 
+
 // Returns a list of listing teasers (browse/search)
-export async function searchListingsV16(filters) {
+export async function searchListingsV16(filters: BrowseFiltersV16): Promise<any[]> {
   const supabase = await createClient();
   let query = supabase
     .from("listings_v16")
@@ -75,8 +78,16 @@ export async function searchListingsV16(filters) {
   if (filters.assetType) {
     query = query.eq("asset_type", filters.assetType);
   }
-  if (filters.category) {
+  // Prefer UUID-based filtering, fallback to string-based for backward compatibility
+  if (filters.categoryId) {
+    query = query.eq("category", filters.categoryId);
+  } else if (filters.category) {
     query = query.eq("category", filters.category);
+  }
+  if (filters.subcategoryId) {
+    query = query.eq("subcategory", filters.subcategoryId);
+  } else if (filters.subcategory) {
+    query = query.eq("subcategory", filters.subcategory);
   }
   if (filters.minPrice) {
     query = query.gte("asking_price", filters.minPrice);
@@ -97,14 +108,14 @@ export async function searchListingsV16(filters) {
     console.error("Error searching V16 listings:", error);
     return [];
   }
-  return data.map((item) => ({
+  return (data as any[]).map((item: any): any => ({
     ...item,
     image_url: item.hero_image_url,
   }));
 }
 
 // Returns full detail for a single listing
-export async function getListingByIdV16(id) {
+export async function getListingByIdV16(id: string): Promise<any | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("listings_v16")
@@ -131,8 +142,12 @@ export async function getListingByIdV16(id) {
     .in("status", PUBLIC_VISIBLE_STATUSES)
     .maybeSingle();
 
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.log("[getListingByIdV16] id:", id, "PUBLIC_VISIBLE_STATUSES:", PUBLIC_VISIBLE_STATUSES, "error:", error, "data is null:", data == null);
+  }
+
   if (error) {
-    console.error("Error fetching listing V16:", error);
     return null;
   }
   if (data) {

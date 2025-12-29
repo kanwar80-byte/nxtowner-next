@@ -29,6 +29,6 @@ function inc(map: Record<string, number>, key: string | null | undefined) {
 
 // ✅ 3. Main Logic (Single consolidated function)
 // Route to canonical implementation in listings.repo.ts
-export async function getBrowseFacetsV16(filters) {
+export async function getBrowseFacetsV16(filters: any) {
   return getBrowseFacetsV16Impl(filters);
 }

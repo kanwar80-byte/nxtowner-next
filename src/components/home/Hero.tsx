@@ -34,11 +34,25 @@ export default function Hero() {
     return 'all';
   };
 
+  // REPLACED: Unified wiring for assetType param
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const params = new URLSearchParams();
-    if (search.trim()) params.set('q', search.trim());
-    params.set('assetType', getAssetType(assetMode));
+
+    // 1. Handle Search Text
+    if (search.trim()) {
+      params.set('q', search.trim());
+    }
+
+    // 2. Handle Asset Type (Map Tabs to V16 DB Values)
+    // assetMode is the tab state variable
+    if (assetMode === 'operational') {
+      params.set('assetType', 'Operational');
+    } else if (assetMode === 'digital') {
+      params.set('assetType', 'Digital');
+    }
+    // If 'all', do not set the param
+
     router.push(`/browse?${params.toString()}`);
   };
 

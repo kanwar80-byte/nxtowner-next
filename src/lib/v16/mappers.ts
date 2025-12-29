@@ -70,8 +70,8 @@ export function mapListingRowToDetail(
   return {
     ...card,
     postalCode: row?.postal_code ?? meta.postal_code,
-    dealStructure: meta.deal_structure,
-    businessStatus: meta.business_status,
-    description: meta.description,
+    dealStructure: meta.deal_structure as string | undefined,
+    businessStatus: meta.business_status as string | undefined,
+    description: meta.description as string | undefined,
   };
 }

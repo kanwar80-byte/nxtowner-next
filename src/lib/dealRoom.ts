@@ -3,7 +3,7 @@ import { supabaseAdmin } from "./supabaseAdmin";
 type CreateDealRoomWithNdaParams = {
   listingId: string;
   buyerId: string;
-  signedPdfUrl: string;
+  signedPdfUrl?: string;
   initialMessage?: string | null;
 };
 

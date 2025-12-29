@@ -31,8 +31,11 @@ export const NDA_STATUS = [
 export const TABLES = {
   listings: 'listings',
   listing_details: 'v16_listing_details',
-  deal_rooms: 'v16_deal_rooms',
-  ndas: 'v16_ndas',
+  deal_rooms: 'deal_rooms',
+  deal_room_members: 'deal_room_members',
+  messages: 'messages',
+  offers: 'offers',
+  ndas: 'ndas',
   events: 'v16_events',
   scores: 'v16_scores',
 };

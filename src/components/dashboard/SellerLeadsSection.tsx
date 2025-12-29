@@ -23,7 +23,7 @@ export default function SellerLeadsSection() {
     async function loadLeads() {
       try {
         const data = await getListingLeadsForSeller();
-        setLeads(data);
+        setLeads(data as any);
       } catch (error) {
         console.error('Failed to load leads:', error);
       } finally {

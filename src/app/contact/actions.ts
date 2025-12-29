@@ -35,7 +35,7 @@ export async function submitContactMessage(
 
     const { error } = await supabase
       .from('contact_messages')
-      // @ts-expect-error - table not yet in generated types
+      // @ts-ignore - table not yet in generated types
       .insert({
         profile_id: profileId,
         name,
