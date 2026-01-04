@@ -1,108 +1,54 @@
 "use client";
 
-
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { MapPin } from "lucide-react";
 import Link from "next/link";
-import { parseAsArrayOf, parseAsString, useQueryState } from 'nuqs';
+import { MapPin, Globe } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
+export function ListingCard({ listing }: { listing: any }) {
+  // 1. SMART LOGIC: Determine Type and Metric
+  const isDigital = listing.deal_type === 'digital';
+  const metricLabel = isDigital ? "MRR" : "EBITDA";
+  // The Fix: Always look at cash_flow for Operational deals
+  const metricValue = isDigital ? listing.mrr : listing.cash_flow;
 
-const FALLBACK_IMAGE =
-  "https://nxtowner-public.s3.amazonaws.com/placeholders/listing-placeholder.webp";
-
-export default function ListingCard(listing: any) {
-  // V16 field mapping
-  const {
-    id,
-    title,
-    heroImageUrl,
-    assetType,
-    categoryLabel,
-    city,
-    province,
-    country,
-    askingPrice,
-    revenueAnnual,
-    cashFlowAnnual,
-  } = listing;
-  // Use nuqs to sync selectedIds in the URL
-  const [selectedIds, setSelectedIds] = useQueryState(
-    'selectedIds',
-    parseAsArrayOf(parseAsString).withDefault([])
-  );
-  const checked = selectedIds.includes(id);
-  const handleCheckbox = (e: React.MouseEvent | React.ChangeEvent) => {
-    e.stopPropagation();
-    setSelectedIds(
-      checked ? selectedIds.filter((x: string) => x !== id) : [...selectedIds, id]
-    );
+  const fmtMoney = (val: number) => {
+    if (val === null || val === undefined) return "N/A";
+    return new Intl.NumberFormat('en-CA', { 
+      style: 'currency', currency: 'CAD', maximumFractionDigits: 0, notation: "compact" 
+    }).format(val);
   };
 
-  // Compose location string
-  const location = [city, province, country].filter(Boolean).join(", ") || "-";
-  // Image fix: support both camelCase and snake_case
-  const imageUrl = heroImageUrl || listing.hero_image_url || FALLBACK_IMAGE;
   return (
-    <Link href={`/listing/${id}`} className="block group">
-      <Card
-        className={`overflow-hidden flex flex-col h-full transition-shadow hover:shadow-lg relative ${checked ? "ring-2 ring-blue-500" : ""}`}
-      >
-        <div className="relative aspect-video bg-muted flex items-center justify-center">
-          <img
-            src={imageUrl}
-            alt={title}
-            className="object-cover w-full h-full transition-transform group-hover:scale-105"
-            loading="lazy"
-          />
-          {/* Checkbox overlay in top-left */}
-          <div className="absolute top-2 left-2 z-10">
-            <Checkbox
-              checked={checked}
-              onClick={handleCheckbox}
-              onChange={handleCheckbox as any}
-              aria-label="Select for comparison"
-            />
+    <Link href={`/listing/${listing.id}`} className="block group h-full">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-slate-500 transition-all shadow-lg h-full flex flex-col">
+        <div className="relative h-48 w-full bg-slate-800">
+          <img src={listing.image_url || '/images/placeholder.jpg'} alt={listing.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"/>
+          <div className="absolute top-3 right-3">
+            <Badge className={`${listing.ai_growth_score > 80 ? 'bg-green-500' : 'bg-yellow-500'} text-black font-bold border-none`}>
+               AI SCORE: {listing.ai_growth_score || 'N/A'}
+            </Badge>
           </div>
-          <div className="absolute top-2 right-2 flex gap-2">
-            <Badge
-              variant="outline"
-              className={
-                assetType === "Operational"
-                  ? "bg-blue-100 text-blue-800 border-blue-200"
-                  : "bg-purple-100 text-purple-800 border-purple-200"
-              }
-            >
-              {assetType}
-            </Badge>
-            <Badge variant="secondary" className="bg-muted/80 text-xs px-2 py-0.5">
-              {categoryLabel}
-            </Badge>
+          <div className="absolute bottom-3 right-3">
+             <div className="bg-slate-950/90 text-white px-3 py-1 rounded text-sm font-bold shadow-sm border border-slate-700">
+              {fmtMoney(listing.asking_price)}
+            </div>
           </div>
         </div>
-        <div className="flex-1 flex flex-col px-4 py-3 gap-1">
-          <div className="font-semibold text-base line-clamp-2 mb-1">{title}</div>
-          <div className="text-sm text-muted-foreground flex items-center gap-1">
-            <MapPin className="w-4 h-4 mr-1 opacity-70" />
-            {location}
-          </div>
-          {/* Revenue and Cash Flow badges */}
-          <div className="flex gap-2 mt-2">
-            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-              Revenue: {revenueAnnual !== undefined ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(revenueAnnual) : '-'}
-            </Badge>
-            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-              Cash Flow: {cashFlowAnnual !== undefined ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(cashFlowAnnual) : '-'}
-            </Badge>
+        <div className="p-5 flex flex-col flex-grow">
+          <h3 className="text-lg font-bold text-white mb-1 line-clamp-1 group-hover:text-blue-400">{listing.title}</h3>
+          <p className="text-xs text-slate-500 mb-4">{isDigital ? "Founder Direct" : "Partner Broker"}</p>
+          <div className="mt-auto flex items-center justify-between pt-4 border-t border-slate-800">
+            <div className="flex items-center gap-2 text-slate-400 text-xs">
+              {isDigital ? <Globe className="w-3.5 h-3.5 text-teal-500"/> : <MapPin className="w-3.5 h-3.5 text-amber-500"/>}
+              {isDigital ? "Global" : (listing.location_province || "Ontario")}
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">{metricLabel}</p>
+              <p className="text-sm font-bold text-emerald-400">{fmtMoney(metricValue)}</p>
+            </div>
           </div>
         </div>
-        <div className="px-4 pb-3 pt-1 mt-auto">
-          <div className="font-bold text-lg text-primary">
-            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(askingPrice)}
-          </div>
-        </div>
-      </Card>
+      </div>
     </Link>
   );
 }

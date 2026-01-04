@@ -1,6 +1,7 @@
 "use server";
 
-import { supabaseServer } from "@/lib/supabase/server";
+import { searchListingsV16 } from "@/lib/v16/listings.repo";
+import type { BrowseFiltersV16 } from "@/lib/v16/types";
 
 // 1. UPDATED TYPE DEFINITION
 export type SearchFilters = {
@@ -20,62 +21,54 @@ export type SearchFilters = {
   [key: string]: any; 
 };
 
+/**
+ * Get filtered listings using V16 canonical repo
+ * Maps V15 filter format to V16 and applies additional client-side filtering
+ */
 export async function getFilteredListings(filters: SearchFilters) {
-  const supabase = await supabaseServer();
+  try {
+    // Map V15 filters to V16 format
+    const v16Filters: BrowseFiltersV16 = {
+      query: filters.query,
+      assetType: filters.assetType === 'asset' ? 'Operational' 
+        : filters.assetType === 'digital' ? 'Digital' 
+        : undefined,
+      category: filters.category && filters.category !== "all" && filters.category !== "All Categories" 
+        ? filters.category 
+        : undefined,
+      minPrice: filters.minPrice,
+      maxPrice: filters.maxPrice,
+      sort: filters.sort === 'oldest' ? 'newest' // V16 doesn't have oldest, use newest
+        : filters.sort === 'lowest_price' || filters.sort === 'highest_price' 
+        ? (filters.sort === 'lowest_price' ? 'price_asc' : 'price_desc')
+        : 'newest',
+    };
 
-  let query = supabase.from("listings").select("*");
+    // Use V16 canonical repo
+    let listings = await searchListingsV16(v16Filters);
 
-  // --- TEXT SEARCH ---
-  if (filters.query) {
-    query = query.ilike("title", `%${filters.query}%`);
-  }
+    // Apply additional filters that V16 repo doesn't support directly (client-side filtering)
+    if (filters.location) {
+      const locationLower = filters.location.toLowerCase();
+      listings = listings.filter((item: any) => {
+        const city = (item.city || '').toLowerCase();
+        const province = (item.province || '').toLowerCase();
+        const country = (item.country || '').toLowerCase();
+        return city.includes(locationLower) || province.includes(locationLower) || country.includes(locationLower);
+      });
+    }
 
-  // --- FILTERS ---
-  if (filters.category && filters.category !== "all" && filters.category !== "All Categories") {
-    query = query.eq("category", filters.category);
-  }
+    if (filters.minCashflow !== undefined) {
+      listings = listings.filter((item: any) => (item.cash_flow || 0) >= filters.minCashflow!);
+    }
 
-  if (filters.assetType && filters.assetType !== "all") {
-    query = query.eq("deal_type", filters.assetType);
-  }
+    if (filters.minRevenue !== undefined) {
+      listings = listings.filter((item: any) => (item.revenue_annual || 0) >= filters.minRevenue!);
+    }
 
-  // Fix: Add Location Search
-  if (filters.location) {
-    query = query.ilike("location", `%${filters.location}%`);
-  }
-
-  // Price Range
-  if (filters.minPrice) query = query.gte("price", filters.minPrice);
-  if (filters.maxPrice) query = query.lte("price", filters.maxPrice);
-
-  // Financials
-  if (filters.minCashflow) query = query.gte("cashflow_numeric", filters.minCashflow);
-  if (filters.minRevenue) query = query.gte("revenue", filters.minRevenue);
-
-  // --- SORTING ---
-  let sortColumn = "created_at";
-  let ascending = false;
-
-  if (filters.sort === "oldest") {
-    ascending = true;
-  } else if (filters.sort === "lowest_price") {
-    sortColumn = "price";
-    ascending = true;
-  } else if (filters.sort === "highest_price") {
-    sortColumn = "price";
-    ascending = false;
-  } else if (filters.sort === "highest_cashflow") {
-    sortColumn = "cashflow_numeric";
-    ascending = false;
-  }
-
-  // Execute Query
-  const { data, error } = await query.order(sortColumn, { ascending });
-
-  if (error) {
+    return listings;
+  } catch (error) {
     console.error("Search Error:", error);
     return [];
   }
-
-  return data;
 }

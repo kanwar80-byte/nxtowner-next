@@ -12,28 +12,77 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
 import { parseAsString, useQueryState } from 'nuqs';
+import { Suspense } from 'react';
 
-const CATEGORIES = ["Food", "SaaS", "Retail", "Healthcare", "Finance"];
+// UUID regex pattern
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isUUID(value: string | null | undefined): boolean {
+  if (!value || typeof value !== "string") return false;
+  return UUID_REGEX.test(value);
+}
+
 const MIN_PRICE = 0;
 const MAX_PRICE = 5000000;
 const PRICE_STEP = 50000;
 
-export default function FilterSidebar({ categoryCounts = {} }: { categoryCounts?: Record<string, number> }) {
+type FacetValue = { count: number; label: string };
+
+function FilterSidebarInner({ 
+  categoryCounts = {} 
+}: { 
+  categoryCounts?: Record<string, number | FacetValue> 
+}) {
   const [assetType, setAssetType] = useQueryState('asset_type', parseAsString);
   const [category, setCategory] = useQueryState('category', parseAsString);
+  const [categoryId, setCategoryId] = useQueryState('categoryId', parseAsString);
   const [minPrice, setMinPrice] = useQueryState('min_price', parseAsString);
   const [maxPrice, setMaxPrice] = useQueryState('max_price', parseAsString);
 
   const clearAll = () => {
     setAssetType(null);
     setCategory(null);
+    setCategoryId(null);
     setMinPrice(null);
     setMaxPrice(null);
   };
 
-  const handleCategoryChange = (cat: string) => {
-    setCategory(category === cat ? null : cat);
+  const handleCategoryChange = (key: string) => {
+    // Determine if key is UUID or code
+    if (isUUID(key)) {
+      // UUID: use categoryId param (preferred)
+      setCategoryId(categoryId === key ? null : key);
+      setCategory(null); // Clear legacy category param
+    } else {
+      // Code/string: use category param (legacy)
+      setCategory(category === key ? null : key);
+      setCategoryId(null); // Clear UUID param
+    }
   };
+
+  // Check if a category is currently selected
+  const isCategorySelected = (key: string): boolean => {
+    if (isUUID(key)) {
+      return categoryId === key;
+    }
+    return category === key;
+  };
+
+  // Normalize categoryCounts to handle both old (number) and new (FacetValue) shapes
+  const normalizedCategoryCounts: Record<string, FacetValue> = {};
+  for (const [key, value] of Object.entries(categoryCounts)) {
+    if (typeof value === 'number') {
+      // Legacy shape: just a number, use key as label
+      normalizedCategoryCounts[key] = { count: value, label: key };
+    } else {
+      // New shape: object with count and label
+      normalizedCategoryCounts[key] = value;
+    }
+  }
+
+  // Sort categories by count (descending) for better UX
+  const sortedCategories = Object.entries(normalizedCategoryCounts)
+    .sort(([, a], [, b]) => b.count - a.count);
 
   const currentMin = minPrice ? parseInt(minPrice) : MIN_PRICE;
   const currentMax = maxPrice ? parseInt(maxPrice) : MAX_PRICE;
@@ -65,11 +114,11 @@ export default function FilterSidebar({ categoryCounts = {} }: { categoryCounts?
                 <Label htmlFor="all" className="text-sm font-normal">All Assets</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Operational" id="operational" />
+                <RadioGroupItem value="operational" id="operational" />
                 <Label htmlFor="operational" className="text-sm font-normal">Operational</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Digital" id="digital" />
+                <RadioGroupItem value="digital" id="digital" />
                 <Label htmlFor="digital" className="text-sm font-normal">Digital</Label>
               </div>
             </RadioGroup>
@@ -82,26 +131,30 @@ export default function FilterSidebar({ categoryCounts = {} }: { categoryCounts?
           <AccordionContent>
             <ScrollArea className="h-48 pr-4 pt-2">
               <div className="space-y-3">
-                {CATEGORIES.map((cat) => (
-                  <div key={cat} className="flex items-center justify-between group">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={cat} 
-                        checked={category === cat}
-                        onCheckedChange={() => handleCategoryChange(cat)}
-                      />
-                      <Label 
-                        htmlFor={cat} 
-                        className="text-sm font-normal cursor-pointer group-hover:text-blue-600 transition-colors"
-                      >
-                        {cat}
-                      </Label>
+                {sortedCategories.length > 0 ? (
+                  sortedCategories.map(([key, facetValue]) => (
+                    <div key={key} className="flex items-center justify-between group">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={key} 
+                          checked={isCategorySelected(key)}
+                          onCheckedChange={() => handleCategoryChange(key)}
+                        />
+                        <Label 
+                          htmlFor={key} 
+                          className="text-sm font-normal cursor-pointer group-hover:text-blue-600 transition-colors"
+                        >
+                          {facetValue.label}
+                        </Label>
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        ({facetValue.count})
+                      </span>
                     </div>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      ({categoryCounts[cat] || 0})
-                    </span>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-500">No categories available</p>
+                )}
               </div>
             </ScrollArea>
           </AccordionContent>
@@ -137,5 +190,24 @@ export default function FilterSidebar({ categoryCounts = {} }: { categoryCounts?
         </AccordionItem>
       </Accordion>
     </div>
+  );
+}
+
+export default function FilterSidebar({ 
+  categoryCounts = {} 
+}: { 
+  categoryCounts?: Record<string, number | FacetValue> 
+}) {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="font-semibold text-lg text-slate-900">Filters</span>
+        </div>
+        <div className="text-sm text-slate-500">Loading filters…</div>
+      </div>
+    }>
+      <FilterSidebarInner categoryCounts={categoryCounts} />
+    </Suspense>
   );
 }

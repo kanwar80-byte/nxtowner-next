@@ -3,6 +3,23 @@
 import { useState } from "react";
 import type { PartnerProfile } from "@/types/database";
 import { ConsultationModal } from "./ConsultationModal";
+import type React from "react";
+
+// Helper to safely convert unknown to string
+const asString = (v: unknown, fallback = ""): string => {
+  if (typeof v === "string") return v;
+  if (v == null) return fallback;
+  return String(v);
+};
+
+// Helper to safely render unknown values as ReactNode
+const renderNode = (v: unknown): React.ReactNode => {
+  if (v == null) return null;
+  if (typeof v === "string" || typeof v === "number") return v;
+  if (typeof v === "boolean") return v ? "Yes" : "No";
+  if (v instanceof Date) return v.toISOString();
+  return String(v);
+};
 
 interface PartnerCardProps {
   partner: PartnerProfile & {
@@ -30,34 +47,36 @@ export function PartnerCard({ partner }: PartnerCardProps) {
         {/* Header */}
         <div className="flex items-start gap-4 mb-4">
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-yellow-400 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-            {partner.firm_name.charAt(0).toUpperCase()}
+            {asString(partner.firm_name).charAt(0).toUpperCase() || "P"}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="text-lg font-semibold text-brand-text truncate">
-                {partner.firm_name}
+                {renderNode(partner.firm_name)}
               </h3>
-              {partner.is_featured && (
+              {partner.is_featured === true && (
                 <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded">
                   Featured
                 </span>
               )}
             </div>
             <p className="text-sm text-brand-muted">
-              {(PARTNER_TYPE_LABELS as any)[partner.partner_type || ''] || partner.partner_type}
+              {partner.partner_type && typeof partner.partner_type === 'string' && partner.partner_type in PARTNER_TYPE_LABELS
+                ? PARTNER_TYPE_LABELS[partner.partner_type]
+                : renderNode(partner.partner_type) || 'Unknown'}
             </p>
-            {partner.years_experience && (
+            {partner.years_experience != null && (
               <p className="text-xs text-brand-muted mt-1">
-                {partner.years_experience} years experience
+                {renderNode(partner.years_experience)} years experience
               </p>
             )}
           </div>
         </div>
 
         {/* Bio */}
-        {partner.bio && (
+        {typeof partner.bio === 'string' && partner.bio.length > 0 && (
           <p className="text-sm text-brand-text mb-4 line-clamp-3">
-            {partner.bio}
+            {renderNode(partner.bio)}
           </p>
         )}
 
@@ -106,9 +125,9 @@ export function PartnerCard({ partner }: PartnerCardProps) {
           >
             Book Consultation
           </button>
-          {partner.website_url && (
+          {partner.website_url != null && (
             <a
-              href={partner.website_url}
+              href={asString(partner.website_url)}
               target="_blank"
               rel="noopener noreferrer"
               className="px-4 py-2 border border-brand-border text-brand-text font-semibold rounded-md hover:bg-gray-50 transition text-sm"

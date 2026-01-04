@@ -38,7 +38,7 @@ export default function ListingGrid({ listings }: ListingGridProps) {
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       {listings.map((listing) => (
         <Link 
-          href={`/listings/${listing.id}`} 
+          href={`/listing/${listing.id}`} 
           key={listing.id}
           className="group flex flex-col bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden h-full"
         >

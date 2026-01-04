@@ -1,0 +1,197 @@
+{
+    "operational_assets": {
+      "taxonomy_version": "17.2-2026-Ready",
+      "categories": [
+        {
+          "id": "op_gas_station",
+          "name": "Gas Stations & Energy Hubs",
+          "subcategories": [
+            "Convenience Store + Fuel",
+            "Truck Stop / Travel Center",
+            "EV Superhub (Charging Only)",
+            "Hybrid (Gas + EV + Hydrogen)",
+            "Unmanned / Cardlock",
+            "Service Center + Fuel"
+          ],
+          "max_columns_data": {
+            "required": ["fuel_volume_annual_liters", "pump_count", "tank_age_years", "fuel_supply_contract_expiry"],
+            "niche_fields": [
+              { "key": "ev_level_3_chargers_count", "label": "DC Fast Chargers (Level 3)" },
+              { "key": "ev_level_2_chargers_count", "label": "Standard Chargers (Level 2)" },
+              { "key": "grid_capacity_kw", "label": "Grid Capacity (kW)", "tooltip": "Crucial for future EV expansion" },
+              { "key": "traffic_count_daily", "label": "Daily Traffic Count (AADT)" },
+              { "key": "environmental_phase_status", "label": "Environmental Phase 1/2 Status" }
+            ]
+          }
+        },
+        {
+          "id": "op_car_wash",
+          "name": "Car Washes",
+          "subcategories": [
+            "Express Tunnel (Conveyor)",
+            "In-Bay Automatic (Touchless/Soft Touch)",
+            "Self-Serve (Wand)",
+            "Flex Service (Express + Detail)",
+            "Mobile Fleet Wash Route"
+          ],
+          "max_columns_data": {
+            "required": ["tunnel_length_feet", "wash_volume_annual_cars", "membership_count"],
+            "niche_fields": [
+              { "key": "equipment_age_years", "label": "Age of Equipment" },
+              { "key": "water_reclaim_system", "label": "Water Reclaim System?", "type": "boolean" },
+              { "key": "vacuum_stations_count", "label": "Number of Vacuum Spots" },
+              { "key": "subscription_revenue_percent", "label": "% Revenue from Memberships" }
+            ]
+          }
+        },
+        {
+          "id": "op_restaurants",
+          "name": "Restaurants & Food Service",
+          "subcategories": [
+            "Quick Service (QSR) - Franchise",
+            "Quick Service (QSR) - Independent",
+            "Full Service / Dine-In",
+            "Ghost Kitchen / Dark Kitchen",
+            "Cafe / Coffee Shop",
+            "Bar / Nightclub"
+          ],
+          "max_columns_data": {
+            "required": ["seating_capacity", "liquor_license_type", "kitchen_hood_size_feet"],
+            "niche_fields": [
+              { "key": "drive_thru_lane_count", "label": "Drive-Thru Lanes" },
+              { "key": "delivery_sales_percent", "label": "% Sales from Apps (Uber/DoorDash)" },
+              { "key": "franchise_royalty_percent", "label": "Royalty Fee %" },
+              { "key": "franchise_transfer_fee", "label": "Transfer Fee" }
+            ]
+          }
+        },
+        {
+          "id": "op_retail",
+          "name": "Retail & Plazas",
+          "subcategories": [
+            "Strip Plaza (Multi-Tenant)",
+            "Standalone Big Box",
+            "Grocery / Supermarket",
+            "Pharmacy / Medical Retail",
+            "Cannabis Retail",
+            "Liquor Store"
+          ],
+          "max_columns_data": {
+            "required": ["net_rentable_area_sqft", "occupancy_rate_percent", "anchor_tenant_name"],
+            "niche_fields": [
+              { "key": "walt_years", "label": "WALT (Weighted Avg Lease Term)" },
+              { "key": "parking_spots_count", "label": "Parking Spots" },
+              { "key": "zoning_code_permitted_uses", "label": "Permitted Zoning Uses" }
+            ]
+          }
+        },
+        {
+          "id": "op_industrial",
+          "name": "Industrial & Warehousing",
+          "subcategories": [
+            "Distribution Center",
+            "Light Manufacturing",
+            "Cold Storage / Refrigerated",
+            "Self-Storage Facility",
+            "Flex Space (Office + Warehouse)"
+          ],
+          "max_columns_data": {
+            "required": ["ceiling_clear_height_feet", "loading_docks_truck_level", "loading_docks_drive_in"],
+            "niche_fields": [
+              { "key": "power_amps", "label": "Power Supply (Amps/Volts)" },
+              { "key": "outside_storage_permitted", "label": "Outside Storage Permitted?", "type": "boolean" },
+              { "key": "occupancy_rate_percent", "label": "Occupancy Rate (for Self-Storage)" }
+            ]
+          }
+        }
+      ]
+    },
+    "digital_assets": {
+      "taxonomy_version": "17.2-2026-Ready",
+      "categories": [
+        {
+          "id": "dig_saas",
+          "name": "SaaS (Software as a Service)",
+          "subcategories": [
+            "B2B Enterprise",
+            "B2B Micro-SaaS",
+            "B2C Subscription",
+            "AI Agent / Autonomous Tool",
+            "Vertical SaaS (Industry Specific)",
+            "API / Dev Tool"
+          ],
+          "max_columns_data": {
+            "required": ["mrr_current", "churn_rate_percent", "customer_acquisition_cost_cac", "lifetime_value_ltv"],
+            "niche_fields": [
+              { "key": "tech_stack_backend", "label": "Backend Stack (e.g. Node, Python)" },
+              { "key": "tech_stack_frontend", "label": "Frontend Stack (e.g. React, Vue)" },
+              { "key": "active_users_daily_dau", "label": "DAU (Daily Active Users)" },
+              { "key": "api_calls_monthly_volume", "label": "Monthly API Calls (for Usage Based)" }
+            ]
+          }
+        },
+        {
+          "id": "dig_ecommerce",
+          "name": "E-Commerce & DTC",
+          "subcategories": [
+            "Shopify / DTC Brand",
+            "Amazon FBA (Private Label)",
+            "Amazon FBA (Wholesale)",
+            "Dropshipping",
+            "Digital Products (Courses/E-books)"
+          ],
+          "max_columns_data": {
+            "required": ["average_order_value_aov", "return_rate_percent", "inventory_value_cost"],
+            "niche_fields": [
+              { "key": "fulfillment_method", "label": "Fulfillment (3PL, In-house, FBA)" },
+              { "key": "supplier_location", "label": "Supplier Location (e.g., China, US, Local)" },
+              { "key": "sku_count", "label": "Total Active SKUs" },
+              { "key": "advertising_spend_monthly", "label": "Monthly Ad Spend (ROAS Context)" }
+            ]
+          }
+        },
+        {
+          "id": "dig_content",
+          "name": "Content & Media",
+          "subcategories": [
+            "Affiliate Blog / Niche Site",
+            "Newsletter (Substack/Beehiiv)",
+            "YouTube Channel",
+            "Social Media Account (IG/TikTok)",
+            "Podcast Network"
+          ],
+          "max_columns_data": {
+            "required": ["monthly_pageviews", "traffic_source_organic_percent", "monetization_method"],
+            "niche_fields": [
+              { "key": "newsletter_subscribers", "label": "Total Subscribers" },
+              { "key": "newsletter_open_rate", "label": "Open Rate %" },
+              { "key": "domain_authority_moz", "label": "Domain Authority (DA)" },
+              { "key": "content_articles_count", "label": "Total Published Articles" }
+            ]
+          }
+        },
+        {
+          "id": "dig_agency",
+          "name": "Service Agencies",
+          "subcategories": [
+            "Marketing / SEO Agency",
+            "Dev Shop / Software House",
+            "Design / Creative Agency",
+            "Lead Generation Service",
+            "Productized Service"
+          ],
+          "max_columns_data": {
+            "required": ["retainer_clients_count", "average_retainer_value", "project_revenue_percent"],
+            "niche_fields": [
+              { "key": "owner_hours_weekly", "label": "Owner Hours/Week (Critical for Service)" },
+              { "key": "team_size_fulltime", "label": "Full-Time Employees" },
+              { "key": "team_size_contractors", "label": "Contractors" },
+              { "key": "client_concentration_max_percent", "label": "% Revenue from Largest Client" }
+            ]
+          }
+        }
+      ]
+    }
+  }
+
+

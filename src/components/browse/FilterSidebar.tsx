@@ -4,7 +4,7 @@
 import { AssetType, TAXONOMY } from '@/lib/taxonomy';
 import { ChevronDown, ChevronRight, Filter } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 
 import type { BrowseFacetsV16 } from '@/lib/v16/facets.repo';
 
@@ -12,7 +12,7 @@ type Props = {
   facets?: BrowseFacetsV16 | null;
 };
 
-export default function FilterSidebar({ facets }: Props) {
+function FilterSidebarInner({ facets }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -85,8 +85,23 @@ export default function FilterSidebar({ facets }: Props) {
                         }`}
                       >
                         {cat}
-                        {facets && facets.categoryCounts && facets.categoryCounts[cat] !== undefined ? (
-                          <span className="ml-2 text-xs text-slate-400 font-normal">({facets.categoryCounts[cat]})</span>
+                        {facets?.categoryCounts?.[cat] !== undefined ? (
+                          <span className="ml-2 text-xs text-slate-400 font-normal">
+                            ({(() => {
+                              const countValue = facets.categoryCounts[cat];
+                              // Handle new shape: { count: number; label: string }
+                              if (typeof countValue === "object" && countValue !== null && "count" in countValue) {
+                                const countNum = typeof countValue.count === "number" ? countValue.count : Number(countValue.count ?? 0);
+                                return countNum;
+                              }
+                              // Handle legacy shape: number
+                              if (typeof countValue === "number") {
+                                return countValue;
+                              }
+                              // Fallback: try to coerce to number
+                              return Number(countValue ?? 0);
+                            })()})
+                          </span>
                         ) : null}
                       </button>
                     </div>
@@ -117,5 +132,22 @@ export default function FilterSidebar({ facets }: Props) {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function FilterSidebar({ facets }: Props) {
+  return (
+    <Suspense fallback={
+      <div className="w-full md:w-64 bg-white border-r border-slate-200 h-full md:min-h-screen p-4 flex-shrink-0">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-bold text-slate-900 flex items-center gap-2">
+            <Filter size={18} /> Filters
+          </h2>
+        </div>
+        <div className="text-sm text-slate-500">Loading filters…</div>
+      </div>
+    }>
+      <FilterSidebarInner facets={facets} />
+    </Suspense>
   );
 }

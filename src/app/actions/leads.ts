@@ -2,9 +2,12 @@
 
 /**
  * Server actions for lead management (CRM-lite)
+ * Uses deal_rooms (deals) + messages (deal_messages) instead of listing_leads/partner_leads
  */
 
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/utils/supabase/server';
+import { trackEventFromServer } from '@/lib/analytics/server';
+import type { Database } from '@/types/database.types';
 
 type ListingLead = {
   id: string;
@@ -36,33 +39,79 @@ type PartnerLead = {
 
 /**
  * Create a new listing lead (buyer interest)
+ * Uses deal_rooms (deals) + messages (deal_messages) instead of listing_leads
  */
 export async function createListingLead(
   listingId: string,
   message?: string
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return { success: false, error: 'Not authenticated' };
     }
 
-    const { data, error } = await supabase
-      .from('listing_leads')
-      // Note: column may not exist in older schemas
-      .insert({
-        listing_id: listingId,
-        buyer_id: user.id,
-        message: message || null,
-        status: 'new',
+    // Get seller_id from listing owner_id
+    const { data: listing } = await supabase
+      .from('listings')
+      .select('owner_id')
+      .eq('id', listingId)
+      .single();
+
+    if (!listing?.owner_id) {
+      throw new Error('Listing not found or has no owner');
+    }
+
+    // Create or get deal_room (represents buyer interest)
+    // Use upsert to handle case where deal_room already exists
+    const dealRoomPayload = {
+      listing_id: listingId,
+      buyer_id: user.id,
+      seller_id: listing.owner_id,
+      status: 'nda_requested', // Initial status for a lead
+      created_by: user.id,
+    } as any; // Use 'as any' since deal_rooms type may not be fully defined
+
+    const { data: dealRoom, error: dealRoomError } = await supabase
+      .from('deal_rooms')
+      .upsert(dealRoomPayload, {
+        onConflict: 'listing_id,buyer_id',
       })
       .select()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .single() as { data: { id: string } | null; error: any };
+      .single();
 
-    if (error) throw error;
+    if (dealRoomError) throw dealRoomError;
 
-    return { success: true, id: data?.id };
+    const dealRoomId = dealRoom?.id;
+    if (!dealRoomId) {
+      throw new Error('Failed to create or retrieve deal room');
+    }
+
+    // Store message in messages table if provided
+    if (message && message.trim()) {
+      const messagePayload: Database["public"]["Tables"]["messages"]["Insert"] = {
+        deal_id: dealRoomId,
+        sender_id: user.id,
+        content: message.trim(),
+      };
+
+      const { error: messageError } = await supabase
+        .from('messages')
+        .insert(messagePayload);
+
+      if (messageError) {
+        // Log but don't fail - deal room creation is the critical part
+        console.error('createListingLead: Failed to insert message:', messageError);
+      }
+    }
+
+    // Track enquiry sent
+    await trackEventFromServer("enquiry_sent", {
+      listing_id: listingId,
+    });
+
+    return { success: true, id: dealRoomId };
   } catch (error) {
     console.error('createListingLead error:', error);
     return {
@@ -74,46 +123,84 @@ export async function createListingLead(
 
 /**
  * Get listing leads for a seller (for their listings)
+ * Uses deal_rooms (deals) + messages (deal_messages) instead of listing_leads
  */
 export async function getListingLeadsForSeller(): Promise<
   Array<ListingLead & { listing: { title: string; id: string }; buyer: { full_name: string } }>
 > {
   try {
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
-    // First get seller's listing IDs
-    const { data: listings, error: listingsError } = await supabase
-      .from('listings')
-      .select('id') as { data: Array<{ id: string }> | null; error: any }; // eslint-disable-line @typescript-eslint/no-explicit-any
-
-    if (listingsError) throw listingsError;
-
-    const listingIds = listings?.map((l) => l.id) || [];
+    // First get seller's listing IDs using V16 canonical repo
+    // Note: V16 repo doesn't support owner_id filtering, so we fetch all and filter client-side
+    const { searchListingsV16 } = await import("@/lib/v16/listings.repo");
+    const allListings = await searchListingsV16({});
+    // Filter by owner_id client-side (temporary until V16 repo supports owner filtering)
+    const sellerListings = allListings.filter((item: any) => item.owner_id === user.id);
+    const listingIds = sellerListings.map((l: any) => l.id);
     if (listingIds.length === 0) return [];
 
-    // Get leads for those listings
-    const { data, error } = await supabase
-      .from('listing_leads')
+    // Get deal_rooms (leads) for those listings
+    // Join with messages to get the initial message
+    const { data: dealRooms, error: dealRoomsError } = await supabase
+      .from('deal_rooms')
       .select(
         `
         id,
         listing_id,
         buyer_id,
-        message,
         status,
         created_at,
         updated_at,
-        listing:listings (id, title),
-        buyer:profiles!listing_leads_buyer_id_fkey (full_name)
+        listing:listings_v16!deal_rooms_listing_id_fkey (id, title),
+        buyer:profiles!deal_rooms_buyer_id_fkey (full_name)
         `
       )
       .in('listing_id', listingIds)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (dealRoomsError) throw dealRoomsError;
+
+    // Get first message for each deal room to populate the "message" field
+    const dealRoomIds = (dealRooms || []).map((dr: any) => dr.id).filter(Boolean);
+    const messagesMap = new Map<string, string>();
+    if (dealRoomIds.length > 0) {
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('deal_id, content')
+        .in('deal_id', dealRoomIds)
+        .order('created_at', { ascending: true });
+
+      // Get first message per deal room
+      if (messages) {
+        const seenRooms = new Set<string>();
+        for (const msg of messages) {
+          const dealId = msg.deal_id;
+          if (dealId && !seenRooms.has(dealId)) {
+            messagesMap.set(dealId, msg.content || '');
+            seenRooms.add(dealId);
+          }
+        }
+      }
+    }
+
+    // Transform deal_rooms to ListingLead format
+    const leads = (dealRooms || []).map((dr: any) => ({
+      id: dr.id,
+      listing_id: dr.listing_id,
+      buyer_id: dr.buyer_id,
+      message: messagesMap.get(dr.id) || null,
+      status: dr.status || 'new',
+      created_at: dr.created_at,
+      updated_at: dr.updated_at,
+      listing: dr.listing,
+      buyer: dr.buyer,
+    }));
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (data || []) as any;
+    return leads as any;
   } catch (error) {
     console.error('getListingLeadsForSeller error:', error);
     return [];
@@ -122,34 +209,71 @@ export async function getListingLeadsForSeller(): Promise<
 
 /**
  * Get listing leads for a buyer (their own leads)
+ * Uses deal_rooms (deals) + messages (deal_messages) instead of listing_leads
  */
 export async function getListingLeadsForBuyer(): Promise<
   Array<ListingLead & { listing: { title: string; id: string } }>
 > {
   try {
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
-    const { data, error } = await supabase
-      .from('listing_leads')
+    // Get deal_rooms (leads) for this buyer
+    const { data: dealRooms, error: dealRoomsError } = await supabase
+      .from('deal_rooms')
       .select(
         `
         id,
         listing_id,
         buyer_id,
-        message,
         status,
         created_at,
         updated_at,
-        listing:listings (id, title)
+        listing:listings_v16!deal_rooms_listing_id_fkey (id, title)
         `
       )
       .eq('buyer_id', user.id)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (dealRoomsError) throw dealRoomsError;
+
+    // Get first message for each deal room
+    const dealRoomIds = (dealRooms || []).map((dr: any) => dr.id).filter(Boolean);
+    const messagesMap = new Map<string, string>();
+    if (dealRoomIds.length > 0) {
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('deal_id, content')
+        .in('deal_id', dealRoomIds)
+        .order('created_at', { ascending: true });
+
+      if (messages) {
+        const seenRooms = new Set<string>();
+        for (const msg of messages) {
+          const dealId = msg.deal_id;
+          if (dealId && !seenRooms.has(dealId)) {
+            messagesMap.set(dealId, msg.content || '');
+            seenRooms.add(dealId);
+          }
+        }
+      }
+    }
+
+    // Transform deal_rooms to ListingLead format
+    const leads = (dealRooms || []).map((dr: any) => ({
+      id: dr.id,
+      listing_id: dr.listing_id,
+      buyer_id: dr.buyer_id,
+      message: messagesMap.get(dr.id) || null,
+      status: dr.status || 'new',
+      created_at: dr.created_at,
+      updated_at: dr.updated_at,
+      listing: dr.listing,
+    }));
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (data || []) as any;
+    return leads as any;
   } catch (error) {
     console.error('getListingLeadsForBuyer error:', error);
     return [];
@@ -158,6 +282,7 @@ export async function getListingLeadsForBuyer(): Promise<
 
 /**
  * Get all listing leads for admin
+ * Uses deal_rooms (deals) + messages (deal_messages) instead of listing_leads
  */
 export async function getListingLeadsForAdmin(filters?: {
   status?: string;
@@ -166,6 +291,7 @@ export async function getListingLeadsForAdmin(filters?: {
   Array<ListingLead & { listing: { title: string; id: string }; buyer: { full_name: string } }>
 > {
   try {
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
@@ -181,18 +307,17 @@ export async function getListingLeadsForAdmin(filters?: {
     }
 
     let query = supabase
-      .from('listing_leads')
+      .from('deal_rooms')
       .select(
         `
         id,
         listing_id,
         buyer_id,
-        message,
         status,
         created_at,
         updated_at,
-        listing:listings (id, title),
-        buyer:profiles!listing_leads_buyer_id_fkey (full_name)
+        listing:listings_v16!deal_rooms_listing_id_fkey (id, title),
+        buyer:profiles!deal_rooms_buyer_id_fkey (full_name)
         `
       );
 
@@ -206,11 +331,47 @@ export async function getListingLeadsForAdmin(filters?: {
       query = query.limit(filters.limit);
     }
 
-    const { data, error } = await query;
+    const { data: dealRooms, error } = await query;
 
     if (error) throw error;
+
+    // Get first message for each deal room
+    const dealRoomIds = (dealRooms || []).map((dr: any) => dr.id).filter(Boolean);
+    const messagesMap = new Map<string, string>();
+    if (dealRoomIds.length > 0) {
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('deal_id, content')
+        .in('deal_id', dealRoomIds)
+        .order('created_at', { ascending: true });
+
+      if (messages) {
+        const seenRooms = new Set<string>();
+        for (const msg of messages) {
+          const dealId = msg.deal_id;
+          if (dealId && !seenRooms.has(dealId)) {
+            messagesMap.set(dealId, msg.content || '');
+            seenRooms.add(dealId);
+          }
+        }
+      }
+    }
+
+    // Transform deal_rooms to ListingLead format
+    const leads = (dealRooms || []).map((dr: any) => ({
+      id: dr.id,
+      listing_id: dr.listing_id,
+      buyer_id: dr.buyer_id,
+      message: messagesMap.get(dr.id) || null,
+      status: dr.status || 'new',
+      created_at: dr.created_at,
+      updated_at: dr.updated_at,
+      listing: dr.listing,
+      buyer: dr.buyer,
+    }));
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (data || []) as any;
+    return leads as any;
   } catch (error) {
     console.error('getListingLeadsForAdmin error:', error);
     return [];
@@ -219,21 +380,36 @@ export async function getListingLeadsForAdmin(filters?: {
 
 /**
  * Update listing lead status (seller or admin only)
+ * Uses deal_rooms (deals) instead of listing_leads
  */
 export async function updateListingLeadStatus(
   leadId: string,
   status: 'new' | 'contacted' | 'qualified' | 'closed_lost' | 'closed_won'
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return { success: false, error: 'Not authenticated' };
     }
 
+    // Map lead status to deal_room status
+    // deal_rooms.status values: 'draft', 'nda_requested', 'nda_signed', 'active', 'closed'
+    let dealRoomStatus: string = status;
+    if (status === 'closed_lost' || status === 'closed_won') {
+      dealRoomStatus = 'closed';
+    } else if (status === 'new') {
+      dealRoomStatus = 'nda_requested';
+    } else if (status === 'qualified') {
+      dealRoomStatus = 'active';
+    } else {
+      // 'contacted' -> keep as 'nda_requested' or 'active' based on context
+      dealRoomStatus = 'nda_requested';
+    }
+
     const { error } = await supabase
-      .from('listing_leads')
-      // Note: schema may differ across environments
-      .update({ status })
+      .from('deal_rooms')
+      .update({ status: dealRoomStatus as any })
       .eq('id', leadId);
 
     if (error) throw error;
@@ -250,9 +426,14 @@ export async function updateListingLeadStatus(
 // ============================================================================
 // PARTNER LEADS
 // ============================================================================
+// TODO(schema): Partner leads functionality removed - partner_leads table does not exist
+// Partner consultation requests should be implemented using a different mechanism
+// (e.g., events table, consultation_requests table, or messages in a partner-specific deal room)
 
 /**
  * Create a new partner lead (consultation request)
+ * NOTE: Partner leads are not supported - partner_leads table does not exist
+ * Returns error indicating this feature is not available
  */
 export async function createPartnerLead(input: {
   partnerProfileId: string;
@@ -262,175 +443,45 @@ export async function createPartnerLead(input: {
   message?: string;
   listingId?: string;
 }): Promise<{ success: boolean; id?: string; error?: string }> {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-
-    const { data, error } = await supabase
-      .from('partner_leads')
-  
-      .insert({
-        partner_profile_id: input.partnerProfileId,
-        requester_id: user?.id || null,
-        requester_name: input.requesterName,
-        requester_email: input.requesterEmail,
-        requester_phone: input.requesterPhone || null,
-        message: input.message || null,
-        listing_id: input.listingId || null,
-        status: 'new',
-      })
-      .select()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .single() as { data: { id: string } | null; error: any };
-
-    if (error) throw error;
-
-    return { success: true, id: data?.id };
-  } catch (error) {
-    console.error('createPartnerLead error:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to create lead',
-    };
-  }
+  return {
+    success: false,
+    error: 'Partner leads are not currently supported. Please use the contact form or messaging system.',
+  };
 }
 
 /**
  * Get partner leads for a specific partner
+ * NOTE: Partner leads are not supported - partner_leads table does not exist
  */
 export async function getPartnerLeadsForPartner(): Promise<
   Array<PartnerLead & { requester?: { full_name: string } }>
 > {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
-
-    // Get the partner profile for this user
-    const { data: partnerProfile } = await supabase
-      .from('partner_profiles')
-      .select('id')
-      .eq('profile_id', user.id)
-      .single() as { data: { id: string } | null };
-
-    if (!partnerProfile) return [];
-
-    const { data, error } = await supabase
-      .from('partner_leads')
-      .select(
-        `
-        id,
-        partner_profile_id,
-        requester_id,
-        requester_name,
-        requester_email,
-        requester_phone,
-        message,
-        listing_id,
-        status,
-        created_at,
-        updated_at,
-        requester:profiles!partner_leads_requester_id_fkey (full_name)
-        `
-      )
-      .eq('partner_profile_id', partnerProfile.id)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (data || []) as any;
-  } catch (error) {
-    console.error('getPartnerLeadsForPartner error:', error);
-    return [];
-  }
+  // Partner leads functionality removed - return empty array
+  return [];
 }
 
 /**
  * Get all partner leads for admin
+ * NOTE: Partner leads are not supported - partner_leads table does not exist
  */
 export async function getPartnerLeadsForAdmin(filters?: {
   status?: string;
   limit?: number;
 }): Promise<Array<PartnerLead & { partner?: { firm_name: string }; requester?: { full_name: string } }>> {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
-
-    // Check admin role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single() as { data: { role: string } | null };
-
-    if (!profile || profile.role !== 'admin') {
-      return [];
-    }
-
-    let query = supabase
-      .from('partner_leads')
-      .select(
-        `
-        id,
-        partner_profile_id,
-        requester_id,
-        requester_name,
-        requester_email,
-        requester_phone,
-        message,
-        listing_id,
-        status,
-        created_at,
-        updated_at,
-        partner:partner_profiles (firm_name),
-        requester:profiles!partner_leads_requester_id_fkey (full_name)
-        `
-      );
-
-    if (filters?.status) {
-      query = query.eq('status', filters.status);
-    }
-
-    query = query.order('created_at', { ascending: false });
-
-    if (filters?.limit) {
-      query = query.limit(filters.limit);
-    }
-
-    const { data, error } = await query;
-
-    if (error) throw error;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (data || []) as any;
-  } catch (error) {
-    console.error('getPartnerLeadsForAdmin error:', error);
-    return [];
-  }
+  // Partner leads functionality removed - return empty array
+  return [];
 }
 
 /**
  * Update partner lead status
+ * NOTE: Partner leads are not supported - partner_leads table does not exist
  */
 export async function updatePartnerLeadStatus(
   leadId: string,
   status: 'new' | 'contacted' | 'qualified' | 'closed_lost' | 'closed_won'
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return { success: false, error: 'Not authenticated' };
-    }
-
-    const { error } = await supabase
-      .from('partner_leads')
-      .update({ status })
-      .eq('id', leadId);
-
-    if (error) throw error;
-    return { success: true };
-  } catch (error) {
-    console.error('updatePartnerLeadStatus error:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to update lead',
-    };
-  }
+  return {
+    success: false,
+    error: 'Partner leads are not currently supported.',
+  };
 }

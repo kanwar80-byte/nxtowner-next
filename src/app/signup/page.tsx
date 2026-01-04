@@ -16,6 +16,15 @@ export default function SignupPage() {
     const email = String(formData.get("email") || "");
     const password = String(formData.get("password") || "");
     const role = (formData.get('role') as string) || "buyer";
+    const preferredTrack = (formData.get('preferred_track') as string) || "all";
+
+    // Determine roles array
+    let roles: string[] = [];
+    if (role === 'both') {
+      roles = ['buyer', 'seller'];
+    } else {
+      roles = [role];
+    }
 
     setLoading(true);
     setError(null);
@@ -24,7 +33,11 @@ export default function SignupPage() {
       email,
       password,
       options: {
-        data: { role }
+        data: {
+          intended_role: roles[0],
+          intended_roles: roles,
+          preferred_track: preferredTrack,
+        }
       }
     });
 
@@ -37,8 +50,8 @@ export default function SignupPage() {
 
     setSuccess(true);
     setTimeout(() => {
-      router.push("/login");
-    }, 2000);
+      router.push("/onboarding");
+    }, 1000);
   }
 
   return (
@@ -89,14 +102,36 @@ export default function SignupPage() {
                 <span className="text-sm text-brand-text">Seller - I&apos;m selling my business</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="role" value="partner" className="h-4 w-4 text-brand-navy focus:ring-brand-navy" />
+                <span className="text-sm text-brand-text">Partner - I&apos;m a broker or partner</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input type="radio" name="role" value="both" className="h-4 w-4 text-brand-navy focus:ring-brand-navy" />
                 <span className="text-sm text-brand-text">Both - I&apos;m buying and selling</span>
               </label>
             </div>
           </div>
 
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-brand-muted">Preferred track</label>
+            <div className="flex flex-col space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="preferred_track" value="all" defaultChecked className="h-4 w-4 text-brand-navy focus:ring-brand-navy" />
+                <span className="text-sm text-brand-text">Both Operational & Digital</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="preferred_track" value="operational" className="h-4 w-4 text-brand-navy focus:ring-brand-navy" />
+                <span className="text-sm text-brand-text">Operational Assets</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="preferred_track" value="digital" className="h-4 w-4 text-brand-navy focus:ring-brand-navy" />
+                <span className="text-sm text-brand-text">Digital Assets</span>
+              </label>
+            </div>
+          </div>
+
           {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
-          {success && <p className="text-sm text-brand-green bg-green-50 px-3 py-2 rounded-md">Account created! Redirecting to login...</p>}
+          {success && <p className="text-sm text-brand-green bg-green-50 px-3 py-2 rounded-md">Account created! Redirecting to onboarding...</p>}
 
           <button
             type="submit"

@@ -232,9 +232,12 @@ export async function updateOfferStatus(
 
     if (roomError || !room) throw roomError ?? new Error('Deal room not found');
 
+    // Runtime guard: ensure listing_id exists before querying
+    if (!room?.listing_id) throw new Error("Deal room is missing listing_id");
+
     // 3) Fetch listing owner (no FK required)
     const { data: listing, error: listingError } = await supabase
-      .from('listings_v16')
+      .from('listings')
       .select('owner_id')
       .eq('id', room.listing_id)
       .single();
@@ -362,4 +365,69 @@ export async function getUserDealRooms(userId: string): Promise<DealRoom[]> {
     console.log('getUserDealRooms fatal:', err);
     return [];
   }
+}
+
+// ============================================================================
+// NDA STATUS FOR LISTING
+// ============================================================================
+
+export type NdaStatusResult = {
+  hasDealRoom: boolean;
+  dealRoomId: string | null;
+  dealRoomStatus: string | null;
+  hasSignedNda: boolean;
+  ndaState: 'none' | 'requested' | 'signed';
+};
+
+/**
+ * Get NDA and deal room status for a listing for the current user.
+ * Returns state to determine UI: none, requested, or signed.
+ */
+export async function getNdaStatusForListing(listingId: string): Promise<{ ndaState: "none" | "requested" | "signed"; dealRoomId: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ndaState: "none", dealRoomId: null };
+  }
+
+  // 1) Prefer deal_rooms status (canonical for redirect)
+  const { data: room, error: roomErr } = await supabase
+    .from("deal_rooms")
+    .select("id,status")
+    .eq("listing_id", listingId)
+    .eq("buyer_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!roomErr && room?.id) {
+    const status = String(room.status || "");
+    if (status === "nda_signed" || status === "active") {
+      return { ndaState: "signed", dealRoomId: room.id };
+    }
+    if (status === "nda_requested") {
+      return { ndaState: "requested", dealRoomId: room.id };
+    }
+  }
+
+  // 2) Fallback to ndas table (in case deal room missing for some reason)
+  const { data: nda, error: ndaErr } = await supabase
+    .from("ndas")
+    .select("status")
+    .eq("listing_id", listingId)
+    .eq("buyer_id", user.id)
+    .maybeSingle();
+
+  if (ndaErr || !nda?.status) {
+    return { ndaState: "none", dealRoomId: null };
+  }
+
+  const ndaStatus = String(nda.status);
+  if (ndaStatus === "signed") return { ndaState: "signed", dealRoomId: null };
+  if (ndaStatus === "requested") return { ndaState: "requested", dealRoomId: null };
+
+  return { ndaState: "none", dealRoomId: null };
 }

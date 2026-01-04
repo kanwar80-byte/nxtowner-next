@@ -1,6 +1,6 @@
 "use server";
 
-import { supabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@/utils/supabase/server";
 
 export type PartnerReferral = {
     referralId: string;
@@ -22,7 +22,7 @@ export type PartnerSummary = {
  * MOCK: Fetches key partner performance metrics and referral data.
  */
 export async function getPartnerDashboardData(): Promise<PartnerSummary | null> {
-    const supabase = await supabaseServer();
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     // Check if the user is authenticated and is a 'Partner' (or similar role)

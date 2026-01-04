@@ -42,5 +42,5 @@ export type PublicListing = {
   asset_type?: string | null;
   hero_image_url?: string | null;
   asking_price?: number | null;
-  [key: string]: any;
+  [key: string]: unknown;
 };

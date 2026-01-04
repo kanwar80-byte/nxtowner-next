@@ -1,100 +1,71 @@
-import { supabaseServer } from "@/lib/supabase/server";
+import { searchListingsV16 } from "@/lib/v16/listings.repo";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
-type Listing = {
+// Simple Listing Interface for the UI
+type ListingUI = {
   id: string;
-  title: string | null;
-  city: string | null;
-  province: string | null;
-  asking_price: number | null;
-  cash_flow: number | null;
-  hero_image_url: string | null;
-  created_at: string | null;
-  subcategory: string | null;
-  category: string | null;
+  title: string;
+  location: string;
+  price: number;
+  cash_flow: number;
+  image: string;
+  category: string;
 };
 
 export default async function RecentListings() {
-  const supabase = await supabaseServer();
-
-  const { data } = await supabase
-    .from("listings")
-    .select("id,title,city,province,asking_price,cash_flow,hero_image_url,created_at,subcategory,category")
-    .order("created_at", { ascending: false })
-    .limit(4);
-
-  const rows = (data || []) as Listing[];
+  // ✅ 1. Use Canonical V16 Repo
+  const listings = await searchListingsV16({ sort: 'newest' });
+  
+  // ✅ 2. Map Data safely (Handle V15/V16 field names)
+  const rows: ListingUI[] = listings.slice(0, 4).map((item: any) => ({
+    id: item.id,
+    title: item.title || "Untitled Opportunity",
+    location: `${item.city || 'Unknown'}, ${item.province || 'Canada'}`,
+    price: item.asking_price || 0,
+    cash_flow: item.cash_flow || 0,
+    image: item.hero_image_url || item.heroImageUrl || '/placeholder.jpg',
+    category: item.category || 'Business',
+  }));
 
   if (rows.length === 0) {
-    return (
-      <section className="py-12 border-b border-slate-100 bg-white">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">Fresh This Week</h2>
-          <p className="text-slate-500 mb-6">No new listings found this week.</p>
-          <Link
-            href="/browse"
-            className="inline-block px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-          >
-            Browse All Listings
-          </Link>
-        </div>
-      </section>
-    );
+    return null; // Don't show section if empty
   }
 
   return (
-    <section className="py-12 border-b border-slate-100 bg-white">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-bold text-slate-900">Fresh This Week</h2>
-          <Link
-            href="/browse?sort=newest"
-            className="text-blue-600 text-sm font-bold flex items-center gap-1 hover:gap-2 transition-all"
-          >
-            View All <ArrowRight size={16} />
+    <section className="py-16 bg-slate-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-end mb-10">
+          <div>
+            <h2 className="text-3xl font-bold text-slate-900">Fresh Opportunities</h2>
+            <p className="mt-2 text-slate-600">The latest verified businesses listed this week.</p>
+          </div>
+          <Link href="/browse?sort=newest" className="hidden sm:flex items-center text-blue-600 font-medium hover:text-blue-700">
+            View All <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {rows.map((item) => (
-            <Link
-              key={item.id}
-              href={`/listing/${item.id}`}
-              className="block bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-lg transition-all h-full"
-            >
-              <div className="aspect-[4/3] bg-slate-100 relative overflow-hidden w-full">
-                {item.hero_image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.hero_image_url} alt={item.title || "Listing"} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-200 to-slate-400 text-slate-500 text-sm">
-                    No Image
-                  </div>
-                )}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {rows.map((listing) => (
+            <Link key={listing.id} href={`/listing/${listing.id}`} className="group block bg-white rounded-xl shadow-sm hover:shadow-md transition-all overflow-hidden border border-slate-100">
+              <div className="relative h-48 w-full bg-slate-200">
+                <Image src={listing.image} alt={listing.title} fill className="object-cover" />
+                <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-2 py-1 rounded text-xs font-semibold text-slate-700">
+                  {listing.category}
+                </div>
               </div>
-
               <div className="p-4">
-                <h3 className="font-bold text-slate-900 mb-1 line-clamp-1">
-                  {item.title || "Untitled Listing"}
-                </h3>
-                {(() => {
-                  const loc = [item.city, item.province].filter(Boolean).join(", ");
-                  return <p className="text-xs text-slate-500 mb-2">{loc || "Canada"}</p>;
-                })()}
-
-                <div className="flex justify-between items-center border-t border-slate-100 pt-2">
+                <h3 className="font-semibold text-slate-900 truncate group-hover:text-blue-600 transition-colors">{listing.title}</h3>
+                <p className="text-sm text-slate-500 mb-4">{listing.location}</p>
+                <div className="flex justify-between items-center border-t border-slate-50 pt-3">
                   <div>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase">Price</p>
-                    <p className="text-sm font-bold">
-                      {typeof item.asking_price === "number" ? `$${item.asking_price.toLocaleString()}` : "Confidential"}
-                    </p>
+                    <p className="text-xs text-slate-400 uppercase font-medium">Asking</p>
+                    <p className="font-bold text-slate-900">${listing.price.toLocaleString()}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase">Cash Flow</p>
-                    <p className="text-sm font-bold text-green-600">
-                      {typeof item.cash_flow === "number" ? `$${item.cash_flow.toLocaleString()}` : "-"}
-                    </p>
+                    <p className="text-xs text-slate-400 uppercase font-medium">Cash Flow</p>
+                    <p className="font-medium text-emerald-600">${listing.cash_flow.toLocaleString()}</p>
                   </div>
                 </div>
               </div>

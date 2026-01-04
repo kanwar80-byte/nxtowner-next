@@ -1,6 +1,6 @@
 "use server";
 
-import { supabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@/utils/supabase/server";
 
 export type AdminSystemFlag = {
     flagId: string;
@@ -26,7 +26,7 @@ export type PlatformMetrics = {
  * This directly supports AI Pillar 5 (Platform Intelligence).
  */
 export async function getAdminDashboardData(): Promise<PlatformMetrics | null> {
-    const supabase = await supabaseServer();
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     // CRITICAL: In production, check if the user has an 'ADMIN' role here.

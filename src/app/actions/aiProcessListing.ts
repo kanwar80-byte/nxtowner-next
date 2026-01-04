@@ -1,13 +1,13 @@
 "use server";
 
-import { supabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@/utils/supabase/server";
 
 /**
  * MOCK: Simulates the two core AI Pillars running on a listing.
  * In production, this would call a dedicated ML service/serverless function.
  */
 export async function aiProcessListing(listingId: string): Promise<boolean> {
-    const supabase = await supabaseServer();
+    const supabase = await createClient();
     
     // --- 1. AI Pillar 1: Listing Intelligence (Financial Normalization) ---
     // Simulate complex calculations and data checks
@@ -24,17 +24,19 @@ export async function aiProcessListing(listingId: string): Promise<boolean> {
     const aiValuationHigh = baseValuation * 1.1;
 
     // --- 3. Update Database with AI Results ---
+    // Update the listings table (not the view)
     const { error } = await supabase
-        .from('listings')
+        .from("listings")
         .update({
             is_ai_verified: isVerified,
-            normalized_sde: normalizedSDE,
-            ai_summary_highlights: aiHighlights,
-            ai_valuation_low: aiValuationLow,
-            ai_valuation_high: aiValuationHigh,
-            // You would update other fields here: margin_benchmark_score, etc.
+            sde: normalizedSDE,
+            ai_summary: aiHighlights,
+            ai_valuation_rating: aiValuationLow && aiValuationHigh 
+                ? `${aiValuationLow}-${aiValuationHigh}` 
+                : null,
+            updated_at: new Date().toISOString(),
         })
-        .eq('id', listingId);
+        .eq("id", listingId);
 
     if (error) {
         console.error("AI Processing Failed:", error);

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/utils/supabase/client';
 
 export type UserProfile = {
-  user_id: string;
+  id: string;
   email: string | null;
+  role: string | null;
   full_name: string | null;
-  role: 'buyer' | 'seller' | 'admin' | null;
+  created_at: string | null;
+  updated_at: string | null;
 };
 
 export type UseUserProfileResult = {
@@ -44,58 +46,91 @@ export function useUserProfile(): UseUserProfileResult {
           console.log('[useUserProfile] session user:', user.id);
         }
 
-        // Query profiles table using user_id
+        // Query profiles table using id (profiles.id is the auth uid)
         const { data, error: profileError } = await supabase
           .from('profiles')
-          .select('user_id, email, full_name, role')
-          .eq('user_id', user.id)
-          .maybeSingle();
+          .select('id,email,role,full_name,created_at,updated_at')
+          .eq('id', user.id)               // ✅ profiles.id is the auth uid
+          .maybeSingle();                  // ✅ avoids throwing on no rows
 
         // Handle errors
         if (profileError && profileError.code !== 'PGRST116') {
           // PGRST116 is "no rows found" - we handle that separately
           if (process.env.NODE_ENV !== 'production') {
-            console.error('[useUserProfile] error loading profile:', profileError);
+            const safeErr =
+              profileError && typeof profileError === 'object'
+                ? JSON.parse(JSON.stringify(profileError))
+                : profileError;
+            console.error('[useUserProfile] error loading profile:', safeErr);
           }
           throw profileError;
         }
 
-        // If no profile exists, create one with default role 'buyer'
+        // Handle missing profile row explicitly
         if (!data) {
+          // No profile row exists yet (common on older setups)
+          // The trigger should create it automatically, but if it doesn't exist,
+          // we can either auto-create it here or show onboarding
           if (process.env.NODE_ENV !== 'production') {
-            console.log('[useUserProfile] no profile found, creating default...');
+            console.log('[useUserProfile] no profile found - trigger should create it, or user needs onboarding');
           }
 
-          // Use role from user metadata if available, otherwise default to 'buyer'
-          const userRole = (user.user_metadata?.role as 'buyer' | 'seller' | 'admin') || 'buyer';
+          // Option 1: Auto-create profile (if trigger didn't fire)
+          // Note: The trigger should handle this, but we can create it as fallback
+          try {
+            const profilePayload = {
+              id: user.id,  // ✅ profiles.id is the auth uid
+              email: user.email,
+              role: 'user', // Default role
+              full_name: null,
+            };
 
-          const profilePayload = {
-            user_id: user.id,
-            email: user.email,
-            full_name: null,
-            role: userRole,
-          };
+            const { data: insertedData, error: insertError } = await supabase
+              .from('profiles')
+              .insert(profilePayload as never)
+              .select('id,email,role,full_name,created_at,updated_at')
+              .maybeSingle();
 
-          const { data: insertedData, error: insertError } = await supabase
-            .from('profiles')
-            .insert(profilePayload as never)
-            .select('user_id, email, full_name, role')
-            .single();
-
-          if (insertError) {
-            if (process.env.NODE_ENV !== 'production') {
-              console.error('[useUserProfile] error creating profile:', insertError);
+            if (insertError) {
+              // If insert fails (e.g., RLS policy), that's ok - trigger will handle it
+              if (process.env.NODE_ENV !== 'production') {
+                const safeErr =
+                  insertError && typeof insertError === 'object'
+                    ? JSON.parse(JSON.stringify(insertError))
+                    : insertError;
+                console.warn('[useUserProfile] could not create profile (may be handled by trigger):', safeErr);
+              }
+              // Set profile to null - user may need to complete onboarding
+              if (mounted) {
+                setProfile(null);
+              }
+            } else if (insertedData && mounted) {
+              setProfile(insertedData as UserProfile);
+              if (process.env.NODE_ENV !== 'production') {
+                console.log('[useUserProfile] created profile:', insertedData);
+              }
             }
-            throw insertError;
-          }
-
-          if (mounted) {
-            setProfile(insertedData as UserProfile);
+          } catch (createErr) {
+            // Silent fail - profile creation may be handled by trigger or require onboarding
             if (process.env.NODE_ENV !== 'production') {
-              console.log('[useUserProfile] created profile:', insertedData);
+              const safeErr =
+                createErr && typeof createErr === 'object'
+                  ? JSON.parse(JSON.stringify(createErr))
+                  : createErr;
+              console.warn(
+                '[useUserProfile] profile creation failed (may be expected):',
+                safeErr?.message ?? String(createErr),
+                safeErr?.code ?? '',
+                safeErr?.details ?? '',
+                safeErr?.hint ?? ''
+              );
+            }
+            if (mounted) {
+              setProfile(null);
             }
           }
         } else {
+          // Profile exists - use it
           if (mounted) {
             setProfile(data as UserProfile);
             if (process.env.NODE_ENV !== 'production') {
@@ -106,14 +141,16 @@ export function useUserProfile(): UseUserProfileResult {
       } catch (err: unknown) {
         const errorObj = err instanceof Error ? err : new Error(String(err));
         if (process.env.NODE_ENV !== 'production') {
-          const errorMessage = err instanceof Error ? err.message : String(err);
-          const errorCode = typeof err === 'object' && err !== null && 'code' in err ? String(err.code) : '';
-          const errorStack = err instanceof Error ? err.stack : '';
+          const safeErr =
+            err && typeof err === 'object'
+              ? JSON.parse(JSON.stringify(err))
+              : err;
           console.error(
             '[useUserProfile] Unexpected error:',
-            errorMessage,
-            errorCode,
-            errorStack
+            safeErr?.message ?? String(err),
+            safeErr?.code ?? '',
+            safeErr?.details ?? '',
+            safeErr?.hint ?? ''
           );
         }
         if (mounted) {

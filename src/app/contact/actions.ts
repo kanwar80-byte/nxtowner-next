@@ -1,6 +1,6 @@
 'use server';
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/utils/supabase/client';
 
 export type ContactFormState = {
   success: boolean;
@@ -31,18 +31,19 @@ export async function submitContactMessage(
     const subject = subjectRaw ? subjectRaw.toString().trim() || null : null;
 
     const { data: { user } } = await supabase.auth.getUser();
-    const profileId = user?.id ?? null;
 
+    // Use leads table - store contact form data in deal_title and use email/full_name
+    // For contact form, we use a placeholder deal_id since leads requires it
+    // In production, you might want a separate contact_messages table or use a system deal_id
     const { error } = await supabase
-      .from('contact_messages')
-      // @ts-ignore - table not yet in generated types
+      .from('leads')
       .insert({
-        profile_id: profileId,
-        name,
+        deal_id: 'contact-form', // Placeholder - in production use a real deal_id or create contact_messages table
+        deal_title: subject || `${topic} - ${name}`,
         email,
-        topic,
-        subject,
-        message,
+        full_name: name,
+        phone: null,
+        buyer_type: topic,
         status: 'new',
       });
 

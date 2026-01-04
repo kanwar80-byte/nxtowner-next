@@ -1,48 +1,35 @@
 "use server";
 
-import { createDealRoomWithNda } from "@/lib/dealRoom";
+import { requestNdaAndEnsureDealRoom } from "@/lib/dealRoom";
 import { createClient } from "@/utils/supabase/server";
+import { trackEventFromServer } from "@/lib/analytics/server";
 
-type SignNdaInput = {
-  listingId: string;
-  signedPdfUrl?: string | null;
-  initialMessage?: string | null;
-};
+type Input = { listingId: string };
 
-type SignNdaResult = { roomId: string } | { error: string };
-
-function normalizeError(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === "string") return err;
-  try {
-    return JSON.stringify(err);
-  } catch {
-    return "Unknown error";
-  }
-}
-
-export async function signNdaAndCreateDealRoom(input: SignNdaInput): Promise<SignNdaResult> {
+export async function signNdaAndCreateDealRoom({ listingId }: Input): Promise<{ roomId?: string; error?: string }> {
   try {
     const supabase = await createClient();
+    const {
+      data: { user },
+      error: userErr,
+    } = await supabase.auth.getUser();
 
-    const { data, error: authError } = await supabase.auth.getUser();
-    const user = data?.user;
+    if (userErr) return { error: userErr.message };
+    if (!user) return { error: "You must be signed in to request an NDA." };
+    if (!listingId) return { error: "Missing listingId." };
 
-    if (authError || !user) {
-      return { error: "Not authenticated" };
-    }
+    // Track intent
+    await trackEventFromServer("nda_requested", { listing_id: listingId });
 
-    const { listingId, signedPdfUrl = null, initialMessage = null } = input;
-
-    const { roomId } = await createDealRoomWithNda({
+    const { roomId } = await requestNdaAndEnsureDealRoom({
       listingId,
       buyerId: user.id,
-      ...(signedPdfUrl ? { signedPdfUrl } : {}),
-      initialMessage,
+      initialMessage: null,
     });
 
     return { roomId };
   } catch (err) {
-    return { error: normalizeError(err) };
+    const msg = err instanceof Error ? err.message : "Failed to request NDA.";
+    return { error: msg };
   }
 }

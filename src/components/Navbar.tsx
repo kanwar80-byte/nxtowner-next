@@ -1,3 +1,9 @@
+/**
+ * ARCHIVED (DO NOT USE)
+ * V17 live nav: src/components/layout/Navbar.tsx
+ * Wired via: src/components/layout/ConditionalLayout.tsx -> src/app/layout.tsx
+ */
+
 'use client';
 
 import { supabase } from '@/utils/supabase/client';
@@ -7,7 +13,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-export default function Navbar() {
+export function ArchivedNavbar() {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);

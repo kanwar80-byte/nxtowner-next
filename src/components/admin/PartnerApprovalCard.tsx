@@ -6,6 +6,16 @@ import {
   rejectPartnerProfile,
 } from "@/app/actions/partners";
 import type { PartnerProfile } from "@/types/database";
+import type React from "react";
+
+// Helper to safely render unknown values as ReactNode
+const renderNode = (v: unknown): React.ReactNode => {
+  if (v == null) return null;
+  if (typeof v === "string" || typeof v === "number") return v;
+  if (typeof v === "boolean") return v ? "Yes" : "No";
+  if (v instanceof Date) return v.toISOString();
+  return String(v);
+};
 
 interface PartnerApprovalCardProps {
   partner: PartnerProfile & {
@@ -28,8 +38,17 @@ export function PartnerApprovalCard({ partner }: PartnerApprovalCardProps) {
   const [approved, setApproved] = useState(false);
   const [rejected, setRejected] = useState(false);
 
+  // Helper to safely get string values from unknown
+  const asString = (value: unknown): string => {
+    if (typeof value === 'string') return value;
+    if (value == null) return '';
+    return String(value);
+  };
+
+  const firmName = asString(partner.firm_name);
+
   const handleApprove = async () => {
-    if (!confirm(`Approve ${partner.firm_name}?`)) return;
+    if (!confirm(`Approve ${firmName}?`)) return;
 
     setLoading(true);
     try {
@@ -44,7 +63,7 @@ export function PartnerApprovalCard({ partner }: PartnerApprovalCardProps) {
   };
 
   const handleReject = async () => {
-    if (!confirm(`Reject ${partner.firm_name}? This action cannot be undone.`))
+    if (!confirm(`Reject ${firmName}? This action cannot be undone.`))
       return;
 
     setLoading(true);
@@ -64,7 +83,7 @@ export function PartnerApprovalCard({ partner }: PartnerApprovalCardProps) {
       <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
         <div className="text-4xl mb-3">✓</div>
         <p className="font-semibold text-green-800">
-          {partner.firm_name} approved
+          {firmName} approved
         </p>
       </div>
     );
@@ -75,7 +94,7 @@ export function PartnerApprovalCard({ partner }: PartnerApprovalCardProps) {
       <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
         <div className="text-4xl mb-3">×</div>
         <p className="font-semibold text-red-800">
-          {partner.firm_name} rejected
+          {firmName} rejected
         </p>
       </div>
     );
@@ -85,10 +104,12 @@ export function PartnerApprovalCard({ partner }: PartnerApprovalCardProps) {
     <div className="bg-white border border-brand-border rounded-lg p-6">
       <div className="mb-4">
         <h3 className="text-xl font-semibold text-brand-text mb-1">
-          {partner.firm_name}
+          {firmName}
         </h3>
         <p className="text-sm text-brand-muted">
-          {(PARTNER_TYPE_LABELS as any)[partner.partner_type || 'default'] || partner.partner_type}
+          {partner.partner_type && partner.partner_type in PARTNER_TYPE_LABELS
+            ? PARTNER_TYPE_LABELS[partner.partner_type]
+            : asString(partner.partner_type) || 'Unknown'}
         </p>
       </div>
 
@@ -98,7 +119,7 @@ export function PartnerApprovalCard({ partner }: PartnerApprovalCardProps) {
             Contact Person
           </p>
           <p className="text-sm text-brand-muted">
-            {partner.profiles.full_name || "Not provided"}
+            {asString(partner.profiles?.full_name) || "Not provided"}
           </p>
         </div>
 
@@ -106,55 +127,55 @@ export function PartnerApprovalCard({ partner }: PartnerApprovalCardProps) {
           <p className="text-xs font-semibold text-brand-text uppercase tracking-wide">
             Email
           </p>
-          <p className="text-sm text-brand-muted">{partner.contact_email}</p>
+          <p className="text-sm text-brand-muted">{asString(partner.contact_email)}</p>
         </div>
 
-        {partner.contact_phone && (
+        {partner.contact_phone != null && (
           <div>
             <p className="text-xs font-semibold text-brand-text uppercase tracking-wide">
               Phone
             </p>
-            <p className="text-sm text-brand-muted">{partner.contact_phone}</p>
+            <p className="text-sm text-brand-muted">{renderNode(partner.contact_phone)}</p>
           </div>
         )}
 
-        {partner.years_experience && (
+        {partner.years_experience != null && (
           <div>
             <p className="text-xs font-semibold text-brand-text uppercase tracking-wide">
               Years Experience
             </p>
             <p className="text-sm text-brand-muted">
-              {partner.years_experience} years
+              {renderNode(partner.years_experience)} years
             </p>
           </div>
         )}
 
-        {partner.website_url && (
+        {partner.website_url != null && (
           <div>
             <p className="text-xs font-semibold text-brand-text uppercase tracking-wide">
               Website
             </p>
             <a
-              href={partner.website_url}
+              href={asString(partner.website_url)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm text-brand-orange hover:underline"
             >
-              {partner.website_url}
+              {asString(partner.website_url)}
             </a>
           </div>
         )}
 
-        {partner.bio && (
+        {typeof partner.bio === 'string' && partner.bio.length > 0 && (
           <div>
             <p className="text-xs font-semibold text-brand-text uppercase tracking-wide mb-1">
               Bio
             </p>
-            <p className="text-sm text-brand-muted">{partner.bio}</p>
+            <p className="text-sm text-brand-muted">{renderNode(partner.bio)}</p>
           </div>
         )}
 
-        {partner.specialties && partner.specialties.length > 0 && (
+        {Array.isArray(partner.specialties) && partner.specialties.length > 0 && (
           <div>
             <p className="text-xs font-semibold text-brand-text uppercase tracking-wide mb-2">
               Specialties
@@ -162,17 +183,17 @@ export function PartnerApprovalCard({ partner }: PartnerApprovalCardProps) {
             <div className="flex flex-wrap gap-2">
               {partner.specialties.map((specialty) => (
                 <span
-                  key={specialty}
+                  key={asString(specialty)}
                   className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded"
                 >
-                  {specialty}
+                  {asString(specialty)}
                 </span>
               ))}
             </div>
           </div>
         )}
 
-        {partner.regions && partner.regions.length > 0 && (
+        {Array.isArray(partner.regions) && partner.regions.length > 0 && (
           <div>
             <p className="text-xs font-semibold text-brand-text uppercase tracking-wide mb-2">
               Regions
@@ -180,10 +201,10 @@ export function PartnerApprovalCard({ partner }: PartnerApprovalCardProps) {
             <div className="flex flex-wrap gap-2">
               {partner.regions.map((region) => (
                 <span
-                  key={region}
+                  key={asString(region)}
                   className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded"
                 >
-                  {region}
+                  {asString(region)}
                 </span>
               ))}
             </div>

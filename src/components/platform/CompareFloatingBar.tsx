@@ -2,18 +2,14 @@
 
 import Link from "next/link";
 import { parseAsArrayOf, parseAsString, useQueryState } from "nuqs";
-import { useEffect, useState } from "react";
 
 export default function CompareFloatingBar() {
   const [selectedIds] = useQueryState(
     "selectedIds",
     parseAsArrayOf(parseAsString).withDefault([])
   );
-  const [visible, setVisible] = useState(false);
 
-  useEffect(() => {
-    setVisible(selectedIds.length > 0);
-  }, [selectedIds.length]);
+  const visible = selectedIds.length > 0;
 
   if (!selectedIds.length) return null;
 

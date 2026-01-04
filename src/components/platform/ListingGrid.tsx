@@ -1,39 +1,38 @@
 "use client";
 
-import ListingCard from "@/components/platform/ListingCard";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { createClient } from "@/utils/supabase/client";
+import { ListingCard } from "./ListingCard"; 
+import { Loader2 } from "lucide-react";
 
-interface Listing {
-  id: string;
-  title: string;
-  hero_image_url?: string | null;
-  asset_type: "Operational" | "Digital";
-  city?: string | null;
-  province?: string | null;
-  asking_price: number;
-}
+export function ListingGrid({ type }: { type: "operational" | "digital" }) {
+  const [listings, setListings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
 
-interface ListingGridProps {
-  listings: Listing[];
-}
+  useEffect(() => {
+    async function fetchListings() {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("listings")
+        .select("*")
+        .eq("deal_type", type)
+        .eq("status", "active")
+        .limit(3);
+      
+      if (!error) setListings(data || []);
+      setLoading(false);
+    }
+    fetchListings();
+  }, [type]);
 
-export default function ListingGrid({ listings }: ListingGridProps) {
-  const router = useRouter();
-
-  if (!listings || listings.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 text-center gap-4">
-        <div className="text-lg text-muted-foreground">No listings match your search</div>
-        <Button variant="outline" onClick={() => router.push("/browse")}>Reset Filters</Button>
-      </div>
-    );
-  }
+  if (loading) return <div className="py-20 flex justify-center"><Loader2 className="w-8 h-8 text-slate-500 animate-spin"/></div>;
+  if (listings.length === 0) return <div className="py-20 text-center text-slate-400 border border-dashed border-slate-800 rounded-xl">No deals found.</div>;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {listings.map(listing => (
-        <ListingCard key={listing.id} {...listing} />
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {listings.map((listing) => (
+        <ListingCard key={listing.id} listing={listing} />
       ))}
     </div>
   );

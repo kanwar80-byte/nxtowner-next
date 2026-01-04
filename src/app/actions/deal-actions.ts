@@ -1,26 +1,41 @@
 
 "use server";
 import { sendMessage as sendDealRoomMessage } from "@/app/actions/dealroom";
-import { supabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@/utils/supabase/server";
 
 // --- getDealState for deal-room page ---
 export async function getDealState(dealRoomId: string) {
-  const supabase = await supabaseServer();
-  // Example: fetch NDA and LOI status for the deal room
-  // Replace with your actual logic as needed
-  const { data: nda, error: ndaError } = await supabase
-    .from("ndas_v16")
+  const supabase = await createClient();
+  
+  // Get current user for filtering NDA signatures
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  
+  // Fetch NDA signature status for the deal room and current user
+  let ndaQuery = supabase
+    .from("nda_signatures")
     .select("id, signed_at")
-    .eq("deal_room_id", dealRoomId)
-    .maybeSingle();
+    .eq("deal_room_id", dealRoomId);
+  
+  // Only filter by user_id if user is authenticated
+  if (user?.id) {
+    ndaQuery = ndaQuery.eq("user_id", user.id);
+  }
+  
+  const { data: nda, error: ndaError } = await ndaQuery.maybeSingle();
+  
+  // Fetch LOI status for the deal room
+  // Only select id since submitted_at column may not exist
   const { data: loi, error: loiError } = await supabase
-    .from("lois_v16")
-    .select("id, submitted_at")
+    .from("lois")
+    .select("id")
     .eq("deal_room_id", dealRoomId)
     .maybeSingle();
+  
   return {
     ndaSigned: !!nda?.signed_at,
-    loiSubmitted: !!loi?.submitted_at,
+    loiSubmitted: !!loi, // Check if LOI exists (submitted_at not available)
   };
 }
 

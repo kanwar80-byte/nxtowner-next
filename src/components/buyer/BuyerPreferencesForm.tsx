@@ -49,12 +49,15 @@ export function BuyerPreferencesForm() {
     
     // Handler for multi-select categories
     const handleCategoryChange = (category: string) => {
-        setPreferences(prev => ({
-            ...prev,
-            targetMainCategories: prev.targetMainCategories.includes(category)
-                ? prev.targetMainCategories.filter((c: string) => c !== category)
-                : [...prev.targetMainCategories, category],
-        }));
+        setPreferences(prev => {
+            const current = Array.isArray(prev.targetMainCategories) ? prev.targetMainCategories : [];
+            return {
+                ...prev,
+                targetMainCategories: current.includes(category)
+                    ? current.filter((c: string) => c !== category)
+                    : [...current, category],
+            };
+        });
     };
 
 
@@ -105,7 +108,7 @@ export function BuyerPreferencesForm() {
                         <select 
                             id="targetAssetType"
                             name="targetAssetType"
-                            value={preferences.targetAssetType}
+                            value={typeof preferences.targetAssetType === 'string' ? preferences.targetAssetType : 'all'}
                             onChange={handleInputChange}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                         >
@@ -124,7 +127,7 @@ export function BuyerPreferencesForm() {
                                     type="button"
                                     onClick={() => handleCategoryChange(category)}
                                     className={`px-3 py-1.5 text-sm rounded-full transition duration-150 ${
-                                        preferences.targetMainCategories.includes(category)
+                                        (Array.isArray(preferences.targetMainCategories) ? preferences.targetMainCategories : []).includes(category)
                                             ? 'bg-blue-600 text-white font-semibold'
                                             : 'bg-gray-100 text-gray-700 hover:bg-blue-100 border border-gray-300'
                                     }`}
@@ -143,17 +146,17 @@ export function BuyerPreferencesForm() {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label htmlFor="minAskingPrice" className="block text-sm font-medium text-gray-700">Min Asking Price ($)</label>
-                            <input type="number" name="minAskingPrice" id="minAskingPrice" value={preferences.minAskingPrice || ''} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" placeholder="e.g., 250000" />
+                            <input type="number" name="minAskingPrice" id="minAskingPrice" value={typeof preferences.minAskingPrice === 'number' ? preferences.minAskingPrice : ''} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" placeholder="e.g., 250000" />
                         </div>
                         <div>
                             <label htmlFor="maxAskingPrice" className="block text-sm font-medium text-gray-700">Max Asking Price ($)</label>
-                            <input type="number" name="maxAskingPrice" id="maxAskingPrice" value={preferences.maxAskingPrice || ''} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" placeholder="e.g., 5000000" />
+                            <input type="number" name="maxAskingPrice" id="maxAskingPrice" value={typeof preferences.maxAskingPrice === 'number' ? preferences.maxAskingPrice : ''} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" placeholder="e.g., 5000000" />
                         </div>
                     </div>
                     
                     <div>
                         <label htmlFor="minCashFlowSDE" className="block text-sm font-medium text-gray-700">Minimum Cash Flow (SDE $)</label>
-                        <input type="number" name="minCashFlowSDE" id="minCashFlowSDE" value={preferences.minCashFlowSDE || ''} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" placeholder="e.g., 100000" />
+                        <input type="number" name="minCashFlowSDE" id="minCashFlowSDE" value={typeof preferences.minCashFlowSDE === 'number' ? preferences.minCashFlowSDE : ''} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm" placeholder="e.g., 100000" />
                     </div>
                 </div>
 
@@ -164,14 +167,14 @@ export function BuyerPreferencesForm() {
                     
                     <div className="space-y-4">
                         <label className="block text-sm font-medium text-gray-700">Growth Potential (YoY %)</label>
-                        <input type="range" name="aiWeight_growth" min="0" max="1" step="0.1" value={preferences.aiWeight_growth} onChange={handleInputChange} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg" />
-                        <p className="text-xs text-gray-500">Weight: **{preferences.aiWeight_growth}** (Higher weight favors high-growth assets like SaaS.)</p>
+                        <input type="range" name="aiWeight_growth" min="0" max="1" step="0.1" value={typeof preferences.aiWeight_growth === 'number' ? preferences.aiWeight_growth : 0.5} onChange={handleInputChange} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg" />
+                        <p className="text-xs text-gray-500">Weight: **{String(preferences.aiWeight_growth ?? 0.5)}** (Higher weight favors high-growth assets like SaaS.)</p>
                     </div>
 
                     <div className="space-y-4">
                         <label className="block text-sm font-medium text-gray-700">Cash Flow Stability (Low Churn/Risk)</label>
-                        <input type="range" name="aiWeight_stability" min="0" max="1" step="0.1" value={preferences.aiWeight_stability} onChange={handleInputChange} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg" />
-                        <p className="text-xs text-gray-500">Weight: **{preferences.aiWeight_stability}** (Higher weight favors reliable, low-risk businesses.)</p>
+                        <input type="range" name="aiWeight_stability" min="0" max="1" step="0.1" value={typeof preferences.aiWeight_stability === 'number' ? preferences.aiWeight_stability : 0.5} onChange={handleInputChange} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg" />
+                        <p className="text-xs text-gray-500">Weight: **{String(preferences.aiWeight_stability ?? 0.5)}** (Higher weight favors reliable, low-risk businesses.)</p>
                     </div>
                 </div>
 

@@ -1,3 +1,13 @@
+import { createClient } from "@/utils/supabase/server";
+
+// UUID regex pattern
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isUUID(value: string | null | undefined): boolean {
+  if (!value || typeof value !== "string") return false;
+  return UUID_REGEX.test(value);
+}
+
 // Get category UUID by code
 export async function getCategoryIdByCode(code: string): Promise<string | null> {
   const supabase = await createClient();
@@ -21,9 +31,10 @@ export async function getSubcategoryIdByCode(code: string): Promise<string | nul
   if (error || !data) return null;
   return data.id ?? null;
 }
-import { createClient } from "@/utils/supabase/server";
 
+// Get category name by UUID id
 export async function getCategoryNameById(categoryId: string): Promise<string | null> {
+  if (!isUUID(categoryId)) return null; // Only resolve UUIDs
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("tax_categories")
@@ -34,7 +45,9 @@ export async function getCategoryNameById(categoryId: string): Promise<string | 
   return data.name ?? null;
 }
 
+// Get subcategory name by UUID id
 export async function getSubcategoryNameById(subcategoryId: string): Promise<string | null> {
+  if (!isUUID(subcategoryId)) return null; // Only resolve UUIDs
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("tax_subcategories")
@@ -45,13 +58,14 @@ export async function getSubcategoryNameById(subcategoryId: string): Promise<str
   return data.name ?? null;
 }
 
+// Helper to get taxonomy labels for a listing
 export async function getTaxonomyLabels(
   categoryId?: string | null,
   subcategoryId?: string | null
 ): Promise<{ categoryName?: string; subcategoryName?: string }> {
   const [categoryNameRaw, subcategoryNameRaw] = await Promise.all([
-    categoryId ? getCategoryNameById(categoryId) : undefined,
-    subcategoryId ? getSubcategoryNameById(subcategoryId) : undefined,
+    categoryId ? getCategoryNameById(categoryId) : Promise.resolve(null),
+    subcategoryId ? getSubcategoryNameById(subcategoryId) : Promise.resolve(null),
   ]);
   const categoryName = categoryNameRaw === null ? undefined : categoryNameRaw;
   const subcategoryName = subcategoryNameRaw === null ? undefined : subcategoryNameRaw;

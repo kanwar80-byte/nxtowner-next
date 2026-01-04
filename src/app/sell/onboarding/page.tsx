@@ -94,6 +94,8 @@ export default function SellerOnboarding() {
         annual_cashflow: formData.cashflow,
         asking_price: formData.askingPrice,
         nxt_score: Math.floor(qualityScore), // Real score
+        // Convert assetType (UI) to asset_type (DB) with lowercase canonical format
+        asset_type: formData.assetType?.toLowerCase() || 'operational',
       };
 
       const result = await createListing(payload);

@@ -1,6 +1,6 @@
 "use server";
 
-import { supabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@/utils/supabase/server";
 
 export type MatchedDeal = {
     listingId: string;
@@ -18,7 +18,7 @@ export type MatchedDeal = {
  * In a real application, this would query a dedicated AI table/service.
  */
 export async function getMatchedBuyersForListing(listingId: string): Promise<{ qualifiedCount: number, buyerMatches: any[] }> {
-    const supabase = await supabaseServer();
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {

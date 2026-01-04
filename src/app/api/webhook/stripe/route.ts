@@ -8,7 +8,7 @@ import {
   constructWebhookEvent,
   getPlanByPriceId,
 } from '@/lib/stripe';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/utils/supabase/client';
 
 type StripeSubscription = {
   id: string;
@@ -29,6 +29,7 @@ if (!webhookSecret) {
 }
 
 export async function POST(req: NextRequest) {
+  const sb: any = supabase;
   // Get the raw body as string
   const body = await req.text();
 
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
         const renewDate = new Date(subscription.current_period_end * 1000);
 
         // Update user profile
-        await supabase
+        await sb
           .from('profiles')
           // @ts-ignore - stripe_subscription_id added in migration
           .update({
@@ -95,7 +96,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Reset to free plan
-        await supabase
+        await sb
           .from('profiles')
           .update({
             plan: 'free',

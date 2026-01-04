@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { getListingsByIds } from "@/app/actions/getListingsByIds";
 import Image from 'next/image';
 import { parseAsArrayOf, parseAsString, useQueryState } from 'nuqs';
 import { useEffect, useState } from 'react';
@@ -24,12 +24,16 @@ export default function ComparisonQueue() {
         return;
       }
       setLoading(true);
-      const { data } = await supabaseBrowser()
-        .from('listings')
-        .select('id, title, hero_image_url, ai_analysis(growth_score)')
-        .in('id', selectedIds);
+      // Use V16 canonical repo via server action
+      const listings = await getListingsByIds(selectedIds);
       
-      setBusinesses(data || []);
+      // Map to format expected by component
+      setBusinesses(listings.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        hero_image_url: item.hero_image_url || item.heroImageUrl,
+        ai_analysis: item.ai_analysis, // May not exist in V16, handle gracefully
+      })));
       setLoading(false);
     };
     fetchQueueDetails();

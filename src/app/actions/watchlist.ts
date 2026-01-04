@@ -5,11 +5,12 @@
  * These can be called directly from client components
  */
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/utils/supabase/client';
 import { revalidatePath } from 'next/cache';
 
 export async function toggleWatchlist(listingId: string): Promise<{ success: boolean; isWatchlisted: boolean; error?: string }> {
   try {
+    const sb: any = supabase;
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
@@ -18,7 +19,7 @@ export async function toggleWatchlist(listingId: string): Promise<{ success: boo
     }
 
     // Check if already watchlisted
-    const { data: existing, error: checkError } = await supabase
+    const { data: existing, error: checkError } = await sb
       .from('watchlist')
       .select('id')
       .eq('user_id', user.id)
@@ -32,7 +33,7 @@ export async function toggleWatchlist(listingId: string): Promise<{ success: boo
 
     if (existing) {
       // Remove from watchlist
-      const { error: deleteError } = await supabase
+      const { error: deleteError } = await sb
         .from('watchlist')
         .delete()
         .eq('user_id', user.id)
@@ -47,7 +48,7 @@ export async function toggleWatchlist(listingId: string): Promise<{ success: boo
     } else {
       // Add to watchlist
       const watchlistPayload = { user_id: user.id, listing_id: listingId };
-      const { error: insertError } = await supabase
+      const { error: insertError } = await sb
         .from('watchlist')
         .insert(watchlistPayload as never);
 
@@ -66,10 +67,11 @@ export async function toggleWatchlist(listingId: string): Promise<{ success: boo
 
 export async function isListingWatchlisted(listingId: string): Promise<boolean> {
   try {
+    const sb: any = supabase;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return false;
 
-    const { data, error } = await supabase
+    const { data, error } = await sb
       .from('watchlist')
       .select('id')
       .eq('user_id', user.id)
@@ -90,10 +92,11 @@ export async function isListingWatchlisted(listingId: string): Promise<boolean> 
 
 export async function getWatchlistForUser(): Promise<{ listing_id: string; created_at: string }[]> {
   try {
+    const sb: any = supabase;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
 
-    const { data, error } = await supabase
+    const { data, error } = await sb
       .from('watchlist')
       .select('listing_id, created_at')
       .eq('user_id', user.id)

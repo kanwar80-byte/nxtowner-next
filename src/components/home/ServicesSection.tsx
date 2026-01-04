@@ -1,3 +1,5 @@
+import { ArrowRight } from 'lucide-react';
+
 // Removed ServicesSectionProps interface as mode is currently unused
 
 export default function ServicesSection() {
@@ -25,16 +27,26 @@ export default function ServicesSection() {
   ];
 
   return (
-    <section className="bg-[#0A122A] text-white py-12 md:py-16">
+    <section className="bg-[#0A122A] text-white py-14 lg:py-20 border-t border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-3xl font-bold tracking-tight text-white text-center mb-4">
-          Select Services for Your Deal
-        </h2>
-        <p className="mt-3 max-w-2xl text-slate-300 text-center mx-auto mb-8">
-          Our vetted partner network supports valuation, due diligence, financing, legal review, 
-          and closing—so you don&apos;t have to build a deal team from scratch.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-7">
+        <div className="flex justify-between items-start mb-6 lg:mb-8">
+          <div>
+            <h2 className="text-3xl font-bold text-white">
+              Select Services for Your Deal
+            </h2>
+            <p className="mt-2 max-w-2xl text-slate-300">
+              Our vetted partner network supports valuation, due diligence, financing, legal review, 
+              and closing—so you don&apos;t have to build a deal team from scratch.
+            </p>
+          </div>
+          <a
+            href="/partners"
+            className="text-white/80 font-bold flex items-center gap-1 hover:text-white transition-all text-sm"
+          >
+            View All <ArrowRight size={16} />
+          </a>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {services.map((service, index) => (
             <div
               key={index}

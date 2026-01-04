@@ -1,6 +1,6 @@
 "use server";
 
-import { supabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@/utils/supabase/server";
 
 export type BuyerMatchedDeal = {
     listingId: string;
@@ -24,7 +24,7 @@ export type BuyerSummary = {
  * MOCK: Fetches buyer activity summary and the list of AI matched deals.
  */
 export async function getBuyerDashboardData(): Promise<BuyerSummary | null> {
-    const supabase = await supabaseServer();
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {

@@ -1,11 +1,17 @@
-﻿"use client";
+﻿/**
+ * ARCHIVED (DO NOT USE)
+ * V17 live nav: src/components/layout/Navbar.tsx
+ * Wired via: src/components/layout/ConditionalLayout.tsx -> src/app/layout.tsx
+ */
 
-import { supabaseBrowser } from "@/lib/supabase/client";
+"use client";
+
+import { supabaseBrowser } from "@/utils/supabase/client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-export default function MainNav() {
+export function ArchivedMainNav() {
   const router = useRouter();
   const pathname = usePathname();
   const [email, setEmail] = useState<string | null>(null);
@@ -13,7 +19,7 @@ export default function MainNav() {
   useEffect(() => {
     let active = true;
     (async () => {
-      const supabase = supabaseBrowser();
+      const supabase = supabaseBrowser;
       const { data } = await supabase.auth.getUser();
       if (!active) return;
       setEmail(data.user?.email ?? null);
@@ -22,7 +28,7 @@ export default function MainNav() {
   }, []);
 
   const logout = async () => {
-    const supabase = supabaseBrowser();
+    const supabase = supabaseBrowser;
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();

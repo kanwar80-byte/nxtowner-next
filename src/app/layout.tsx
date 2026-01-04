@@ -1,8 +1,9 @@
-import Footer from "@/components/layout/Footer";
-import MainNav from "@/components/Navbar";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Suspense } from "react";
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
+import ConditionalLayout from "@/components/layout/ConditionalLayout";
+import PageViewTracker from "@/components/analytics/PageViewTracker";
 import "./globals.css";
 
 const inter = Inter({
@@ -25,10 +26,13 @@ export default function RootLayout({
       <body
         className={`${inter.variable} antialiased bg-brand-bg`}
       >
+        <Suspense fallback={null}>
+          <PageViewTracker />
+        </Suspense>
         <NuqsAdapter>
-          <MainNav />
-          <main>{children}</main>
-          <Footer />
+          <ConditionalLayout>
+            {children}
+          </ConditionalLayout>
         </NuqsAdapter>
       </body>
     </html>

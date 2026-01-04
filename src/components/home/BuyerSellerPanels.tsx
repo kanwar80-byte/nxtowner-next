@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function BuyerSellerPanels() {
   return (
     <section className="bg-white py-12 md:py-16">
@@ -34,12 +36,12 @@ export default function BuyerSellerPanels() {
                 <span className="text-sm">Expert support across your acquisition journey</span>
               </li>
             </ul>
-            <a
+            <Link
               href="/browse"
               className="inline-flex items-center justify-center rounded-full px-7 py-3 bg-[#0A122A] text-white font-semibold shadow-md hover:shadow-lg hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"
             >
               Start Browsing
-            </a>
+            </Link>
           </div>
 
           {/* Sellers Panel */}
@@ -74,12 +76,12 @@ export default function BuyerSellerPanels() {
                 <span className="text-sm">Optional broker and legal partner support</span>
               </li>
             </ul>
-            <a
+            <Link
               href="/sell"
               className="inline-flex items-center justify-center rounded-full px-7 py-3 bg-[#F97316] text-white font-semibold shadow-md hover:shadow-lg hover:scale-[1.03] active:scale-[0.98] hover:bg-[#ea580c] transition-all duration-300"
             >
               List Your Asset
-            </a>
+            </Link>
           </div>
         </div>
       </div>

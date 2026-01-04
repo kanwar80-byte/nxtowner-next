@@ -1,8 +1,9 @@
 import { getUserDealRooms } from '@/app/actions/dealroom';
-import { getWatchlistForUser } from '@/app/actions/watchlist';
 import { requireAuth } from '@/lib/auth';
 import { createClient } from "@/utils/supabase/server";
 import Link from 'next/link';
+import GettingStartedCard from '@/components/buyer/GettingStartedCard';
+import BuyerNextActions from '@/components/buyer/BuyerNextActions';
 
 export const revalidate = 0; // Render on demand
 
@@ -32,26 +33,35 @@ export default async function BuyerDashboardPage() {
     .single();
 
   // 2. Fetch all buyer data
-  const [watchlistItems, dealRooms, ndas] = await Promise.all([
-    getWatchlistForUser(),
+  // Fetch saved listings directly from saved_listings table
+  const { data: savedListingsData } = await supabase
+    .from('saved_listings')
+    .select('listing_id, created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+
+  const [dealRooms, ndas] = await Promise.all([
     getUserDealRooms(user.id).catch(() => []), // Catch errors if table missing
     fetchUserNDAs(user.id)
   ]);
 
-  // 3. Fetch listing details for watchlist
+  // 3. Fetch listing details for saved listings
+  // Filter out null listing_id before mapping
   const watchlistWithDetails: WatchlistWithDetails[] = await Promise.all(
-    (watchlistItems || []).map(async (item) => {
-      const { data: listing } = await supabase
-        .from('listings_v16')
-        .select('id, title, asking_price, status, asset_type')
-        .eq('id', item.listing_id)
-        .single();
-      return {
-        listing_id: item.listing_id,
-        created_at: item.created_at,
-        listing: listing as ListingData | null
-      };
-    })
+    (savedListingsData || [])
+      .filter((item) => item.listing_id !== null)
+      .map(async (item) => {
+        const { data: listing } = await supabase
+          .from('listings_v16')
+          .select('id, title, asking_price, status, asset_type')
+          .eq('id', item.listing_id!)
+          .single();
+        return {
+          listing_id: item.listing_id!,
+          created_at: item.created_at || '',
+          listing: listing as ListingData | null
+        };
+      })
   );
 
   return (
@@ -64,15 +74,18 @@ export default async function BuyerDashboardPage() {
           </p>
         </div>
 
+        {/* Getting Started Card */}
+        <GettingStartedCard />
+
+        {/* Next Actions */}
+        <BuyerNextActions />
+
         {/* Plan Status */}
         {profile && (
           <div className="mb-8 p-6 bg-slate-800/50 rounded-xl border border-slate-700">
             <h2 className="text-lg font-semibold text-white mb-2">Current Plan</h2>
             <div className="flex items-center gap-2">
-                <span className="capitalize text-blue-400 font-bold">{profile.plan || 'Free Tier'}</span>
-                {profile.plan_renews_at && (
-                    <span className="text-sm text-slate-500">Renews: {new Date(profile.plan_renews_at || Date.now()).toLocaleDateString()}</span>
-                )}
+                <span className="capitalize text-blue-400 font-bold">Free Tier</span>
             </div>
           </div>
         )}
@@ -230,7 +243,7 @@ async function fetchUserNDAs(userId: string) {
       .from(NDA_TABLE)
       .select("listing_id,signed_at,status")
       .eq("buyer_id", userId)
-      .order("signed_at", { ascending: false });
+      .order("updated_at", { ascending: false });
     if (ndaError) {
       console.log("Supabase NDA Error:", {
         message: (ndaError as any)?.message,

@@ -1,142 +1,339 @@
-'use client';
+"use client";
 
-import { ArrowRight, CheckCircle, ChevronDown, Search } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import React, { useState } from 'react';
-
-const HERO_COPY = {
-  all: {
-    title: "The Operating System for Business Acquisitions.",
-    subtitle: "Canada’s premier marketplace. Buy and sell verified assets with bank-grade data and AI valuations.",
-    placeholder: "Search 'SaaS', 'Car Wash', 'Marketing Agency'...",
-  },
-  operational: {
-    title: "Institutional-Grade Operational Businesses.",
-    subtitle: "Acquire verified brick-and-mortar businesses with real cash flow, audited fundamentals, and asset-backed value.",
-    placeholder: "Search gas stations, car washes, QSRs, logistics...",
-  },
-  digital: {
-    title: "Scalable Digital Businesses, Professionally Vetted.",
-    subtitle: "Buy and sell SaaS, e-commerce, and online businesses with AI-normalized financials and verified performance data.",
-    placeholder: "Search SaaS, e-commerce, agencies, content sites...",
-  },
-};
+import { useState, FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useTrack } from "@/contexts/TrackContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Search, MapPin, Globe, Building2, TrendingUp, ArrowRight, Sparkles, Loader2, AlertCircle, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { createClient } from "@/utils/supabase/client";
 
 export default function Hero() {
-  const [assetMode, setAssetMode] = useState<'all' | 'operational' | 'digital'>('all');
-  const [search, setSearch] = useState('');
+  const { track, setTrack } = useTrack();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isOperational = track === "operational";
+  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [locationQuery, setLocationQuery] = useState("");
+  const [mrrQuery, setMrrQuery] = useState(""); // For digital mode input (even if disabled)
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showModePrompt, setShowModePrompt] = useState(false);
+  const [suggestedMode, setSuggestedMode] = useState<'operational' | 'digital' | null>(null);
+  const [pendingFilters, setPendingFilters] = useState<any>(null);
 
-  const getAssetType = (mode: 'all' | 'operational' | 'digital') => {
-    if (mode === 'all') return 'all';
-    if (mode === 'operational') return 'physical';
-    if (mode === 'digital') return 'digital';
-    return 'all';
-  };
-
-  // REPLACED: Unified wiring for assetType param
-  const handleSearch = (e: React.FormEvent) => {
+  async function handleSearch(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const params = new URLSearchParams();
+    setIsAnalyzing(true);
 
-    // 1. Handle Search Text
-    if (search.trim()) {
-      params.set('q', search.trim());
+    try {
+      // Get Supabase configuration (these are inlined at build time for client components)
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error("Supabase configuration missing. Please check your environment variables.");
+      }
+
+      // Call the AI Search Parser Edge Function
+      const response = await fetch(`${supabaseUrl}/functions/v1/ai-search-parser`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${supabaseAnonKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: searchQuery,
+          mode: track,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Edge Function error: ${response.statusText}`);
+      }
+
+      const { filters, raw_query } = await response.json();
+
+      // Check for mode mismatch (if AI suggests different mode)
+      if (filters.type && filters.type !== track) {
+        setSuggestedMode(filters.type);
+        setPendingFilters(filters);
+        setShowModePrompt(true);
+        setIsAnalyzing(false);
+        return;
+      }
+
+      // Proceed with search using Edge Function filters
+      executeSearch(filters, raw_query);
+    } catch (error) {
+      console.error("AI Search Error:", error);
+      // Fallback: use raw query if Edge Function fails
+      executeSearch({ query: searchQuery }, searchQuery);
+    }
+  }
+
+  function executeSearch(filters: any, rawQuery?: string) {
+    // Build URL search params
+    const params = new URLSearchParams(searchParams.toString());
+    
+    // Clear existing search params
+    params.delete('q');
+    params.delete('category');
+    params.delete('location');
+    params.delete('min_value');
+    params.delete('is_verified');
+
+    // Add Edge Function filters (structured format)
+    if (rawQuery) {
+      params.set('q', rawQuery);
+    }
+    if (filters.category) {
+      params.set('category', filters.category);
+    }
+    if (filters.location || locationQuery) {
+      params.set('location', filters.location || locationQuery);
+    }
+    if (filters.min_value) {
+      params.set('min_value', filters.min_value.toString());
+    }
+    if (filters.is_verified) {
+      params.set('is_verified', 'true');
     }
 
-    // 2. Handle Asset Type (Map Tabs to V16 DB Values)
-    // assetMode is the tab state variable
-    if (assetMode === 'operational') {
-      params.set('assetType', 'Operational');
-    } else if (assetMode === 'digital') {
-      params.set('assetType', 'Digital');
-    }
-    // If 'all', do not set the param
+    // Update URL without page reload
+    router.push(`/?${params.toString()}`, { scroll: false });
+    
+    // Scroll to listings section
+    setTimeout(() => {
+      const listingsSection = document.getElementById('listings-section');
+      if (listingsSection) {
+        listingsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      setIsAnalyzing(false);
+    }, 300);
+  }
 
-    router.push(`/browse?${params.toString()}`);
-  };
+  function handleModeSwitch() {
+    if (suggestedMode) {
+      setTrack(suggestedMode);
+      if (pendingFilters) {
+        executeSearch(pendingFilters);
+      }
+      setShowModePrompt(false);
+      setSuggestedMode(null);
+      setPendingFilters(null);
+    }
+  }
+
+  function handleContinueWithoutSwitch() {
+    if (pendingFilters) {
+      executeSearch(pendingFilters);
+    }
+    setShowModePrompt(false);
+    setSuggestedMode(null);
+    setPendingFilters(null);
+  }
 
   return (
-    <div className="relative bg-[#0B1221] text-white pt-20 pb-32 overflow-hidden">
-      {/* Background Gradient Effect */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-blue-900/20 blur-[100px] rounded-full pointer-events-none opacity-50" />
+    <section className="relative w-full min-h-[85vh] flex flex-col items-center justify-center overflow-hidden bg-slate-950 pt-20">
+      
+      {/* BACKGROUND EFFECTS (Subtle Gradients) */}
+      <div className={`absolute top-0 left-1/4 w-[500px] h-[500px] rounded-full blur-[120px] opacity-20 transition-colors duration-1000 ${isOperational ? 'bg-amber-600' : 'bg-teal-600'}`} />
+      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-indigo-600/10 rounded-full blur-[100px]" />
 
-      <div className="container mx-auto px-4 relative z-10 text-center">
+      <div className="container relative z-10 px-4 text-center">
         
-        {/* 1. HEADLINE (Dynamic based on mode) */}
-        <h1 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight tracking-tight text-white drop-shadow-sm">
-          {HERO_COPY[assetMode].title}
+        {/* 1. THE BADGE */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-slate-800 bg-slate-900/50 backdrop-blur-sm mb-8"
+        >
+          <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+          <span className="text-xs font-medium text-slate-300 uppercase tracking-wide">
+            Live Market: 42 New Listings Today
+          </span>
+        </motion.div>
+
+        {/* 2. THE HEADLINE */}
+        <h1 className="text-5xl md:text-7xl font-bold text-white tracking-tight mb-6 max-w-5xl mx-auto leading-[1.1]">
+          The Operating System for <br />
+          <span className="relative">
+             {/* Text Switch Animation */}
+             <AnimatePresence mode="wait">
+               <motion.span 
+                 key={track}
+                 initial={{ opacity: 0, y: 20 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 exit={{ opacity: 0, y: -20 }}
+                 className={`inline-block ${isOperational ? 'text-amber-500' : 'text-teal-400'}`}
+               >
+                 {isOperational ? "Real World" : "Digital"}
+               </motion.span>
+             </AnimatePresence>
+             {" "}Acquisitions.
+          </span>
         </h1>
 
-        {/* 2. SUBTITLE */}
-        <p className="text-slate-400 text-lg md:text-xl max-w-3xl mx-auto mb-10 leading-relaxed">
-          {HERO_COPY[assetMode].subtitle}
+        <p className="text-lg md:text-xl text-slate-400 mb-10 max-w-2xl mx-auto">
+          Stop guessing. Start closing. We combine verified financials, AI-driven due diligence, and expert advisory for the modern dealmaker.
         </p>
 
-        {/* 3. PILLS / FILTER TABS (Moved Below Text, Above Search) */}
-        <div className="flex justify-center mb-8">
-          <div className="inline-flex bg-slate-800/50 p-1.5 rounded-full border border-slate-700/50 backdrop-blur-sm">
-            {(['all', 'operational', 'digital'] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setAssetMode(mode)}
-                className={`px-6 py-2 rounded-full text-sm font-bold transition-all duration-200 ${
-                  assetMode === mode
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-                }`}
-              >
-                {mode === 'all' ? 'All Assets' : mode === 'operational' ? 'Operational' : 'Digital'}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* 3. THE TOGGLE & SEARCH MODULE */}
+        <div className="w-full max-w-3xl mx-auto bg-slate-900/80 backdrop-blur-md border border-slate-700 rounded-2xl p-2 shadow-2xl">
+          
+          {/* A. THE SWITCHER (Tabs) */}
+          <div className="flex p-1 bg-slate-950 rounded-xl mb-4 relative">
+             {/* Sliding Background Pill */}
+             <motion.div 
+               className={`absolute top-1 bottom-1 w-[49%] rounded-lg ${isOperational ? 'bg-slate-800' : 'bg-slate-800 translate-x-[102%]'}`}
+               layoutId="tab-pill"
+               transition={{ type: "spring", stiffness: 300, damping: 30 }}
+             />
+             
+             <button 
+               onClick={() => setTrack("operational")}
+               className={`flex-1 relative z-10 flex items-center justify-center gap-2 py-3 text-sm font-bold transition-colors ${isOperational ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
+             >
+               <Building2 className="w-4 h-4" />
+               Operational Assets
+             </button>
 
-        {/* 4. SEARCH BAR (Main Action) */}
-        <div className="max-w-3xl mx-auto">
+             <button 
+               onClick={() => setTrack("digital")}
+               className={`flex-1 relative z-10 flex items-center justify-center gap-2 py-3 text-sm font-bold transition-colors ${!isOperational ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
+             >
+               <Globe className="w-4 h-4" />
+               Digital Assets
+             </button>
+          </div>
+
+          {/* B. THE AI SEARCH BAR */}
           <form 
-            onSubmit={handleSearch} 
-            className="bg-white p-2 rounded-2xl shadow-2xl shadow-blue-900/20 flex flex-col md:flex-row items-center gap-2 border border-slate-200"
+            onSubmit={handleSearch}
+            className="flex flex-col md:flex-row gap-2"
           >
-            {/* Input Field */}
-            <div className="flex-1 w-full relative flex items-center px-4 py-3">
-              <Search className="w-5 h-5 text-slate-400 mr-3 shrink-0" />
-              <input
-                type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder={HERO_COPY[assetMode].placeholder}
-                className="w-full bg-transparent outline-none text-slate-800 placeholder-slate-400 font-medium text-lg"
+            <div className="relative flex-grow group">
+              <Sparkles className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-amber-500 transition-colors" />
+              <Input 
+                type="text" 
+                value={searchQuery || ""}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={
+                  isOperational 
+                    ? "Search gas stations, car washes, logistics..."
+                    : "Search SaaS, e-commerce, AI tools..."
+                }
+                className="pl-12 h-14 bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 focus-visible:ring-offset-0 focus-visible:ring-1 focus-visible:ring-amber-500/50"
               />
             </div>
-
-            {/* Location Filter (Static for now) */}
-            <div className="hidden md:flex items-center px-4 py-3 border-l border-slate-200 min-w-[160px] text-slate-600 font-medium cursor-pointer hover:text-slate-900 transition-colors">
-              <span className="flex-1 text-left">Any Location</span>
-              <ChevronDown className="w-4 h-4 ml-2 opacity-50" />
+            
+            {/* Contextual Input #2 */}
+            <div className="relative md:w-1/3 group hidden md:block">
+               {isOperational ? (
+                 <>
+                   <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-amber-500 transition-colors" />
+                   <Input 
+                     type="text" 
+                     value={locationQuery || ""}
+                     onChange={(e) => setLocationQuery(e.target.value)}
+                     placeholder="City or Province"
+                     className="pl-12 h-14 bg-slate-950 border-slate-800 text-white placeholder:text-slate-500"
+                   />
+                 </>
+               ) : (
+                 <>
+                   <TrendingUp className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-teal-500 transition-colors" />
+                   <Input 
+                     type="text" 
+                     value={mrrQuery || ""}
+                     onChange={(e) => setMrrQuery(e.target.value)}
+                     placeholder="Min. MRR (e.g. $5k)"
+                     className="pl-12 h-14 bg-slate-950 border-slate-800 text-white placeholder:text-slate-500"
+                     disabled
+                   />
+                 </>
+               )}
             </div>
 
-            {/* Search Button - UPDATED TO YELLOW */}
-            <button 
-              type="submit" 
-              className="w-full md:w-auto bg-[#EAB308] hover:bg-[#CA8A04] text-slate-900 font-bold py-3 px-8 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 group"
+            <Button 
+              type="submit"
+              size="lg" 
+              disabled={isAnalyzing}
+              className={`h-14 px-8 text-base font-bold relative overflow-hidden ${isOperational ? 'bg-amber-600 hover:bg-amber-700' : 'bg-teal-600 hover:bg-teal-700'} ${isAnalyzing ? 'opacity-75 cursor-not-allowed' : ''}`}
             >
-              Search
-              <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
-            </button>
+              {isAnalyzing ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="animate-pulse">AI Analyzing...</span>
+                </span>
+              ) : (
+                'Search'
+              )}
+            </Button>
           </form>
         </div>
 
-        {/* 5. TRUST SIGNALS */}
-        <div className="mt-12 flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm text-slate-500 font-medium">
-          {['Verified Listings', 'AI Due Diligence', 'Secure Deal Rooms', 'Bank-Grade Data'].map((item) => (
-             <span key={item} className="flex items-center gap-2">
-               <CheckCircle className="w-4 h-4 text-blue-500/80" /> {item}
-             </span>
-          ))}
-        </div>
+        {/* Mode Switch Prompt Modal */}
+        <AnimatePresence>
+          {showModePrompt && suggestedMode && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowModePrompt(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0.95 }}
+                onClick={(e) => e.stopPropagation()}
+                className="relative bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl"
+              >
+                <button
+                  onClick={() => setShowModePrompt(false)}
+                  className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                
+                <div className="flex items-start gap-4 mb-4">
+                  <div className={`p-3 rounded-full ${suggestedMode === 'operational' ? 'bg-amber-600/20' : 'bg-teal-600/20'}`}>
+                    <AlertCircle className={`w-6 h-6 ${suggestedMode === 'operational' ? 'text-amber-500' : 'text-teal-500'}`} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-white mb-2">
+                      Switch to {suggestedMode === 'operational' ? 'Operational' : 'Digital'} Assets?
+                    </h3>
+                    <p className="text-sm text-slate-400">
+                      Your search seems to match {suggestedMode === 'operational' ? 'operational' : 'digital'} assets better. Switch to {suggestedMode === 'operational' ? 'Operational' : 'Digital'} Assets for these results?
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleModeSwitch}
+                    className={`flex-1 ${suggestedMode === 'operational' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-teal-600 hover:bg-teal-700'}`}
+                  >
+                    Switch & Search
+                  </Button>
+                  <Button
+                    onClick={handleContinueWithoutSwitch}
+                    variant="outline"
+                    className="flex-1 border-slate-700 text-slate-300 hover:bg-slate-800"
+                  >
+                    Continue in Current Mode
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
       </div>
-    </div>
+    </section>
   );
 }

@@ -1,6 +1,7 @@
 'use server'
 
-import { createClient } from '@/utils/supabase/client';
+import { searchListingsV16 } from "@/lib/v16/listings.repo";
+import type { BrowseFiltersV16 } from "@/lib/v16/types";
 
 export type SearchFilters = {
   query?: string;
@@ -12,41 +13,41 @@ export type SearchFilters = {
   minRevenue?: number;
 };
 
+/**
+ * Get listings using V16 canonical repo
+ * Maps V15 filter format to V16 and applies additional client-side filtering
+ */
 export async function getListings(filters: SearchFilters) {
-  const supabase = createClient();
-  
-  let query = supabase.from('listings').select('*');
+  try {
+    // Map V15 filters to V16 format
+    const v16Filters: BrowseFiltersV16 = {
+      query: filters.query,
+      assetType: filters.assetType === 'asset' ? 'Operational' 
+        : filters.assetType === 'digital' ? 'Digital' 
+        : undefined,
+      category: filters.category && filters.category !== 'All Categories' 
+        ? filters.category 
+        : undefined,
+      minPrice: filters.minPrice,
+      maxPrice: filters.maxPrice,
+      sort: 'newest',
+    };
 
-  // 1. Text Search
-  if (filters.query) {
-    query = query.ilike('title', `%${filters.query}%`);
-  }
+    // Use V16 canonical repo
+    let listings = await searchListingsV16(v16Filters);
 
-  // 2. Main Filters
-  if (filters.category && filters.category !== 'All Categories') {
-    query = query.eq('category', filters.category);
-  }
+    // Apply additional filters that V16 repo doesn't support directly
+    if (filters.minCashflow !== undefined) {
+      listings = listings.filter((item: any) => (item.cash_flow || 0) >= filters.minCashflow!);
+    }
 
-  // 3. Asset Type (The Split: Operational vs Digital)
-  if (filters.assetType && filters.assetType !== 'all') {
-    query = query.eq('deal_type', filters.assetType); 
-  }
+    if (filters.minRevenue !== undefined) {
+      listings = listings.filter((item: any) => (item.revenue_annual || 0) >= filters.minRevenue!);
+    }
 
-  // 4. Price Logic
-  if (filters.minPrice) query = query.gte('price', filters.minPrice);
-  if (filters.maxPrice) query = query.lte('price', filters.maxPrice);
-
-  // 5. Financial Filters (The "Serious Buyer" logic)
-  if (filters.minCashflow) query = query.gte('cashflow_numeric', filters.minCashflow);
-  if (filters.minRevenue) query = query.gte('revenue', filters.minRevenue);
-
-  // Execute
-  const { data, error } = await query.order('created_at', { ascending: false });
-
-  if (error) {
+    return listings;
+  } catch (error) {
     console.error('Search Error:', error);
     return [];
   }
-
-  return data;
 }

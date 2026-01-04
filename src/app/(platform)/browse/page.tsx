@@ -27,16 +27,35 @@ export default async function BrowsePage({
   const minPrice = sp.min_price ? Number(sp.min_price) : undefined;
   const maxPrice = sp.max_price ? Number(sp.max_price) : undefined;
 
-  // 3. Resolve category/subcategory codes to UUIDs (fail-soft)
+  // 3. Resolve category/subcategory codes to UUIDs (fail-soft - never throw)
   let categoryId: string | undefined = undefined;
   let subcategoryId: string | undefined = undefined;
   const categoryCode = sp.category as string | undefined;
   const subcategoryCode = sp.subcategory as string | undefined;
-  if (categoryCode) {
-    categoryId = await getCategoryIdByCode(categoryCode) || undefined;
+  
+  // Try to resolve category code (fail-soft: if code doesn't exist, categoryId stays undefined)
+  // NEVER throw or call notFound() - always render the page
+  if (categoryCode && typeof categoryCode === 'string') {
+    try {
+      const resolvedId = await getCategoryIdByCode(categoryCode);
+      if (resolvedId) {
+        categoryId = resolvedId;
+      }
+    } catch (err) {
+      // Category code not found or error - this is fine
+      console.warn(`Category code resolution failed for "${categoryCode}":`, err);
+    }
   }
-  if (subcategoryCode) {
-    subcategoryId = await getSubcategoryIdByCode(subcategoryCode) || undefined;
+  if (subcategoryCode && typeof subcategoryCode === 'string') {
+    try {
+      const resolvedId = await getSubcategoryIdByCode(subcategoryCode);
+      if (resolvedId) {
+        subcategoryId = resolvedId;
+      }
+    } catch (err) {
+      // Subcategory code not found or error - this is fine
+      console.warn(`Subcategory code resolution failed for "${subcategoryCode}":`, err);
+    }
   }
 
   // 4. Build Clean Filter Object (UUID preferred, fallback to string)
@@ -53,9 +72,30 @@ export default async function BrowsePage({
   };
   // --- END TRANSLATION LAYER ---
 
-  // NOW PASS THE CLEAN 'filters' OBJECT
-  const listings = await searchListingsV16(filters);
-  const facets = await getBrowseFacetsV16(filters);
+  // Fetch listings and facets (will return empty array if no matches, not 404)
+  // NEVER throw or call notFound() - always render the page
+  let listings: any[] = [];
+  let facets: any = { categoryCounts: {}, subcategoryCounts: {}, assetTypeCounts: {}, total: 0 };
+
+  try {
+    listings = await searchListingsV16(filters) || [];
+  } catch (err) {
+    // If fetch fails, show empty state (not 404)
+    console.warn('Error fetching listings:', err);
+    listings = [];
+  }
+
+  try {
+    facets = await getBrowseFacetsV16(filters) || facets;
+  } catch (err) {
+    // If facets fetch fails, use empty facets (not 404)
+    console.warn('Error fetching facets:', err);
+    facets = { categoryCounts: {}, subcategoryCounts: {}, assetTypeCounts: {}, total: 0 };
+  }
+
+  // Determine if we have an unknown category
+  const hasCategoryFilter = Boolean(categoryCode);
+  const isUnknownCategory = hasCategoryFilter && !categoryId && listings.length === 0;
 
   return (
     <div className="flex flex-col min-h-screen pt-20 bg-slate-50/50">
@@ -65,6 +105,21 @@ export default async function BrowsePage({
           <p className="text-slate-500 mt-1">
             Discover and acquire vetted business opportunities.
           </p>
+          {isUnknownCategory && categoryCode && (
+            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-800">
+                <strong>Category not found:</strong> No listings found for category "{categoryCode}". 
+                Showing all listings instead.
+              </p>
+            </div>
+          )}
+          {hasCategoryFilter && !isUnknownCategory && listings.length === 0 && (
+            <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+              <p className="text-sm text-slate-700">
+                No listings found for this category.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-8 items-start">
@@ -74,7 +129,16 @@ export default async function BrowsePage({
 
           <main className="flex-1 min-w-0">
             <Suspense fallback={<div className="animate-pulse space-y-4">Loading listings...</div>}>
-              <BrowseClientShell listings={listings || []} />
+              <BrowseClientShell 
+                listings={listings || []} 
+                emptyStateReason={
+                  isUnknownCategory 
+                    ? "no_results" 
+                    : listings.length === 0 
+                      ? (hasCategoryFilter ? "no_results" : null)
+                      : null
+                }
+              />
             </Suspense>
           </main>
         </div>

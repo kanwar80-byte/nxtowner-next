@@ -153,7 +153,7 @@ export default function BrowsePage() {
             {listings.map((listing) => (
               <Link
                 key={listing.id}
-                href={`/listings/${listing.id}`}
+                href={`/listing/${listing.id}`}
                 className="group relative block overflow-hidden rounded-xl bg-white shadow-sm transition hover:shadow-md"
               >
                 {/* Image Area */}

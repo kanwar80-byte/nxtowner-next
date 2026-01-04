@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { supabase } from '@/lib/supabase';
+import { searchListingsV16 } from "@/lib/v16/listings.repo";
 
 // Initialize Gemini AI (server-side only)
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -69,41 +69,42 @@ Return ONLY the JSON object, no other text.`;
       // Fallback to empty filters
     }
 
-    // Query Supabase with extracted filters
-    let supabaseQuery = supabase
-      .from('listings')
-      .select('*')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(20);
+    // Map AI filters to V16 Filters and use canonical V16 repo
+    const v16Filters = {
+      assetType: filters.type === 'asset' ? 'Operational' : filters.type === 'digital' ? 'Digital' : undefined,
+      category: filters.category,
+      minPrice: filters.min_price,
+      maxPrice: filters.max_price,
+      sort: 'newest' as const,
+    };
 
-    if (filters.type) {
-      supabaseQuery = supabaseQuery.eq('type', filters.type);
-    }
-    if (filters.category) {
-      supabaseQuery = supabaseQuery.ilike('category', `%${filters.category}%`);
-    }
-    if (filters.min_price !== undefined) {
-      supabaseQuery = supabaseQuery.gte('asking_price', filters.min_price);
-    }
-    if (filters.max_price !== undefined) {
-      supabaseQuery = supabaseQuery.lte('asking_price', filters.max_price);
-    }
+    // Use V16 canonical repo
+    const v16Results = await searchListingsV16(v16Filters);
+
+    // Apply additional filters that V16 repo doesn't support directly (client-side filtering)
+    let listings = v16Results;
+
+    // Filter by revenue (if specified) - V16 repo doesn't have revenue filtering yet
     if (filters.min_revenue !== undefined) {
-      supabaseQuery = supabaseQuery.gte('annual_revenue', filters.min_revenue);
+      listings = listings.filter((item: any) => (item.revenue_annual || 0) >= filters.min_revenue!);
     }
     if (filters.max_revenue !== undefined) {
-      supabaseQuery = supabaseQuery.lte('annual_revenue', filters.max_revenue);
+      listings = listings.filter((item: any) => (item.revenue_annual || 0) <= filters.max_revenue!);
     }
+
+    // Filter by location (if specified) - V16 repo doesn't have location filtering yet
     if (filters.location) {
-      supabaseQuery = supabaseQuery.or(`location.ilike.%${filters.location}%,region.ilike.%${filters.location}%,country.ilike.%${filters.location}%`);
+      const locationLower = filters.location.toLowerCase();
+      listings = listings.filter((item: any) => {
+        const city = (item.city || '').toLowerCase();
+        const province = (item.province || '').toLowerCase();
+        const country = (item.country || '').toLowerCase();
+        return city.includes(locationLower) || province.includes(locationLower) || country.includes(locationLower);
+      });
     }
 
-    const { data: listings, error: dbError } = await supabaseQuery;
-
-    if (dbError) {
-      throw dbError;
-    }
+    // Use the first 20 results for the AI context
+    listings = listings.slice(0, 20);
 
     return NextResponse.json({
       success: true,

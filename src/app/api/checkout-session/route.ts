@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/utils/supabase/client';
 import {
   stripe,
   getOrCreateStripeCustomer,

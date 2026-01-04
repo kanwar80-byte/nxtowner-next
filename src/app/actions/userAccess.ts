@@ -1,6 +1,6 @@
 "use server";
 
-import { supabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@/utils/supabase/server";
 
 export type UserAccessTier = 'FREE' | 'PRO' | 'ELITE' | 'NO_AUTH';
 
@@ -9,7 +9,7 @@ export type UserAccessTier = 'FREE' | 'PRO' | 'ELITE' | 'NO_AUTH';
  * to determine their current paid plan (Buyer Pro, Buyer Elite).
  */
 export async function getBuyerAccessTier(): Promise<UserAccessTier> {
-    const supabase = await supabaseServer();
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {

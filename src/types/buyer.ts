@@ -5,5 +5,5 @@ export type BuyerPreferences = {
   regions?: string[];
   minPrice?: number | null;
   maxPrice?: number | null;
-  [key: string]: any;
+  [key: string]: unknown;
 };

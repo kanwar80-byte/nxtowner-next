@@ -4,6 +4,16 @@ import { createConsultationRequest } from "@/app/actions/partners";
 import type { PartnerProfile } from "@/types/database";
 import { supabase } from "@/utils/supabase/client";
 import { useState } from "react";
+import type React from "react";
+
+// Helper to safely render unknown values as ReactNode
+const renderNode = (v: unknown): React.ReactNode => {
+  if (v == null) return null;
+  if (typeof v === "string" || typeof v === "number") return v;
+  if (typeof v === "boolean") return v ? "Yes" : "No";
+  if (v instanceof Date) return v.toISOString();
+  return String(v);
+};
 
 interface ConsultationModalProps {
   partner: PartnerProfile;
@@ -91,7 +101,7 @@ export function ConsultationModal({ partner, onClose }: ConsultationModalProps) 
                 Request Sent!
               </h3>
               <p className="text-brand-muted">
-                {partner.firm_name} will contact you soon at {formData.requester_email}
+                {typeof partner.firm_name === 'string' ? partner.firm_name : 'Partner'} will contact you soon at {formData.requester_email}
               </p>
             </div>
           ) : (
@@ -99,10 +109,10 @@ export function ConsultationModal({ partner, onClose }: ConsultationModalProps) 
               {/* Partner Info */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
                 <h3 className="font-semibold text-brand-text mb-1">
-                  {partner.firm_name}
+                  {renderNode(partner.firm_name)}
                 </h3>
                 <p className="text-sm text-brand-muted mb-2">
-                  {partner?.partner_type?.toUpperCase()}
+                  {renderNode(partner?.partner_type?.toUpperCase())}
                 </p>
                 <p className="text-xs text-brand-muted">
                   You&apos;ll receive a response at the email you provide below

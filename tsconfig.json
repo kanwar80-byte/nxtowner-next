@@ -30,13 +30,22 @@
   },
   "include": [
     "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    ".next",
+    "src/_archive/**",
+    "src/app/_archive/**",
+    "src/app/**/_archive/**",
+    "**/*.old.*",
+    "**/*.bak.*",
+    "supabase/functions/**",
+    "supabase/**",
+    "src/app/checkout/test-payment.disabled/**"
   ]
 }

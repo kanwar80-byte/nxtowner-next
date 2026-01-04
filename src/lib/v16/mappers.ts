@@ -1,4 +1,4 @@
-import { AssetType, ListingCard, ListingDetail, ListingStatus } from "./types";
+import { AssetType, AssetTypeV16, ListingCard, ListingDetail, ListingDetailV16, ListingStatus, ListingTeaserV16 } from "./types";
 
 const PLACEHOLDER_IMAGE = "/images/placeholder.jpg";
 
@@ -16,6 +16,161 @@ export function asStringArray(v: any): string[] {
   return [];
 }
 
+/**
+ * Normalizes asset_type to canonical lowercase format
+ */
+function normalizeAssetType(value: any): AssetTypeV16 {
+  if (!value) return 'operational'; // Default fallback
+  const normalized = String(value).toLowerCase();
+  if (normalized === 'operational' || normalized === 'digital') {
+    return normalized as AssetTypeV16;
+  }
+  // Handle capitalized variants
+  if (normalized === 'operational' || value === 'Operational' || value === 'physical' || value === 'asset') {
+    return 'operational';
+  }
+  if (normalized === 'digital') {
+    return 'digital';
+  }
+  return 'operational'; // Safe default
+}
+
+/**
+ * Resolves hero image URL with priority:
+ * 1) row.hero_image_url (top-level)
+ * 2) row.meta.hero_image_url
+ * 3) row.images[0] (if array)
+ * 4) row.meta.images[0] or row.meta.gallery[0]
+ * 5) fallback or null
+ */
+function resolveHeroImage(row: any, meta: Record<string, unknown>): string | null {
+  if (row?.hero_image_url && typeof row.hero_image_url === 'string') {
+    return row.hero_image_url;
+  }
+  if (meta?.hero_image_url && typeof meta.hero_image_url === 'string') {
+    return meta.hero_image_url as string;
+  }
+  if (Array.isArray(row?.images) && row.images[0] && typeof row.images[0] === 'string') {
+    return row.images[0];
+  }
+  if (Array.isArray(meta?.images) && meta.images[0] && typeof meta.images[0] === 'string') {
+    return meta.images[0] as string;
+  }
+  if (Array.isArray(meta?.gallery) && meta.gallery[0] && typeof meta.gallery[0] === 'string') {
+    return meta.gallery[0] as string;
+  }
+  return null;
+}
+
+/**
+ * Resolves gallery images array with priority:
+ * 1) row.images (if array)
+ * 2) row.meta.images
+ * 3) row.meta.gallery
+ * 4) empty array
+ */
+function resolveGallery(row: any, meta: Record<string, unknown>): string[] {
+  if (Array.isArray(row?.images)) {
+    return asStringArray(row.images);
+  }
+  if (Array.isArray(meta?.images)) {
+    return asStringArray(meta.images);
+  }
+  if (Array.isArray(meta?.gallery)) {
+    return asStringArray(meta.gallery);
+  }
+  return [];
+}
+
+/**
+ * Resolves description with priority:
+ * row.description || meta.description || meta.business_description || meta.summary || null
+ */
+function resolveDescription(row: any, meta: Record<string, unknown>): string | null {
+  if (row?.description && typeof row.description === 'string') {
+    return row.description;
+  }
+  if (meta?.description && typeof meta.description === 'string') {
+    return meta.description as string;
+  }
+  if (meta?.business_description && typeof meta.business_description === 'string') {
+    return meta.business_description as string;
+  }
+  if (meta?.summary && typeof meta.summary === 'string') {
+    return meta.summary as string;
+  }
+  return null;
+}
+
+/**
+ * Pure mapping function: Maps database row to ListingTeaserV16
+ * Used by browse/search results
+ */
+export function mapListingTeaserV16(row: any): ListingTeaserV16 {
+  const meta = asRecord(row?.meta);
+  const heroImageUrl = resolveHeroImage(row, meta);
+  
+  return {
+    id: String(row?.id ?? ""),
+    title: String(row?.title ?? ""),
+    asset_type: normalizeAssetType(row?.asset_type),
+    category: row?.category ?? null,
+    subcategory: row?.subcategory ?? null,
+    city: row?.city ?? null,
+    province: row?.province ?? null,
+    country: row?.country ?? null,
+    asking_price: row?.asking_price != null ? (isNaN(Number(row.asking_price)) ? null : Number(row.asking_price)) : null,
+    revenue_annual: row?.revenue_annual != null ? (isNaN(Number(row.revenue_annual)) ? null : Number(row.revenue_annual)) : null,
+    cash_flow: row?.cash_flow != null ? (isNaN(Number(row.cash_flow)) ? null : Number(row.cash_flow)) : null,
+    hero_image_url: heroImageUrl,
+    heroImageUrl: heroImageUrl, // camelCase alias
+    image_url: heroImageUrl, // Legacy alias
+    status: row?.status ?? null,
+    created_at: row?.created_at ?? null,
+  };
+}
+
+/**
+ * Pure mapping function: Maps database row to ListingDetailV16
+ * Used by listing detail pages
+ */
+export function mapListingDetailV16(row: any): ListingDetailV16 {
+  const teaser = mapListingTeaserV16(row);
+  const meta = asRecord(row?.meta);
+  
+  const description = resolveDescription(row, meta);
+  const images = resolveGallery(row, meta);
+  
+  // Greedy deal_structure extraction
+  const deal_structure = 
+    row?.deal_structure ||
+    meta?.deal_structure ||
+    meta?.deal_type ||
+    row?.deal_type ||
+    null;
+  
+  // Greedy business_status extraction
+  const business_status = 
+    row?.business_status ||
+    meta?.business_status ||
+    row?.status || // status might be used as business_status
+    meta?.status ||
+    null;
+  
+  return {
+    ...teaser,
+    description,
+    deal_structure: deal_structure ? String(deal_structure) : null,
+    business_status: business_status ? String(business_status) : null,
+    images,
+    meta: meta || null,
+    currency: row?.currency ?? null,
+    listing_tier: row?.listing_tier ?? null,
+    deal_stage: row?.deal_stage ?? null,
+  };
+}
+
+// Legacy mappers (kept for backward compatibility)
 function selectHeroImage(meta: any, fallback?: string): string {
   if (!meta) return fallback || PLACEHOLDER_IMAGE;
   if (typeof meta.hero_image_url === "string" && meta.hero_image_url) return meta.hero_image_url;
@@ -31,11 +186,22 @@ function selectGallery(meta: any): string[] {
   return [];
 }
 
+/**
+ * Maps a database row to a ListingCard.
+ * 
+ * Image field standardization:
+ * - heroImageUrl (camelCase) is the canonical field - use this for new code
+ * - hero_image_url (snake_case) is provided as a deprecated alias for backward compatibility
+ * - Migration path: Update components to use heroImageUrl, then remove hero_image_url alias
+ */
 export function mapListingRowToCard(
   row: any,
   taxonomyLabels?: { categoryName?: string; subcategoryName?: string }
 ): ListingCard {
   const meta = asRecord(row?.meta);
+  // Canonical image URL (camelCase)
+  const heroImageUrl = selectHeroImage(meta, row?.hero_image_url);
+  
   return {
     id: String(row?.id ?? ""),
     title: String(row?.title ?? ""),
@@ -51,7 +217,10 @@ export function mapListingRowToCard(
     revenueAnnual: safeNumber(row?.revenue_annual, undefined),
     cashFlowAnnual: safeNumber(meta.cash_flow_annual, undefined),
     ebitdaAnnual: safeNumber(meta.ebitda_annual, undefined),
-    heroImageUrl: selectHeroImage(meta, row?.hero_image_url),
+    // Canonical field (camelCase)
+    heroImageUrl,
+    // Deprecated alias for backward compatibility (will be removed in future version)
+    hero_image_url: heroImageUrl,
     galleryUrls: selectGallery(meta),
     verificationLevel: row?.verification_level ?? meta.verification_level,
     listingTier: row?.listing_tier ?? meta.listing_tier,

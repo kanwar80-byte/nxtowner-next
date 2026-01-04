@@ -1,7 +1,7 @@
 // Canonical browse/search filter type for V16
 export interface BrowseFiltersV16 {
   query?: string;
-  assetType?: string;
+  assetType?: string; // Will be canonicalized to lowercase in repo layer
   category?: string; // legacy string code
   subcategory?: string; // legacy string code
   categoryId?: string; // UUID
@@ -10,8 +10,45 @@ export interface BrowseFiltersV16 {
   maxPrice?: number;
   sort?: string;
 }
-// Domain types for V16 adapter
 
+// V16 Canonical Asset Type (lowercase)
+export type AssetTypeV16 = 'operational' | 'digital';
+
+// Listing Teaser (used by browse cards/grids)
+export interface ListingTeaserV16 {
+  id: string;
+  title: string;
+  asset_type: AssetTypeV16; // Canonical lowercase
+  category: string | null;
+  subcategory: string | null;
+  city: string | null;
+  province: string | null;
+  country: string | null;
+  asking_price: number | null;
+  revenue_annual: number | null;
+  cash_flow: number | null;
+  hero_image_url: string | null;
+  heroImageUrl: string | null; // camelCase alias
+  image_url: string | null; // Legacy alias
+  status: string | null;
+  created_at: string | null;
+}
+
+// Listing Detail (full detail used by /listing/[id])
+export interface ListingDetailV16 extends ListingTeaserV16 {
+  description: string | null;
+  deal_structure: string | null;
+  business_status: string | null;
+  images: string[]; // Gallery array
+  meta: Record<string, unknown> | null; // Full meta object
+  currency: string | null;
+  listing_tier: string | null;
+  deal_stage: string | null;
+  // Additional fields that may exist in DB
+  [key: string]: unknown;
+}
+
+// Legacy types (kept for backward compatibility during migration)
 export type AssetType = "Operational" | "Digital";
 export type ListingStatus = "draft" | "published" | "live" | "archived";
 
@@ -30,7 +67,10 @@ export interface ListingCard {
   revenueAnnual?: number;
   cashFlowAnnual?: number;
   ebitdaAnnual?: number;
+  /** Canonical image URL field (camelCase). Use this for new code. */
   heroImageUrl: string;
+  /** @deprecated Use heroImageUrl instead. This alias is provided for backward compatibility and will be removed in a future version. */
+  hero_image_url?: string;
   galleryUrls: string[];
   verificationLevel?: string;
   listingTier?: string;

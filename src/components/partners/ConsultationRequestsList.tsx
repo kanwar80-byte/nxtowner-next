@@ -3,6 +3,16 @@
 import { useState } from "react";
 import { updateConsultationRequestStatus } from "@/app/actions/partners";
 import type { ConsultationRequest } from "@/types/database";
+import type React from "react";
+
+// Helper to safely render unknown values as ReactNode
+const renderNode = (v: unknown): React.ReactNode => {
+  if (v == null) return null;
+  if (typeof v === "string" || typeof v === "number") return v;
+  if (typeof v === "boolean") return v ? "Yes" : "No";
+  if (v instanceof Date) return v.toISOString();
+  return String(v);
+};
 
 interface ConsultationRequestsListProps {
   requests: (ConsultationRequest & {
@@ -15,7 +25,9 @@ const STATUS_COLORS = {
   contacted: "bg-blue-100 text-blue-800",
   completed: "bg-green-100 text-green-800",
   cancelled: "bg-gray-100 text-gray-800",
-};
+} as const;
+
+type Status = keyof typeof STATUS_COLORS;
 
 export function ConsultationRequestsList({
   requests,
@@ -56,11 +68,11 @@ export function ConsultationRequestsList({
           <div className="flex items-start justify-between mb-4">
             <div>
               <h3 className="font-semibold text-brand-text">
-                {request.requester_name}
+                {renderNode(request.requester_name)}
               </h3>
               <p className="text-sm text-brand-muted">
-                {request.requester_email}
-                {request.requester_phone && ` • ${request.requester_phone}`}
+                {renderNode(request.requester_email)}
+                {request.requester_phone != null && ` • ${renderNode(request.requester_phone)}`}
               </p>
               <p className="text-xs text-brand-muted mt-1">
                 {new Date(request.created_at || Date.now()).toLocaleDateString("en-US", {
@@ -74,16 +86,19 @@ export function ConsultationRequestsList({
             </div>
             <span
               className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                (STATUS_COLORS as any)[request.status || 'pending']
+                (() => {
+                  const status = (request.status ?? "pending") as Status;
+                  return status in STATUS_COLORS ? STATUS_COLORS[status] : STATUS_COLORS.pending;
+                })()
               }`}
             >
-              {request.status}
+              {request.status || 'pending'}
             </span>
           </div>
 
           <div className="bg-gray-50 rounded-lg p-4 mb-4">
             <p className="text-sm text-brand-text whitespace-pre-wrap">
-              {request.message}
+              {renderNode(request.message)}
             </p>
           </div>
 

@@ -1,6 +1,6 @@
 "use server";
 
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/utils/supabase/client";
 import type {
   ConsultationRequest,
   ConsultationRequestInsert,
@@ -28,7 +28,8 @@ export async function getApprovedPartners(filters?: {
   specialties?: string[];
 }) {
   const supabase = await createClient();
-  let query = supabase
+  const sb: any = supabase;
+  let query = sb
     .from("partner_profiles")
     .select(`
       *,
@@ -67,7 +68,8 @@ export async function getApprovedPartners(filters?: {
  * Get partner profile by profile_id (for current user)
  */
 export async function getPartnerProfileByUserId(userId: string) {
-  const { data, error } = await supabase
+  const sb: any = supabase;
+  const { data, error } = await sb
     .from("partner_profiles")
     .select("*")
     .eq("profile_id", userId)
@@ -85,7 +87,8 @@ export async function getPartnerProfileByUserId(userId: string) {
  * Get partner profile by id (public or self)
  */
 export async function getPartnerProfileById(partnerId: string) {
-  const { data, error } = await supabase
+  const sb: any = supabase;
+  const { data, error } = await sb
     .from("partner_profiles")
     .select(`
       *,
@@ -109,7 +112,8 @@ export async function getPartnerProfileById(partnerId: string) {
  * Create a partner profile (self-service onboarding)
  */
 export async function createPartnerProfile(profileData: PartnerProfileInsert) {
-  const { data, error } = await supabase
+  const sb: any = supabase;
+  const { data, error } = await sb
     .from("partner_profiles")
     // @ts-ignore - table exists but not in generated Supabase types until migration
     .insert(profileData)
@@ -134,7 +138,8 @@ export async function updatePartnerProfile(
   partnerId: string,
   updates: PartnerProfileUpdate
 ) {
-  const { data, error } = await supabase
+  const sb: any = supabase;
+  const { data, error } = await sb
     .from("partner_profiles")
     .update(updates)
     .eq("id", partnerId)
@@ -156,7 +161,8 @@ export async function updatePartnerProfile(
  * Get all pending partner profiles (admin only)
  */
 export async function getPendingPartnerProfiles() {
-  const { data, error } = await supabase
+  const sb: any = supabase;
+  const { data, error } = await sb
     .from("partner_profiles")
     .select(`
       *,
@@ -180,7 +186,8 @@ export async function getPendingPartnerProfiles() {
  * Approve partner profile (admin only)
  */
 export async function approvePartnerProfile(partnerId: string) {
-  const { data, error } = await supabase
+  const sb: any = supabase;
+  const { data, error } = await sb
     .from("partner_profiles")
     .update({ status: "approved" })
     .eq("id", partnerId)
@@ -202,7 +209,8 @@ export async function approvePartnerProfile(partnerId: string) {
  * Reject partner profile (admin only)
  */
 export async function rejectPartnerProfile(partnerId: string) {
-  const { data, error } = await supabase
+  const sb: any = supabase;
+  const { data, error } = await sb
     .from("partner_profiles")
     .update({ status: "rejected" })
     .eq("id", partnerId)
@@ -229,7 +237,8 @@ export async function rejectPartnerProfile(partnerId: string) {
 export async function createConsultationRequest(
   requestData: ConsultationRequestInsert
 ) {
-  const { data, error } = await supabase
+  const sb: any = supabase;
+  const { data, error } = await sb
     .from("consultation_requests")
     .insert(requestData)
     .select()
@@ -247,7 +256,8 @@ export async function createConsultationRequest(
  * Get consultation requests for a partner
  */
 export async function getConsultationRequestsForPartner(partnerProfileId: string) {
-  const { data, error } = await supabase
+  const sb: any = supabase;
+  const { data, error } = await sb
     .from("consultation_requests")
     .select(`
       *,
@@ -276,7 +286,8 @@ export async function updateConsultationRequestStatus(
   requestId: string,
   status: ConsultationRequestUpdate["status"]
 ) {
-  const { data, error } = await supabase
+  const sb: any = supabase;
+  const { data, error } = await sb
     .from("consultation_requests")
     .update({ status })
     .eq("id", requestId)
@@ -297,7 +308,8 @@ export async function updateConsultationRequestStatus(
  * Get consultation requests for a user (buyer/seller)
  */
 export async function getConsultationRequestsForUser(userId: string) {
-  const { data, error } = await supabase
+  const sb: any = supabase;
+  const { data, error } = await sb
     .from("consultation_requests")
     .select(`
       *,

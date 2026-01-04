@@ -14,6 +14,26 @@ export async function getOrCreateProfile(userId: string, defaults: Partial<Profi
 
 export async function requestNda({ listingId, buyerId }: { listingId: string; buyerId: string; }) {
   await (supabase as any).from(TABLES.ndas).upsert({ listing_id: listingId, buyer_id: buyerId, status: 'requested' }, { onConflict: 'listing_id,buyer_id' });
+  
+  // Fetch seller_id from listing (owner_id)
+  const { data: listing } = await (supabase as any).from('listings_v16').select('owner_id').eq('id', listingId).single();
+  const sellerId = listing?.owner_id;
+  
+  if (!sellerId) {
+    throw new Error(`Could not find seller_id for listing ${listingId}`);
+  }
+  
+  // Create deal_room with status 'nda_requested' when NDA is requested
+  // NOTE: deal_rooms.status must match DB constraint: ('draft','nda_requested','nda_signed','active','closed')
+  // Required columns: listing_id, buyer_id, seller_id (NOT NULL), created_by (NOT NULL), status
+  await (supabase as any).from(TABLES.deal_rooms).upsert({ 
+    listing_id: listingId, 
+    buyer_id: buyerId,
+    seller_id: sellerId,
+    created_by: buyerId,
+    status: 'nda_requested'  // Use status column (not stage/is_active) per DB constraint
+  }, { onConflict: 'listing_id,buyer_id' });
+  
   await emitEvent({
     dealRoomId: null,
     listingId,
@@ -26,8 +46,26 @@ export async function requestNda({ listingId, buyerId }: { listingId: string; bu
 export async function signNdaAndCreateDealRoom({ listingId, buyerId }: { listingId: string; buyerId: string; }) {
   // Set NDA signed
   await (supabase as any).from(TABLES.ndas).upsert({ listing_id: listingId, buyer_id: buyerId, status: 'signed', signed_at: new Date().toISOString() }, { onConflict: 'listing_id,buyer_id' });
+  
+  // Fetch seller_id from listing (owner_id)
+  const { data: listing } = await (supabase as any).from('listings_v16').select('owner_id').eq('id', listingId).single();
+  const sellerId = listing?.owner_id;
+  
+  if (!sellerId) {
+    throw new Error(`Could not find seller_id for listing ${listingId}`);
+  }
+  
   // Upsert deal_room
-  const { data: dealRoom } = await (supabase as any).from(TABLES.deal_rooms).upsert({ listing_id: listingId, buyer_id: buyerId, stage: 'deal_room', is_active: true, opened_at: new Date().toISOString() }, { onConflict: 'listing_id,buyer_id' }).select('id').single();
+  // NOTE: deal_rooms.status must match DB constraint: ('draft','nda_requested','nda_signed','active','closed')
+  // Required columns: listing_id, buyer_id, seller_id (NOT NULL), created_by (NOT NULL), status
+  const { data: dealRoom } = await (supabase as any).from(TABLES.deal_rooms).upsert({ 
+    listing_id: listingId, 
+    buyer_id: buyerId,
+    seller_id: sellerId,
+    created_by: buyerId,
+    status: 'nda_signed'  // Use status column (not stage/is_active) per DB constraint
+  }, { onConflict: 'listing_id,buyer_id' }).select('id').single();
+  
   // Emit events
   await emitEvent({
     dealRoomId: dealRoom?.id,

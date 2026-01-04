@@ -2,11 +2,11 @@ import { AlertCircle, Check, ShieldCheck, X } from 'lucide-react';
 
 export default function ComparisonSection() {
   return (
-    <section className="py-24 bg-slate-50 border-y border-slate-200">
+    <section className="py-14 lg:py-20 bg-slate-50 border-t border-slate-200/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* HEADER */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-6 lg:mb-8">
            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Stop Guessing. Start Closing.</h2>
            <p className="text-slate-500 max-w-2xl mx-auto text-lg">
              Why serious buyers and sellers choose NxtOwner over traditional listing sites.
