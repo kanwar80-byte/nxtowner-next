@@ -182,7 +182,7 @@ export async function createListing(
     asking_price: askingPrice,
     owner_id: user?.id || null, // Always from auth, never from form
     status: 'draft',
-    meta_data: metaData,
+    meta_data: metaData as any,
     currency: 'CAD',
     listing_tier: 'standard',
     verification_level: 'unverified',
