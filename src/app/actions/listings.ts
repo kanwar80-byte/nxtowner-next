@@ -14,6 +14,10 @@ import { revalidatePath } from 'next/cache';
 import { searchListingsV16, getListingByIdV16, getFeaturedListingsV16, getBrowseFacetsV16 } from '@/lib/v16/listings.repo';
 import type { BrowseFiltersV16 } from '@/lib/v16/types';
 import { writeAuditEvent } from '@/lib/audit/auditWriter';
+import {
+  getCategoryIdByCode,
+  getSubcategoryIdByCode,
+} from '@/lib/v17/categoryResolver';
 
 type Listing = {
   id: string;
@@ -45,7 +49,10 @@ type PublicListing = {
 
 export type BrowseFilters = {
   type?: string; // 'asset' | 'digital' | 'all'
-  category?: string;
+  categoryId?: string | null; // UUID
+  subcategoryId?: string | null; // UUID
+  categoryCode?: string | null; // Code (will be resolved to UUID)
+  subcategoryCode?: string | null; // Code (will be resolved to UUID)
   minPrice?: number;
   maxPrice?: number;
   location?: string;
@@ -60,13 +67,25 @@ export async function getFilteredListings(
   filters: BrowseFilters
 ): Promise<PublicListing[]> {
   try {
+    // Resolve category codes to UUIDs if provided
+    let categoryId: string | null | undefined = filters.categoryId;
+    let subcategoryId: string | null | undefined = filters.subcategoryId;
+
+    if (filters.categoryCode && !categoryId) {
+      categoryId = await getCategoryIdByCode(filters.categoryCode);
+    }
+    if (filters.subcategoryCode && !subcategoryId) {
+      subcategoryId = await getSubcategoryIdByCode(filters.subcategoryCode);
+    }
+
     // Map V15 filters to V16 filters
     const v16Filters: BrowseFiltersV16 = {
       query: undefined, // V15 BrowseFilters doesn't have query, but V16 supports it
       assetType: filters.type && filters.type !== 'all' 
         ? (filters.type === 'asset' ? 'Operational' : filters.type === 'digital' ? 'Digital' : undefined)
         : undefined,
-      category: filters.category && filters.category !== 'all' ? filters.category : undefined,
+      categoryId: categoryId ?? undefined,
+      subcategoryId: subcategoryId ?? undefined,
       minPrice: filters.minPrice,
       maxPrice: filters.maxPrice,
       sort: filters.sort === 'price_asc' ? 'price_asc' 
@@ -89,7 +108,8 @@ export async function getFilteredListings(
       revenue_annual: item.revenue_annual,
       annual_revenue: item.revenue_annual, // Alias for backward compat
       annual_cashflow: item.cash_flow,
-      category: item.category,
+      category_id: item.category_id,
+      subcategory_id: item.subcategory_id,
       country: item.country,
       // Note: Some V15 fields may not exist in V16 (summary, region, is_verified, etc.)
       // These will be undefined, which is acceptable for backward compatibility
@@ -265,19 +285,34 @@ export async function getListingById(id: string): Promise<Listing | null> {
  */
 export async function getActiveListings(filters?: {
   type?: 'asset' | 'digital';
-  category?: string;
+  categoryId?: string | null;
+  subcategoryId?: string | null;
+  categoryCode?: string | null;
+  subcategoryCode?: string | null;
   minPrice?: number;
   maxPrice?: number;
   minRevenue?: number;
   location?: string;
 }): Promise<Listing[]> {
   try {
+    // Resolve category codes to UUIDs if provided
+    let categoryId: string | null | undefined = filters?.categoryId;
+    let subcategoryId: string | null | undefined = filters?.subcategoryId;
+
+    if (filters?.categoryCode && !categoryId) {
+      categoryId = await getCategoryIdByCode(filters.categoryCode);
+    }
+    if (filters?.subcategoryCode && !subcategoryId) {
+      subcategoryId = await getSubcategoryIdByCode(filters.subcategoryCode);
+    }
+
     // Map filters to V16 format
     const v16Filters: BrowseFiltersV16 = {
       assetType: filters?.type === 'asset' ? 'Operational' 
         : filters?.type === 'digital' ? 'Digital' 
         : undefined,
-      category: filters?.category,
+      categoryId: categoryId ?? undefined,
+      subcategoryId: subcategoryId ?? undefined,
       minPrice: filters?.minPrice,
       maxPrice: filters?.maxPrice,
       sort: 'newest',

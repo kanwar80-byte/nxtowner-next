@@ -1,8 +1,9 @@
 ﻿import BrowseClientShell from "@/components/platform/BrowseClientShell";
 import FilterSidebar from "@/components/platform/FilterSidebar";
-import { getBrowseFacetsV16 } from "@/lib/v16/facets.repo";
-import { searchListingsV16 } from "@/lib/v16/listings.repo";
-import { getCategoryIdByCode, getSubcategoryIdByCode } from "@/lib/v16/taxonomy.repo";
+import { getBrowseFacetsV16, type BrowseFacetsV16 } from "@/lib/v16/facets.repo";
+import { searchListingsV16, normalizeAssetType } from "@/lib/v16/listings.repo";
+import { getCategoryIdByCode, getSubcategoryIdByCode, getCategoryIdByName } from "@/lib/v16/taxonomy.repo";
+import type { ListingTeaserV16 } from "@/lib/v16/types";
 import { Suspense } from "react";
 
 
@@ -15,38 +16,45 @@ export default async function BrowsePage({
   // --- START TRANSLATION LAYER ---
   const sp = searchParams || {};
 
-  // 1. Normalize Asset Type (Handle 'physical' vs 'Operational' mismatch)
-  let assetTypeFilter: string | undefined;
-  // Check both camelCase (new) and snake_case (old) params
-  const rawType = (sp.assetType || sp.asset_type) as string | undefined;
-  if (rawType?.toLowerCase() === 'physical') assetTypeFilter = 'Operational';
-  else if (rawType?.toLowerCase() === 'digital') assetTypeFilter = 'Digital';
-  else if (rawType === 'Operational' || rawType === 'Digital') assetTypeFilter = rawType;
+  // 1. Normalize Asset Type (read from listing_type, assetType, type, asset_type params)
+  // Priority: listing_type (V17 canonical) > assetType > type > asset_type
+  const rawType = (sp.listing_type || sp.assetType || sp.type || sp.asset_type) as string | undefined;
+  const assetTypeFilter = normalizeAssetType(rawType); // Returns "operational" | "digital" | undefined
 
   // 2. Normalize Prices
   const minPrice = sp.min_price ? Number(sp.min_price) : undefined;
   const maxPrice = sp.max_price ? Number(sp.max_price) : undefined;
 
-  // 3. Resolve category/subcategory codes to UUIDs (fail-soft - never throw)
+  // 3. Read categoryId/subcategoryId from URL (UUIDs) or resolve category/subcategory codes to UUIDs
   let categoryId: string | undefined = undefined;
   let subcategoryId: string | undefined = undefined;
+  
+  // Priority 1: Use categoryId/subcategoryId if provided directly (UUIDs)
+  const categoryIdParam = sp.categoryId as string | undefined;
+  const subcategoryIdParam = sp.subcategoryId as string | undefined;
+  if (categoryIdParam) categoryId = categoryIdParam;
+  if (subcategoryIdParam) subcategoryId = subcategoryIdParam;
+  
+  // Priority 2: If not provided, try to resolve category/subcategory codes or canonical names to UUIDs
   const categoryCode = sp.category as string | undefined;
   const subcategoryCode = sp.subcategory as string | undefined;
-  
-  // Try to resolve category code (fail-soft: if code doesn't exist, categoryId stays undefined)
-  // NEVER throw or call notFound() - always render the page
-  if (categoryCode && typeof categoryCode === 'string') {
+  if (!categoryId && categoryCode && typeof categoryCode === 'string') {
     try {
-      const resolvedId = await getCategoryIdByCode(categoryCode);
+      // Try resolving as code first (e.g., "saas_software")
+      let resolvedId = await getCategoryIdByCode(categoryCode);
+      // If code resolution fails, try resolving as canonical name (e.g., "SaaS", "E-Commerce")
+      if (!resolvedId) {
+        resolvedId = await getCategoryIdByName(categoryCode);
+      }
       if (resolvedId) {
         categoryId = resolvedId;
       }
     } catch (err) {
-      // Category code not found or error - this is fine
-      console.warn(`Category code resolution failed for "${categoryCode}":`, err);
+      // Category code/name resolution failed - this is fine
+      console.warn(`Category resolution failed for "${categoryCode}":`, err);
     }
   }
-  if (subcategoryCode && typeof subcategoryCode === 'string') {
+  if (!subcategoryId && subcategoryCode && typeof subcategoryCode === 'string') {
     try {
       const resolvedId = await getSubcategoryIdByCode(subcategoryCode);
       if (resolvedId) {
@@ -58,12 +66,10 @@ export default async function BrowsePage({
     }
   }
 
-  // 4. Build Clean Filter Object (UUID preferred, fallback to string)
+  // 4. Build Clean Filter Object (UUID preferred)
   const filters = {
     query: sp.q as string | undefined,
     assetType: assetTypeFilter,
-    category: categoryId ? undefined : categoryCode,
-    subcategory: subcategoryId ? undefined : subcategoryCode,
     categoryId,
     subcategoryId,
     minPrice,
@@ -72,10 +78,20 @@ export default async function BrowsePage({
   };
   // --- END TRANSLATION LAYER ---
 
+  // Debug: Log filters (only in debug mode)
+  if (process.env.NEXT_PUBLIC_DEBUG_LISTINGS === "1") {
+    console.log('[browse/page] searchListingsV16 filters:', JSON.stringify(filters, null, 2));
+  }
+
   // Fetch listings and facets (will return empty array if no matches, not 404)
   // NEVER throw or call notFound() - always render the page
-  let listings: any[] = [];
-  let facets: any = { categoryCounts: {}, subcategoryCounts: {}, assetTypeCounts: {}, total: 0 };
+  let listings: ListingTeaserV16[] = [];
+  let facets: BrowseFacetsV16 = { 
+    categoryCounts: {}, 
+    subcategoryCounts: {}, 
+    assetTypeCounts: {}, 
+    total: 0 
+  };
 
   try {
     listings = await searchListingsV16(filters) || [];
@@ -108,7 +124,7 @@ export default async function BrowsePage({
           {isUnknownCategory && categoryCode && (
             <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
               <p className="text-sm text-amber-800">
-                <strong>Category not found:</strong> No listings found for category "{categoryCode}". 
+                <strong>Category not found:</strong> No listings found for category &quot;{categoryCode}&quot;. 
                 Showing all listings instead.
               </p>
             </div>

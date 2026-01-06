@@ -22,21 +22,33 @@ export function TrackProvider({
 }) {
   // Initialize state from initialTrack prop (passed from server via cookies)
   // This ensures SSR and client first render match
+  // Normalize 'all' to 'operational' for homepage consistency
+  const normalizeTrack = (t: Track): 'operational' | 'digital' => {
+    return t === 'digital' ? 'digital' : 'operational';
+  };
+  
   const [track, setTrackState] = useState<Track>(initialTrack || 'operational');
 
   // After mount, sync with localStorage if it differs from initialTrack
   // This allows the client to pick up changes made in other tabs/sessions
-  // Use a ref to track if we've already synced to avoid issues with dependency array
+  // Normalize 'all' to 'operational' to prevent homepage desync
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored === 'operational' || stored === 'digital' || stored === 'all') {
-        // Only update if different from initial value (initialTrack or 'operational' default)
+        // Normalize 'all' to 'operational' for homepage consistency
+        const normalizedStored = stored === 'all' ? 'operational' : stored;
         const initialValue = initialTrack || 'operational';
-        if (stored !== initialValue) {
-          setTrackState(stored as Track);
+        
+        // Only update if different from initial value
+        if (normalizedStored !== initialValue) {
+          setTrackState(normalizedStored as Track);
+          // Update localStorage to persist normalization
+          if (stored === 'all') {
+            localStorage.setItem(STORAGE_KEY, 'operational');
+          }
         }
       }
     } catch (error) {
@@ -46,18 +58,27 @@ export function TrackProvider({
   }, []); // Run only once on mount
 
   // Persist to localStorage whenever track changes
+  // Normalize 'all' to 'operational' before storing
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
     try {
-      localStorage.setItem(STORAGE_KEY, track);
+      // Track can be 'all' | 'operational' | 'digital', but we normalize 'all' to 'operational' for storage
+      const normalizedTrack: 'operational' | 'digital' = track === 'all' || track === 'operational' ? 'operational' : 'digital';
+      localStorage.setItem(STORAGE_KEY, normalizedTrack);
+      // Update state if normalization occurred (track was 'all')
+      if (track === 'all') {
+        setTrackState('operational');
+      }
     } catch (error) {
       console.warn('Failed to save track to localStorage:', error);
     }
   }, [track]);
 
   const setTrack = (newTrack: Track) => {
-    setTrackState(newTrack);
+    // Normalize 'all' to 'operational' for homepage consistency
+    const normalized = newTrack === 'all' ? 'operational' : newTrack;
+    setTrackState(normalized);
   };
 
   return (

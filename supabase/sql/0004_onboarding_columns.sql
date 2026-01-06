@@ -28,3 +28,5 @@ COMMENT ON COLUMN public.profiles.onboarding_step IS 'Current onboarding step: r
 COMMENT ON COLUMN public.profiles.profile_meta IS 'Additional profile metadata as JSONB';
 
 
+
+

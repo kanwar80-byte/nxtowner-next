@@ -21,7 +21,7 @@ export default function MarketplacePage() {
   const [filters, setFilters] = useState({
     priceMin: '',
     priceMax: '',
-    category: '',
+    // Note: category filtering removed - use server repo (searchListingsV16/V17) with categoryId/subcategoryId instead
     // Operational Specifics
     location: '', 
     fuelVolMin: '',
@@ -39,7 +39,8 @@ export default function MarketplacePage() {
       query = sb.from('listings_operational').select('*').eq('status', 'active'); // Only show active
       
       // Apply Op Filters
-      if (filters.category) query = query.eq('category', filters.category);
+      // Note: category filtering removed - legacy 'category' column not used
+      // Use server repo (searchListingsV16/V17) with categoryId/subcategoryId for category filtering
       if (filters.location) query = query.ilike('province', `%${filters.location}%`); // Simple search
       if (filters.fuelVolMin) query = query.gte('fuel_volume_annual_liters', parseInt(filters.fuelVolMin));
       
@@ -47,7 +48,8 @@ export default function MarketplacePage() {
       query = sb.from('listings_digital').select('*').eq('status', 'active');
       
       // Apply Digital Filters
-      if (filters.category) query = query.eq('category', filters.category);
+      // Note: category filtering removed - legacy 'category' column not used
+      // Use server repo (searchListingsV16/V17) with categoryId/subcategoryId for category filtering
       if (filters.mrrMin) query = query.gte('mrr_current', parseInt(filters.mrrMin));
     }
 

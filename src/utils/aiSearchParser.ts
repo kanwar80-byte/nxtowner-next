@@ -5,7 +5,8 @@
 
 export interface ParsedSearchFilters {
   query?: string;
-  category?: string;
+  categoryCode?: string; // Category code (e.g., "fuel_auto", "saas_software")
+  subcategoryCode?: string; // Subcategory code (e.g., "gas_stations", "b2b_saas")
   location?: string;
   minEbitda?: number;
   minMrr?: number;
@@ -42,24 +43,68 @@ export function parseAISearchQuery(
     'content site', 'content sites', 'blog', 'website'
   ];
 
+  // Category name to code mapping
+  const categoryCodeMap: Record<string, string> = {
+    // Operational
+    'gas station': 'fuel_auto',
+    'gas stations': 'fuel_auto',
+    'fuel station': 'fuel_auto',
+    'car wash': 'fuel_auto',
+    'car washes': 'fuel_auto',
+    'franchise': 'retail_franchise',
+    'franchises': 'retail_franchise',
+    'convenience store': 'retail_franchise',
+    'convenience stores': 'retail_franchise',
+    'retail': 'retail',
+    'restaurant': 'food_beverage',
+    'logistics': 'transport_logistics',
+    'industrial': 'industrial',
+    // Digital
+    'saas': 'saas_software',
+    'software': 'saas_software',
+    'app': 'saas_software',
+    'application': 'saas_software',
+    'e-commerce': 'ecommerce',
+    'ecommerce': 'ecommerce',
+    'online store': 'ecommerce',
+    'ai tool': 'saas_software',
+    'ai tools': 'saas_software',
+    'artificial intelligence': 'saas_software',
+    'content site': 'content_media',
+    'content sites': 'content_media',
+    'blog': 'content_media',
+    'website': 'content_media',
+  };
+
   if (mode === 'operational') {
     for (const cat of operationalCategories) {
       if (lowerQuery.includes(cat)) {
-        // Map to standard category names
-        if (cat.includes('gas')) filters.category = 'Gas Stations';
-        else if (cat.includes('car wash')) filters.category = 'Car Washes';
-        else if (cat.includes('franchise')) filters.category = 'Franchise Resales';
-        else if (cat.includes('convenience')) filters.category = 'Convenience Stores';
+        // Map to category codes
+        const code = categoryCodeMap[cat.toLowerCase()];
+        if (code) {
+          filters.categoryCode = code;
+          // For gas stations, also set subcategory code
+          if (cat.includes('gas')) {
+            filters.subcategoryCode = 'gas_stations';
+          } else if (cat.includes('car wash')) {
+            filters.subcategoryCode = 'car_washes';
+          }
+        }
         break;
       }
     }
   } else {
     for (const cat of digitalCategories) {
       if (lowerQuery.includes(cat)) {
-        if (cat.includes('saas') || cat.includes('software')) filters.category = 'SaaS';
-        else if (cat.includes('e-commerce') || cat.includes('ecommerce')) filters.category = 'E-Commerce';
-        else if (cat.includes('ai tool')) filters.category = 'AI Tools';
-        else if (cat.includes('content')) filters.category = 'Content Sites';
+        // Map to category codes
+        const code = categoryCodeMap[cat.toLowerCase()];
+        if (code) {
+          filters.categoryCode = code;
+          // For SaaS, set subcategory code
+          if (cat.includes('saas') || cat.includes('software')) {
+            filters.subcategoryCode = 'b2b_saas';
+          }
+        }
         break;
       }
     }

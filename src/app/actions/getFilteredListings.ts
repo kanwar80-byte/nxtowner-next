@@ -2,11 +2,18 @@
 
 import { searchListingsV16 } from "@/lib/v16/listings.repo";
 import type { BrowseFiltersV16 } from "@/lib/v16/types";
+import {
+  getCategoryIdByCode,
+  getSubcategoryIdByCode,
+} from "@/lib/v17/categoryResolver";
 
 // 1. UPDATED TYPE DEFINITION
 export type SearchFilters = {
   query?: string;
-  category?: string;
+  categoryId?: string | null; // UUID
+  subcategoryId?: string | null; // UUID
+  categoryCode?: string | null; // Code (will be resolved to UUID)
+  subcategoryCode?: string | null; // Code (will be resolved to UUID)
   minPrice?: number;
   maxPrice?: number;
   minCashflow?: number;
@@ -14,7 +21,7 @@ export type SearchFilters = {
   
   // These MUST be here to match the frontend
   assetType?: string; 
-  location?: string;  // <--- This is the missing field causing your error
+  location?: string;
   sort?: string;      
   
   // Safety catch-all
@@ -27,15 +34,25 @@ export type SearchFilters = {
  */
 export async function getFilteredListings(filters: SearchFilters) {
   try {
+    // Resolve category codes to UUIDs if provided
+    let categoryId: string | null | undefined = filters.categoryId;
+    let subcategoryId: string | null | undefined = filters.subcategoryId;
+
+    if (filters.categoryCode && !categoryId) {
+      categoryId = await getCategoryIdByCode(filters.categoryCode);
+    }
+    if (filters.subcategoryCode && !subcategoryId) {
+      subcategoryId = await getSubcategoryIdByCode(filters.subcategoryCode);
+    }
+
     // Map V15 filters to V16 format
     const v16Filters: BrowseFiltersV16 = {
       query: filters.query,
       assetType: filters.assetType === 'asset' ? 'Operational' 
         : filters.assetType === 'digital' ? 'Digital' 
         : undefined,
-      category: filters.category && filters.category !== "all" && filters.category !== "All Categories" 
-        ? filters.category 
-        : undefined,
+      categoryId: categoryId ?? undefined,
+      subcategoryId: subcategoryId ?? undefined,
       minPrice: filters.minPrice,
       maxPrice: filters.maxPrice,
       sort: filters.sort === 'oldest' ? 'newest' // V16 doesn't have oldest, use newest

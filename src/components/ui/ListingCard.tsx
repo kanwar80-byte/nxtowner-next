@@ -36,7 +36,7 @@ export function ListingCard({
         {/* IMAGE */}
         <div className="relative h-48 w-full shrink-0">
           <Image
-            src={image}
+            src={image || "/images/placeholder.jpg"}
             alt={title}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"

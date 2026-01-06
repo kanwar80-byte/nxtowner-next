@@ -46,3 +46,5 @@ WHERE u.email = 'kanwar80@gmail.com';
 -- Expected result: role should be 'admin'
 
 
+
+

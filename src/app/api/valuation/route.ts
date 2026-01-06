@@ -1,19 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { ValuationRequestSchema } from '@/lib/validation/api.schemas';
 
 // Initialize Gemini AI (server-side only)
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-
-export interface ValuationRequest {
-  asset_type: string;
-  location: string;
-  annual_revenue: number;
-  annual_profit: number;
-  asking_price?: number;
-  years_in_operation: number;
-  key_highlights: string;
-  risk_flags?: string;
-}
 
 export interface ValuationResponse {
   success: boolean;
@@ -27,25 +17,25 @@ export interface ValuationResponse {
 
 export async function POST(request: NextRequest): Promise<NextResponse<ValuationResponse>> {
   try {
-    const body: ValuationRequest = await request.json();
+    const rawBody = await request.json();
 
-    // Validate required fields
-    if (
-      !body.asset_type ||
-      !body.location ||
-      body.annual_revenue === undefined ||
-      body.annual_profit === undefined ||
-      body.years_in_operation === undefined ||
-      !body.key_highlights
-    ) {
+    // Validate request body with Zod
+    const validationResult = ValuationRequestSchema.safeParse(rawBody);
+    if (!validationResult.success) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Missing required fields: asset_type, location, annual_revenue, annual_profit, years_in_operation, key_highlights',
+          error: 'Validation failed',
+          details: validationResult.error.errors.map((err) => ({
+            path: err.path.join('.'),
+            message: err.message,
+          })),
         },
         { status: 400 }
       );
     }
+
+    const body = validationResult.data;
 
     // Build valuation prompt for Gemini
     const prompt = `You are an expert business valuation analyst specializing in Canadian small and medium-sized businesses.

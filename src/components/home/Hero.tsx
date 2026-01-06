@@ -7,13 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, MapPin, Globe, Building2, TrendingUp, ArrowRight, Sparkles, Loader2, AlertCircle, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { createClient } from "@/utils/supabase/client";
 
 export default function Hero() {
   const { track, setTrack } = useTrack();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isOperational = track === "operational";
+  
+  // Derive mode from track (single source of truth)
+  // Normalize 'all' to 'operational' for homepage
+  const mode: 'operational' | 'digital' = track === 'digital' ? 'digital' : 'operational';
+  const isOperational = mode === "operational";
   
   const [searchQuery, setSearchQuery] = useState("");
   const [locationQuery, setLocationQuery] = useState("");
@@ -23,99 +26,97 @@ export default function Hero() {
   const [suggestedMode, setSuggestedMode] = useState<'operational' | 'digital' | null>(null);
   const [pendingFilters, setPendingFilters] = useState<any>(null);
 
+  // Handle toggle switch - updates TrackContext (single source of truth)
+  function handleToggleSwitch(newMode: "operational" | "digital") {
+    // Update TrackContext - this will trigger re-renders in all components
+    setTrack(newMode);
+  }
+
   async function handleSearch(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsAnalyzing(true);
 
     try {
-      // Get Supabase configuration (these are inlined at build time for client components)
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-      if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error("Supabase configuration missing. Please check your environment variables.");
-      }
-
-      // Call the AI Search Parser Edge Function
-      const response = await fetch(`${supabaseUrl}/functions/v1/ai-search-parser`, {
+      // Call the Next.js API route for AI search
+      const response = await fetch('/api/ai-search-listings', {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${supabaseAnonKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           query: searchQuery,
-          mode: track,
+          mode: track === 'digital' ? 'digital' : 'operational',
+          location: locationQuery || null,
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`Edge Function error: ${response.statusText}`);
+        throw new Error(`API error: ${response.statusText}`);
       }
 
-      const { filters, raw_query } = await response.json();
+      const { success, filters, raw_query, suggestedMode } = await response.json();
+
+      if (!success) {
+        throw new Error("API returned success: false");
+      }
 
       // Check for mode mismatch (if AI suggests different mode)
-      if (filters.type && filters.type !== track) {
-        setSuggestedMode(filters.type);
+      const currentMode = track === 'digital' ? 'digital' : 'operational';
+      if (suggestedMode && suggestedMode !== currentMode) {
+        setSuggestedMode(suggestedMode);
         setPendingFilters(filters);
         setShowModePrompt(true);
         setIsAnalyzing(false);
         return;
       }
 
-      // Proceed with search using Edge Function filters
-      executeSearch(filters, raw_query);
+      // Proceed with search using AI-extracted filters
+      executeSearch(filters, raw_query || searchQuery);
     } catch (error) {
       console.error("AI Search Error:", error);
-      // Fallback: use raw query if Edge Function fails
-      executeSearch({ query: searchQuery }, searchQuery);
+      // Fallback: redirect to search page with query and listing_type
+      setIsAnalyzing(false);
+      const params = new URLSearchParams();
+      params.set('listing_type', track === 'digital' ? 'digital' : 'operational');
+      if (searchQuery) {
+        params.set('q', encodeURIComponent(searchQuery));
+      }
+      router.push(`/search?${params.toString()}`);
     }
   }
 
   function executeSearch(filters: any, rawQuery?: string) {
-    // Build URL search params
-    const params = new URLSearchParams(searchParams.toString());
+    // Build URL search params for /search route (V17 canonical)
+    const params = new URLSearchParams();
     
-    // Clear existing search params
-    params.delete('q');
-    params.delete('category');
-    params.delete('location');
-    params.delete('min_value');
-    params.delete('is_verified');
+    // Always include listing_type from current track (single source of truth)
+    params.set('listing_type', track === 'digital' ? 'digital' : 'operational');
 
-    // Add Edge Function filters (structured format)
+    // Add query if present
     if (rawQuery) {
-      params.set('q', rawQuery);
+      params.set('q', encodeURIComponent(rawQuery));
     }
-    if (filters.category) {
-      params.set('category', filters.category);
-    }
+    
+    // Add other filters if needed (location, price, etc.)
     if (filters.location || locationQuery) {
-      params.set('location', filters.location || locationQuery);
+      params.set('province', filters.location || locationQuery);
     }
-    if (filters.min_value) {
-      params.set('min_value', filters.min_value.toString());
+    if (filters.min_revenue) {
+      params.set('min_revenue', filters.min_revenue.toString());
     }
     if (filters.is_verified) {
-      params.set('is_verified', 'true');
+      // Note: verification_status filter would need to be handled by backend
+      // For now, we'll skip it or add it as a query param if backend supports it
     }
 
-    // Update URL without page reload
-    router.push(`/?${params.toString()}`, { scroll: false });
-    
-    // Scroll to listings section
-    setTimeout(() => {
-      const listingsSection = document.getElementById('listings-section');
-      if (listingsSection) {
-        listingsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-      setIsAnalyzing(false);
-    }, 300);
+    // Navigate to search page with filters
+    router.push(`/search?${params.toString()}`);
+    setIsAnalyzing(false);
   }
 
   function handleModeSwitch() {
     if (suggestedMode) {
+      // Update TrackContext (single source of truth)
       setTrack(suggestedMode);
       if (pendingFilters) {
         executeSearch(pendingFilters);
@@ -152,7 +153,7 @@ export default function Hero() {
         >
           <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
           <span className="text-xs font-medium text-slate-300 uppercase tracking-wide">
-            Live Market: 42 New Listings Today
+            {isOperational ? "Operational Market: New Listings Today" : "Digital Market: New Listings Today"}
           </span>
         </motion.div>
 
@@ -177,7 +178,17 @@ export default function Hero() {
         </h1>
 
         <p className="text-lg md:text-xl text-slate-400 mb-10 max-w-2xl mx-auto">
-          Stop guessing. Start closing. We combine verified financials, AI-driven due diligence, and expert advisory for the modern dealmaker.
+          {isOperational
+            ? "Stop guessing. Start closing. Verified real-world businesses, NDA deal rooms, and guided diligence for serious buyers."
+            : "Stop guessing. Start closing. Traction-first digital deals, transfer readiness signals, and faster diligence for modern acquirers."}
+        </p>
+
+        {/* AI MICRO-SIGNAL (no layout change, just a single line) */}
+        <p className="text-sm text-slate-500 -mt-6 mb-8 max-w-2xl mx-auto">
+          Powered by <span className="text-slate-300 font-semibold">NxtAI™</span> —{" "}
+          {isOperational
+            ? "verification signals, pricing guidance, and buyer readiness."
+            : "traction signals, risk flags, and deal-room acceleration."}
         </p>
 
         {/* 3. THE TOGGLE & SEARCH MODULE */}
@@ -193,7 +204,7 @@ export default function Hero() {
              />
              
              <button 
-               onClick={() => setTrack("operational")}
+               onClick={() => handleToggleSwitch("operational")}
                className={`flex-1 relative z-10 flex items-center justify-center gap-2 py-3 text-sm font-bold transition-colors ${isOperational ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
              >
                <Building2 className="w-4 h-4" />
@@ -201,7 +212,7 @@ export default function Hero() {
              </button>
 
              <button 
-               onClick={() => setTrack("digital")}
+               onClick={() => handleToggleSwitch("digital")}
                className={`flex-1 relative z-10 flex items-center justify-center gap-2 py-3 text-sm font-bold transition-colors ${!isOperational ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
              >
                <Globe className="w-4 h-4" />
@@ -222,8 +233,8 @@ export default function Hero() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={
                   isOperational 
-                    ? "Search gas stations, car washes, logistics..."
-                    : "Search SaaS, e-commerce, AI tools..."
+                    ? "Search gas stations, car washes, trucking, warehouses..."
+                    : "Search SaaS, e-commerce, apps, agencies..."
                 }
                 className="pl-12 h-14 bg-slate-950 border-slate-800 text-white placeholder:text-slate-500 focus-visible:ring-offset-0 focus-visible:ring-1 focus-visible:ring-amber-500/50"
               />
@@ -238,7 +249,7 @@ export default function Hero() {
                      type="text" 
                      value={locationQuery || ""}
                      onChange={(e) => setLocationQuery(e.target.value)}
-                     placeholder="City or Province"
+                     placeholder="City / Province"
                      className="pl-12 h-14 bg-slate-950 border-slate-800 text-white placeholder:text-slate-500"
                    />
                  </>

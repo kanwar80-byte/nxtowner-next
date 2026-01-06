@@ -10,3 +10,5 @@ alter table public.listings_v16
 alter column id set default gen_random_uuid();
 
 
+
+

@@ -199,3 +199,5 @@ CREATE TRIGGER update_analytics_revenue_daily_updated_at
   EXECUTE FUNCTION update_updated_at_column();
 
 
+
+

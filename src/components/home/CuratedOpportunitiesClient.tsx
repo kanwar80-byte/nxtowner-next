@@ -82,9 +82,9 @@ export default function CuratedOpportunitiesClient({ listings }: { listings: Lis
                   </div>
                 )}
                 <div className="absolute top-4 left-4 flex gap-2">
-                  {deal.subcategory || deal.category ? (
+                  {deal.subcategory_id || deal.category_id ? (
                     <div className="bg-white/90 px-2 py-1 rounded text-xs font-bold">
-                      {deal.subcategory || deal.category || "Business"}
+                      {"Business"}
                     </div>
                   ) : null}
                   {/* Track badge - only show when track = 'all' */}

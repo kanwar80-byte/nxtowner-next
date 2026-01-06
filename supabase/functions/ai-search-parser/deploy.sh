@@ -17,3 +17,5 @@ echo "  --header 'Content-Type: application/json' \\"
 echo "  --data '{\"query\": \"Gas stations in Ontario with >\$300k EBITDA\", \"mode\": \"operational\"}'"
 
 
+
+

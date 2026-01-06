@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { recordEventServer } from "@/lib/analytics/server";
+import { EventsRequestSchema } from '@/lib/validation/api.schemas';
 import { randomUUID } from "crypto";
 
 const SESSION_COOKIE_NAME = "nx_session";
@@ -21,15 +22,24 @@ const SESSION_MAX_AGE = 60 * 60 * 24; // 24 hours in seconds
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { event_name, path, referrer, listing_id, properties } = body;
+    const rawBody = await request.json();
 
-    if (!event_name || typeof event_name !== "string") {
+    // Validate request body with Zod
+    const validationResult = EventsRequestSchema.safeParse(rawBody);
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: "event_name is required and must be a string" },
+        {
+          error: "Validation failed",
+          details: validationResult.error.errors.map((err) => ({
+            path: err.path.join('.'),
+            message: err.message,
+          })),
+        },
         { status: 400 }
       );
     }
+
+    const { event_name, path, referrer, listing_id, properties } = validationResult.data;
 
     // Get or create session ID from cookie
     const cookieStore = await cookies();

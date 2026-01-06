@@ -20,6 +20,18 @@ export async function getCategoryIdByCode(code: string): Promise<string | null> 
   return data.id ?? null;
 }
 
+// Get category UUID by canonical name (e.g., "SaaS", "E-Commerce")
+export async function getCategoryIdByName(name: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("tax_categories")
+    .select("id")
+    .eq("name", name)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data.id ?? null;
+}
+
 // Get subcategory UUID by code
 export async function getSubcategoryIdByCode(code: string): Promise<string | null> {
   const supabase = await createClient();

@@ -83,3 +83,5 @@ COMMENT ON COLUMN public.audit_events.ip IS 'IP address of the actor (optional)'
 COMMENT ON COLUMN public.audit_events.user_agent IS 'User agent string (optional)';
 
 
+
+

@@ -33,3 +33,5 @@ COMMENT ON COLUMN public.event_stream.session_id IS 'Browser session identifier 
 COMMENT ON COLUMN public.event_stream.properties IS 'Event-specific properties (JSONB, no PII)';
 
 
+
+

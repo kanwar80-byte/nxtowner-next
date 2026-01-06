@@ -25,8 +25,8 @@ export default async function RecentListings() {
     location: `${item.city || 'Unknown'}, ${item.province || 'Canada'}`,
     price: item.asking_price || 0,
     cash_flow: item.cash_flow || 0,
-    image: item.hero_image_url || item.heroImageUrl || '/placeholder.jpg',
-    category: item.category || 'Business',
+    image: item.hero_image_url || item.heroImageUrl || '/images/placeholder.jpg',
+    category: item.category_id || item.subcategory_id || 'Business',
   }));
 
   if (rows.length === 0) {

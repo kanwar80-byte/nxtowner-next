@@ -4,6 +4,25 @@ import { getBrowseFacetsV16 } from "@/lib/v16/facets.repo";
 import { searchListingsV16 } from "@/lib/v16/listings.repo";
 import { getCategoryIdByCode, getSubcategoryIdByCode } from "@/lib/v16/taxonomy.repo";
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
+
+// Map model URL slugs to category codes
+const MODEL_TO_CATEGORY_CODE: Record<string, string> = {
+  'all': '',
+  'saas': 'saas_software',
+  'ecommerce': 'ecommerce',
+  'e-commerce': 'ecommerce', // Support both
+  'ai_tools': 'ai_tools',
+  'ai-tools': 'ai_tools', // Support both
+  'agencies': 'agencies',
+  'mobile_apps': 'mobile_apps',
+  'mobile-apps': 'mobile_apps', // Support both
+  'content_sites': 'content_media',
+  'content-sites': 'content_media', // Support both
+  'content_media': 'content_media', // Legacy support
+  'domains': 'domains',
+  'communities': 'communities', // For "View all models" page
+};
 
 export default async function BrowseDigitalPage({
   searchParams,
@@ -14,6 +33,12 @@ export default async function BrowseDigitalPage({
   const assetTypeFilter = 'Digital';
   const sp = searchParams || {};
 
+  // Canonicalize: redirect if model parameter is missing
+  const modelParam = typeof sp.model === 'string' ? sp.model : '';
+  if (!modelParam) {
+    redirect('/browse/digital?model=all');
+  }
+
   // --- START TRANSLATION LAYER ---
   // 1. Asset Type is already set to 'Digital'
   // 2. Normalize Prices
@@ -21,9 +46,15 @@ export default async function BrowseDigitalPage({
   const maxPrice = sp.max_price ? Number(sp.max_price) : undefined;
 
   // 3. Resolve category/subcategory codes to UUIDs (fail-soft - never throw)
+  // Map model parameter to category code (canonical form)
+  const modelCategoryCode = MODEL_TO_CATEGORY_CODE[modelParam.toLowerCase()] || '';
+  // Support legacy category parameter for backward compatibility
+  const legacyCategoryCode = sp.category as string | undefined;
+  const categoryCodeFromModel = modelCategoryCode || legacyCategoryCode;
+  
   let categoryId: string | undefined = undefined;
   let subcategoryId: string | undefined = undefined;
-  const categoryCode = sp.category as string | undefined;
+  const categoryCode = categoryCodeFromModel || undefined;
   const subcategoryCode = sp.subcategory as string | undefined;
   
   // Try to resolve category code (fail-soft: if code doesn't exist, categoryId stays undefined)
@@ -147,5 +178,6 @@ export default async function BrowseDigitalPage({
     </div>
   );
 }
+
 
 

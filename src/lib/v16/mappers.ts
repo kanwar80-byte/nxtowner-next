@@ -20,7 +20,7 @@ export function asStringArray(v: any): string[] {
  * Normalizes asset_type to canonical lowercase format
  */
 function normalizeAssetType(value: any): AssetTypeV16 {
-  if (!value) return 'operational'; // Default fallback
+  if (!value) return 'operational'; // Default fallback (NULL treated as operational)
   const normalized = String(value).toLowerCase();
   if (normalized === 'operational' || normalized === 'digital') {
     return normalized as AssetTypeV16;
@@ -114,8 +114,8 @@ export function mapListingTeaserV16(row: any): ListingTeaserV16 {
     id: String(row?.id ?? ""),
     title: String(row?.title ?? ""),
     asset_type: normalizeAssetType(row?.asset_type),
-    category: row?.category ?? null,
-    subcategory: row?.subcategory ?? null,
+    category_id: row?.category_id ?? null, // Map DB field as-is (no aliasing)
+    subcategory_id: row?.subcategory_id ?? null, // Map DB field as-is (no aliasing)
     city: row?.city ?? null,
     province: row?.province ?? null,
     country: row?.country ?? null,
@@ -208,8 +208,8 @@ export function mapListingRowToCard(
     assetType: (row?.asset_type as AssetType) ?? "Operational",
     categoryId: String(row?.category_id ?? ""),
     subcategoryId: String(row?.subcategory_id ?? ""),
-    categoryLabel: taxonomyLabels?.categoryName ?? String(row?.category ?? ""),
-    subcategoryLabel: taxonomyLabels?.subcategoryName ?? String(row?.subcategory ?? ""),
+    categoryLabel: taxonomyLabels?.categoryName ?? "",
+    subcategoryLabel: taxonomyLabels?.subcategoryName ?? "",
     city: row?.city ?? meta.city,
     province: row?.province ?? meta.province,
     country: row?.country ?? meta.country,
@@ -243,4 +243,82 @@ export function mapListingRowToDetail(
     businessStatus: meta.business_status as string | undefined,
     description: meta.description as string | undefined,
   };
+}
+
+/**
+ * Maps ListingTeaserV16 to SmartListingGrid Listing format
+ * Used for homepage featured listings
+ */
+export function mapV16ToGridListings(v16Listings: ListingTeaserV16[]): Array<{
+  id: string;
+  title: string;
+  category: string;
+  type: 'operational' | 'digital';
+  price: string;
+  metricLabel: string;
+  metricValue: string;
+  locationOrModel: string;
+  imageUrl: string;
+  badges: string[];
+}> {
+  const formatMoney = (amount: number | null | undefined) => {
+    if (!amount || amount === 0) return "Contact for Price";
+    return new Intl.NumberFormat('en-CA', { 
+      style: 'currency', 
+      currency: 'CAD', 
+      maximumFractionDigits: 0,
+      notation: "compact" 
+    }).format(amount);
+  };
+
+  return v16Listings.map((item) => {
+    const isOps = item.asset_type === 'operational';
+    const ebitda = item.cash_flow ?? 0;
+    const mrr = 0; // V16 teaser doesn't have MRR
+    const arr = mrr * 12;
+
+    // Determine metric label and value
+    let metricLabel = 'Revenue';
+    let metricValue = item.revenue_annual ? formatMoney(item.revenue_annual) : 'N/A';
+    
+    if (isOps) {
+      metricLabel = 'EBITDA';
+      metricValue = ebitda > 0 ? formatMoney(ebitda) : 'N/A';
+    } else {
+      if (mrr > 0) {
+        metricLabel = 'ARR';
+        metricValue = formatMoney(arr);
+      } else {
+        metricLabel = 'Revenue';
+        metricValue = item.revenue_annual ? formatMoney(item.revenue_annual) : 'N/A';
+      }
+    }
+
+    // Generate badges
+    const badges: string[] = [];
+    if (item.status === 'published') {
+      badges.push('Published');
+    }
+    if (isOps && item.city) {
+      badges.push('Prime Location');
+    }
+    if (badges.length === 0) {
+      badges.push('Active Listing');
+    }
+
+    return {
+      id: item.id,
+      title: item.title || '',
+      category: item.category_id || item.subcategory_id || 'General', // Use ID temporarily; UI should lookup names
+      type: isOps ? 'operational' as const : 'digital' as const,
+      price: item.asking_price ? formatMoney(item.asking_price) : 'Contact for Price',
+      metricLabel,
+      metricValue,
+      locationOrModel: isOps 
+        ? (item.city || 'Location TBD')
+        : 'Remote / Digital',
+      imageUrl: item.hero_image_url || item.heroImageUrl || item.image_url || '/images/placeholder.jpg',
+      badges: badges.slice(0, 2),
+    };
+  });
 }

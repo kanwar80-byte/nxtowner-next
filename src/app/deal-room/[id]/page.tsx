@@ -5,6 +5,7 @@ import SecureVault from "@/components/platform/SecureVault";
 import SmartActionCenter from "@/components/platform/SmartActionCenter";
 import { getUser } from "@/lib/auth";
 import { getListingByIdV16, searchListingsV16 } from "@/lib/v16/listings.repo";
+import { normalizeId } from "@/lib/utils/normalizeId";
 import { TABLES } from "@/lib/spine/constants";
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
@@ -236,9 +237,11 @@ export default async function DealRoomPage({ params, searchParams }: PageProps) 
 
   // 2. Fetch benchmarks for comparison using canonical repo
   // Filter by subcategory to get comparable listings
-  const benchmarkListings = listing.subcategory
+  const subcategoryId = normalizeId(listing.subcategory_id ?? listing.subcategory);
+
+  const benchmarkListings = subcategoryId
     ? await searchListingsV16({
-        subcategory: listing.subcategory,
+        subcategory: subcategoryId,
       })
     : [];
   

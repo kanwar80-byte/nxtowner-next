@@ -2,12 +2,15 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin, Globe, TrendingUp, DollarSign, Building2, Loader2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { createClient } from '@/utils/supabase/client';
 import { useTrack } from '@/contexts/TrackContext';
 import { Button } from '@/components/ui/button';
+import { mapV17ToGridListings } from '@/lib/v17/mappers';
+import { manualSearch } from '@/lib/v17/search/client';
+import type { ListingTeaserV17 } from '@/lib/v17/types';
 
 type AssetType = 'operational' | 'digital';
 
@@ -53,7 +56,7 @@ const ListingCard = ({ listing }: { listing: Listing }) => {
   const LocationIcon = isOps ? MapPin : Globe;
 
   return (
-    <div className={cardBaseStyle}>
+    <Link href={`/listing/${listing.id}`} className={cardBaseStyle}>
       <div className="relative h-48 w-full overflow-hidden bg-gray-200 dark:bg-zinc-800">
         <Image src={listing.imageUrl} alt={listing.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
          <div className="absolute top-4 left-4">
@@ -86,248 +89,277 @@ const ListingCard = ({ listing }: { listing: Listing }) => {
               <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-zinc-800 dark:text-gray-300">{b}</span>
             ))}
           </div>
-          <button className={cn("text-sm font-semibold hover:underline focus:outline-none", accentTextColor)}>View Deal &rarr;</button>
+          <span className={cn("text-sm font-semibold", accentTextColor)}>
+            View Deal &rarr;
+          </span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 };
 
 interface SmartListingGridProps {
   activeCategory: string;
+  initialListings?: Listing[]; // Optional server-provided listings
 }
 
-export default function SmartListingGrid({ activeCategory }: SmartListingGridProps) {
+// Digital category chips for Featured Acquisitions
+const DIGITAL_CATEGORY_CHIPS = [
+  'All Listings',
+  'SaaS',
+  'E-Commerce',
+  'AI Tools',
+  'Content Sites',
+];
+
+export default function SmartListingGrid({ activeCategory, initialListings }: SmartListingGridProps) {
   const { track } = useTrack();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [listings, setListings] = useState<Listing[]>([]);
-  const [loading, setLoading] = useState(true);
-  const supabase = createClient();
-  
-  // Check if AI filters are active
-  const hasAIFilters = !!(
-    searchParams.get('q') ||
-    searchParams.get('category') ||
-    searchParams.get('location') ||
-    searchParams.get('min_value') ||
-    searchParams.get('is_verified')
-  );
+  const [listings, setListings] = useState<Listing[]>(initialListings || []);
+  const [loading, setLoading] = useState(!initialListings); // If we have initial listings, don't show loading
+  const [selectedChip, setSelectedChip] = useState<string>('All Listings'); // Local state for chip selection
 
-  // Fetch real data from Supabase with AI search filters
+  // Read filters from URL params (single source of truth)
+  const urlAssetType = searchParams.get('assetType');
+  const urlCategoryId = searchParams.get('categoryId');
+  const urlSubcategoryId = searchParams.get('subcategoryId');
+  const searchQuery = searchParams.get('q');
+  
+  // Determine if we should use URL params or local state
+  const hasUrlFilters = !!(urlAssetType || urlCategoryId || urlSubcategoryId || searchQuery);
+  const effectiveAssetType = (urlAssetType || track) as "operational" | "digital";
+  const effectiveCategoryId = urlCategoryId || undefined;
+  const effectiveSubcategoryId = urlSubcategoryId || undefined;
+  const effectiveQuery = searchQuery || undefined;
+
+  // Helper: Fetch listings via server API route (supports UUID filtering)
+  async function fetchV17Listings(params: {
+    assetType?: "operational" | "digital";
+    categoryId?: string | null;
+    subcategoryId?: string | null;
+    query?: string | null;
+    limit?: number;
+  }): Promise<ListingTeaserV17[]> {
+    const sp = new URLSearchParams();
+    if (params.assetType) sp.set("assetType", params.assetType);
+    if (params.categoryId) sp.set("categoryId", params.categoryId);
+    if (params.subcategoryId) sp.set("subcategoryId", params.subcategoryId);
+    if (params.query) sp.set("query", params.query);
+    sp.set("limit", String(params.limit ?? 20));
+
+    const res = await fetch(`/api/search-listings?${sp.toString()}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error("Search failed");
+    return res.json();
+  }
+
+  // Handle chip click - filter in place using manualSearch
+  const handleChipClick = async (chipCategory: string) => {
+    setSelectedChip(chipCategory);
+    setLoading(true);
+    
+    try {
+      const filters: Record<string, unknown> = {
+        listing_type: 'digital',
+        page_size: 6,
+        sort: 'newest', // Use 'newest' as fallback (featured not yet supported)
+      };
+      
+      // Only add category if not "All Listings"
+      if (chipCategory !== 'All Listings') {
+        filters.category = chipCategory;
+      }
+      
+      const response = await manualSearch(filters);
+      
+      if (response.items && response.items.length > 0) {
+        // Convert ListingTeaserV17 from @/types/v17/search to format expected by mapper
+        // The mapper expects @/lib/v17/types format, so we need to adapt
+        const adaptedItems = response.items.map((item) => ({
+          id: item.id,
+          title: item.title,
+          asset_type: item.listing_type === 'digital' ? 'digital' : 'operational',
+          asking_price: item.asking_price,
+          cash_flow: item.owner_cashflow ?? 0,
+          revenue_annual: item.annual_revenue ?? 0,
+          status: item.featured_level === 'premium' || item.featured_level === 'boost' ? 'teaser' : 'published',
+          city: item.location_city || '',
+          category_id: item.category || '',
+          subcategory_id: item.subcategory || '',
+          hero_image_url: null, // Not available in ListingTeaserV17
+        }));
+        
+        // Map adapted items to Listing format
+        const mappedListings = mapV17ToGridListings(adaptedItems as any);
+        setListings(mappedListings);
+      } else {
+        setListings([]);
+      }
+    } catch (error: any) {
+      console.error("Error fetching listings via chip:", error);
+      setListings([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch from server API route (supports UUID category_id/subcategory_id filtering)
+  // Use URL params as single source of truth
   useEffect(() => {
+    // If we have initial listings and no URL filters, use them and skip fetch
+    if (initialListings && initialListings.length > 0 && !hasUrlFilters && activeCategory === "All Listings" && selectedChip === "All Listings") {
+      setListings(initialListings);
+      setLoading(false);
+      return;
+    }
+
+    // If chip is selected and not "All Listings", use chip filtering (handled by handleChipClick)
+    if (selectedChip !== "All Listings" && !hasUrlFilters) {
+      // Chip filtering is handled by handleChipClick, don't fetch here
+      return;
+    }
+
     async function fetchListings() {
       setLoading(true);
       
-      // Get search params from URL (AI Super Search Edge Function format)
-      const query = searchParams.get('q');
-      const urlCategory = searchParams.get('category');
-      const location = searchParams.get('location');
-      const minValue = searchParams.get('min_value');
-      const isVerified = searchParams.get('is_verified') === 'true';
-      
-      // Combine URL category with activeCategory from filter pills
-      // Priority: URL category (from AI search) > activeCategory (from filter pills)
-      const categoryFilter = urlCategory || (activeCategory !== "All Listings" ? activeCategory : null);
-      
-      let queryBuilder = supabase
-        .from('listings')
-        .select('*')
-        .eq('status', 'active')
-        .eq('deal_type', track); // Must match current mode (operational vs digital)
-      
-      // Apply text search
-      if (query) {
-        queryBuilder = queryBuilder.or(`title.ilike.%${query}%,listing_title.ilike.%${query}%,category.ilike.%${query}%`);
-      }
-      
-      // Apply category filter (from AI search or filter pills)
-      if (categoryFilter) {
-        queryBuilder = queryBuilder.ilike('category', `%${categoryFilter}%`);
-      }
-      
-      // Apply location filter
-      if (location) {
-        queryBuilder = queryBuilder.or(`location_city.ilike.%${location}%,location_province.ilike.%${location}%,city.ilike.%${location}%`);
-      }
-      
-      // Apply financial filters (Edge Function structured format)
-      // Mode-specific: operational uses ebitda/cash_flow, digital uses mrr
-      if (minValue) {
-        const minVal = parseFloat(minValue);
-        if (track === 'operational') {
-          queryBuilder = queryBuilder.gte('cash_flow', minVal);
-        } else {
-          queryBuilder = queryBuilder.gte('mrr', minVal);
-        }
-      }
-      
-      // Apply verification filter
-      if (isVerified) {
-        queryBuilder = queryBuilder.eq('is_ai_verified', true);
-      }
-      
-      const { data, error } = await queryBuilder
-        .order('created_at', { ascending: false })
-        .limit(6); // Limit to top 6 matches for homepage
-
-      if (error) {
-        console.error("Error fetching listings:", error);
-        setListings([]);
-      } else if (data) {
-        // Map database fields to SmartListingGrid Listing interface
-        const mappedListings: Listing[] = data.map((item: any) => {
-          const isOps = (item.deal_type || item.asset_type || 'operational') === 'operational';
-          const ebitda = Number(item.cash_flow || item.ebitda) || 0;
-          const mrr = Number(item.mrr || item.mrr_current) || 0;
-          const arr = mrr * 12;
-
-          // Determine metric label and value based on type
-          let metricLabel = 'Revenue';
-          let metricValue = fmtMoney(item.gross_revenue_annual || 0);
-          
-          if (isOps) {
-            metricLabel = 'EBITDA';
-            metricValue = ebitda > 0 ? fmtMoney(ebitda) : 'N/A';
-          } else {
-            if (mrr > 0) {
-              metricLabel = 'ARR';
-              metricValue = fmtMoney(arr);
-            } else {
-              metricLabel = 'Revenue';
-              metricValue = fmtMoney(item.gross_revenue_annual || 0);
-            }
-          }
-
-          // Generate badges from available data
-          const badges: string[] = [];
-          if (item.source_type === 'broker' || item.source_type === 'partner') {
-            badges.push('Broker Listed');
-          }
-          if (item.ai_growth_score && item.ai_growth_score > 80) {
-            badges.push('High Growth');
-          }
-          if (isOps && item.location_city) {
-            badges.push('Prime Location');
-          }
-          if (!isOps && item.tech_stack && Array.isArray(item.tech_stack) && item.tech_stack.length > 0) {
-            badges.push('Modern Stack');
-          }
-          // Fallback badges if none generated
-          if (badges.length === 0) {
-            badges.push('Verified', 'Active Listing');
-          }
-
-          return {
-            id: String(item.id || ''),
-            title: String(item.title || item.listing_title || 'Untitled'),
-            category: String(item.category || item.subcategory || 'General'),
-            type: isOps ? 'operational' : 'digital',
-            price: fmtMoney(item.asking_price || 0),
-            metricLabel,
-            metricValue,
-            locationOrModel: isOps 
-              ? String(item.location_city || item.city || 'Location TBD')
-              : (item.tech_stack && Array.isArray(item.tech_stack) && item.tech_stack.length > 0
-                  ? item.tech_stack[0]
-                  : 'Remote / Digital'),
-            imageUrl: String(item.image_url || item.hero_image_url || '/images/placeholder.jpg'),
-            badges: badges.slice(0, 2), // Limit to 2 badges
-          };
+      try {
+        // Use server API route (calls server repo with UUID support)
+        const v17Listings = await fetchV17Listings({
+          assetType: effectiveAssetType,
+          categoryId: effectiveCategoryId,
+          subcategoryId: effectiveSubcategoryId,
+          query: effectiveQuery,
+          limit: 6,
         });
-        
+
+        // Map V17 listings to grid format
+        const mappedListings = mapV17ToGridListings(v17Listings);
         setListings(mappedListings);
+      } catch (error: any) {
+        console.error("Error fetching listings:", {
+          message: error?.message,
+          queryInputs: {
+            assetType: effectiveAssetType,
+            categoryId: effectiveCategoryId,
+            subcategoryId: effectiveSubcategoryId,
+            query: effectiveQuery,
+          },
+        });
+        setListings([]);
       }
       setLoading(false);
     }
 
     fetchListings();
-  }, [track, supabase, searchParams, activeCategory]);
+  }, [effectiveAssetType, effectiveCategoryId, effectiveSubcategoryId, effectiveQuery, initialListings, hasUrlFilters, activeCategory, searchParams, selectedChip]);
 
-  // Determine if this is an AI search result
-  const searchQuery = searchParams.get('q');
-  const hasAISearch = !!searchQuery;
   const resultCount = listings.length;
 
-  // Clear AI filters function
-  function clearAIFilters() {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete('q');
-    params.delete('category');
-    params.delete('location');
-    params.delete('min_value');
-    params.delete('is_verified');
-    router.push(`/?${params.toString()}`, { scroll: false });
+  // Clear filters function - route to /browse with assetType only
+  function clearFilters() {
+    router.push(`/browse?assetType=${track}`);
   }
 
-  // Generate AI results summary text
+  // Generate results summary text
   const getResultsSummary = () => {
     if (loading) return 'Loading...';
     
-    if (hasAISearch) {
+    if (effectiveQuery) {
       return (
         <>
-          <span className="font-semibold text-amber-600 dark:text-amber-400">AI found {resultCount} match{resultCount !== 1 ? 'es' : ''}</span>
+          <span className="font-semibold text-amber-600 dark:text-amber-400">Found {resultCount} match{resultCount !== 1 ? 'es' : ''}</span>
           {' for '}
-          <span className="font-semibold text-gray-900 dark:text-white">&quot;{searchQuery}&quot;</span>
+          <span className="font-semibold text-gray-900 dark:text-white">&quot;{effectiveQuery}&quot;</span>
           {resultCount === 0 && '. Try adjusting your search criteria.'}
         </>
       );
     }
     
-    // Default text when no AI search
-    if (activeCategory === "All Listings") {
-      return `Showing ${resultCount} premium ${track === 'operational' ? 'operational' : 'digital'} opportunities.`;
+    // Default text when no search
+    if (!effectiveCategoryId && !effectiveSubcategoryId) {
+      return `Showing ${resultCount} premium ${effectiveAssetType === 'operational' ? 'operational' : 'digital'} opportunities.`;
     }
     
     return (
       <>
-        Showing {resultCount} premium opportunities in{' '}
-        <span className="font-semibold text-blue-600 dark:text-blue-400">{activeCategory}</span>.
+        Showing {resultCount} premium opportunities
+        {effectiveCategoryId || effectiveSubcategoryId ? ' in selected category' : ''}.
       </>
     );
   };
 
   return (
-    <section id="listings-section" className="w-full py-12 bg-gray-50 dark:bg-zinc-900 transition-colors duration-300">
+    <section className="w-full py-12 bg-gray-50 dark:bg-zinc-900 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* AI Results Summary - Positioned between Filter Pills and Grid */}
-        {hasAIFilters && (
+        {/* Search Results Summary - Positioned between Filter Pills and Grid */}
+        {(effectiveQuery || effectiveCategoryId || effectiveSubcategoryId) && (
           <div className="mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  {hasAISearch ? 'AI Search Results' : 'Filtered Results'}
+                  {effectiveQuery ? 'Search Results' : 'Filtered Results'}
                 </h2>
                 <p className="text-gray-600 dark:text-gray-400">
                   {getResultsSummary()}
                 </p>
               </div>
               <Button
-                onClick={clearAIFilters}
+                onClick={clearFilters}
                 variant="outline"
                 size="sm"
                 className="ml-4 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30"
               >
                 <X className="w-4 h-4 mr-2" />
-                Clear AI Filters
+                Clear Filters
               </Button>
             </div>
           </div>
         )}
         
-        {/* Default Header (when no AI filters) */}
-        {!hasAIFilters && (
-          <div className="flex justify-between items-end mb-8">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Featured Acquisitions
-              </h2>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">
-                {getResultsSummary()}
-              </p>
+        {/* Default Header (when no filters) */}
+        {!effectiveQuery && !effectiveCategoryId && !effectiveSubcategoryId && (
+          <div className="mb-8">
+            <div className="flex justify-between items-end mb-6">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+                  Featured Acquisitions
+                </h2>
+                <p className="mt-2 text-gray-600 dark:text-gray-400">
+                  {getResultsSummary()}
+                </p>
+              </div>
+              <Link 
+                href={selectedChip === 'All Listings' 
+                  ? '/search?listing_type=digital'
+                  : `/search?listing_type=digital&category=${encodeURIComponent(selectedChip)}`
+                }
+                className="hidden md:block text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                View all listings &rarr;
+              </Link>
             </div>
-            <a href="/listings" className="hidden md:block text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">View all listings &rarr;</a>
+            
+            {/* Category Chips - Only show for digital track */}
+            {track === 'digital' && (
+              <div className="flex flex-wrap gap-3 justify-center">
+                {DIGITAL_CATEGORY_CHIPS.map((chip) => (
+                  <button
+                    key={chip}
+                    onClick={() => handleChipClick(chip)}
+                    className={cn(
+                      "px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-200",
+                      selectedChip === chip
+                        ? "bg-cyan-600 hover:bg-cyan-700 text-white shadow-lg scale-105"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
+                    )}
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
         {loading ? (
@@ -336,15 +368,15 @@ export default function SmartListingGrid({ activeCategory }: SmartListingGridPro
           </div>
         ) : listings.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {listings.map((listing) => <ListingCard key={listing.id} listing={listing} />)}
+            {listings.slice(0, 6).map((listing) => <ListingCard key={listing.id} listing={listing} />)}
           </div>
         ) : (
           <div className="text-center py-20 rounded-2xl border-2 border-dashed border-gray-200 dark:border-zinc-800">
              <Building2 className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">No listings found</h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {hasAISearch 
-                ? `No results match "${searchQuery}". Try adjusting your search criteria.`
+              {effectiveQuery 
+                ? `No results match "${effectiveQuery}". Try adjusting your search criteria.`
                 : 'Try selecting a different category or adjusting your filters.'}
             </p>
           </div>

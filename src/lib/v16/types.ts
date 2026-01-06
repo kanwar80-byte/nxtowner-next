@@ -1,11 +1,17 @@
 // Canonical browse/search filter type for V16
+// V17 RULE:
+// - listings.category_id / subcategory_id are ALWAYS string | null
+// - UI may hydrate category objects, but repos accept IDs only
+// - Never pass category objects into repo filters
 export interface BrowseFiltersV16 {
   query?: string;
   assetType?: string; // Will be canonicalized to lowercase in repo layer
-  category?: string; // legacy string code
-  subcategory?: string; // legacy string code
-  categoryId?: string; // UUID
-  subcategoryId?: string; // UUID
+  // ✅ IDs ONLY (do not accept objects)
+  categoryId?: string | null; // UUID
+  subcategoryId?: string | null; // UUID
+  // Optional: allow code-based filtering if you use it
+  category_code?: string | null;
+  subcategory_code?: string | null;
   minPrice?: number;
   maxPrice?: number;
   sort?: string;
@@ -19,8 +25,8 @@ export interface ListingTeaserV16 {
   id: string;
   title: string;
   asset_type: AssetTypeV16; // Canonical lowercase
-  category: string | null;
-  subcategory: string | null;
+  category_id: string | null; // UUID reference to tax_categories
+  subcategory_id: string | null; // UUID reference to tax_subcategories
   city: string | null;
   province: string | null;
   country: string | null;

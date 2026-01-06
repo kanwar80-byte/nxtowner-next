@@ -5,23 +5,65 @@
  */
 'use client';
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { useTrack } from "@/contexts/TrackContext";
 import type { ListingTeaserV16 } from "@/lib/v16/types";
 
 export default function CuratedListingsClient({ listings }: { listings: ListingTeaserV16[] }) {
+  const DEBUG_LISTINGS = process.env.NEXT_PUBLIC_DEBUG_LISTINGS === "1";
   const { track } = useTrack();
+
+  // Normalize selection state
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>("all");
+
+  const searchParams = useSearchParams();
+
+  // Sync selection from query params (if pills use links); default to 'all'
+  useEffect(() => {
+    const categoryParam =
+      searchParams.get("category_id") ||
+      searchParams.get("category") ||
+      "all";
+    const subcategoryParam =
+      searchParams.get("subcategory_id") ||
+      searchParams.get("subcategory") ||
+      "all";
+    setSelectedCategoryId(categoryParam);
+    setSelectedSubcategoryId(subcategoryParam);
+  }, [searchParams]);
 
   // Filter listings based on track
   // Track is determined by: listing.asset_type (field: 'operational' | 'digital')
-  // If asset_type is missing/null, mapper normalizes to 'operational' by default
-  const filteredListings = listings.filter((listing) => {
-    if (track === 'all') return true;
-    // Defensive: if asset_type is missing, treat as 'operational' (safer default)
-    const listingTrack = listing.asset_type || 'operational';
-    return listingTrack === track;
-  });
+  const assetMode = track === "digital" ? "digital" : "operational";
+
+  const filteredListings = useMemo(() => {
+    const byAsset = listings.filter((listing) => {
+      if (assetMode === "digital") return listing.asset_type === "digital";
+      return listing.asset_type === "operational" || listing.asset_type == null;
+    });
+
+    const byCategory = byAsset.filter((listing) => {
+      const categoryOk = selectedCategoryId === "all" || listing.category_id === selectedCategoryId;
+      const subcategoryOk = selectedSubcategoryId === "all" || listing.subcategory_id === selectedSubcategoryId;
+      return categoryOk && subcategoryOk;
+    });
+
+    if (DEBUG_LISTINGS) {
+      console.log("[CuratedListingsClient] filter", {
+        assetMode,
+        selectedCategoryId,
+        selectedSubcategoryId,
+        total: listings.length,
+        filtered: byCategory.length,
+      });
+    }
+
+    return byCategory;
+  }, [assetMode, listings, selectedCategoryId, selectedSubcategoryId, DEBUG_LISTINGS]);
 
   // Limit to 3 listings for display (standardized grid)
   const displayListings = filteredListings.slice(0, 3);

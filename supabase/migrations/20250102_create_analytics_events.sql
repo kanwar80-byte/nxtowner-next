@@ -34,3 +34,5 @@ CREATE POLICY "Users can insert their own events"
 -- Note: SELECT/UPDATE/DELETE policies omitted for now (admin access later)
 
 
+
+
