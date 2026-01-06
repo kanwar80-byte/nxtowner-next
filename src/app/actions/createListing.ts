@@ -83,7 +83,8 @@ export async function createListing(
     return {
       success: false,
       error: 'Validation failed',
-      details: validationResult.error.errors.map((err) => ({
+      // CHANGED: .errors -> .issues
+      details: validationResult.error.issues.map((err) => ({
         path: err.path.join('.'),
         message: err.message,
       })),
