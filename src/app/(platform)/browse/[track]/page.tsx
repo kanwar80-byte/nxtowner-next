@@ -1,10 +1,29 @@
-import BrowseClientShell from "@/components/platform/BrowseClientShell";
-import FilterSidebar from "@/components/platform/FilterSidebar";
-import { getBrowseFacetsV16 } from "@/lib/v16/facets.repo";
-import { searchListingsV16 } from "@/lib/v16/listings.repo";
-import { getCategoryIdByCode, getSubcategoryIdByCode } from "@/lib/v16/taxonomy.repo";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import { Monitor, Briefcase } from "lucide-react";
+
+// --- V17 BRAIN (The New Engine) ---
+import { searchListingsV17, type SearchFiltersV17 } from "@/lib/v17/listings.repo";
+import { ASSET_TYPE_LABEL } from "@/lib/v17/uiLabels";
+import type { AssetTypeV17 } from "@/lib/v17/types";
+
+// Mapper: Convert Track/route values to AssetTypeV17 (real_world => operational)
+const toAssetTypeV17 = (trackOrAsset?: string): AssetTypeV17 | undefined => {
+  if (!trackOrAsset) return undefined;
+  if (trackOrAsset === "real_world") return "operational";
+  if (trackOrAsset === "operational") return "operational";
+  if (trackOrAsset === "digital") return "digital";
+  return undefined;
+};
+
+// --- V16 FALLBACKS (Facets/Taxonomy) ---
+// We keep these until you migrate facets to V17
+import { getBrowseFacetsV16 } from "@/lib/v16/facets.repo";
+import { getCategoryIdByCode, getSubcategoryIdByCode } from "@/lib/v16/taxonomy.repo";
+
+// --- CLIENT COMPONENTS ---
+import BrowseClientShell from "@/components/platform/BrowseClientShell";
+import FilterSidebar from "@/components/platform/FilterSidebar";
 
 interface BrowseTrackPageProps {
   params: { track: string };
@@ -15,148 +34,125 @@ export default async function BrowseTrackPage({
   params,
   searchParams,
 }: BrowseTrackPageProps) {
-  // Extract params (Next.js 16: params are not Promises)
   const { track: trackParam } = params;
   const sp = searchParams || {};
 
-  // Validate track parameter
+  // 1. VALIDATION - Accept 'real-world' and 'digital' only
   const normalizedTrack = trackParam?.toLowerCase();
-  if (normalizedTrack !== 'operational' && normalizedTrack !== 'digital') {
+  if (normalizedTrack !== 'real-world' && normalizedTrack !== 'digital') {
     notFound();
   }
+  
+  // Map URL param to DB asset_type value (keep for UI logic)
+  const assetTypeRoute: "real_world" | "digital" = normalizedTrack === 'real-world' ? 'real_world' : 'digital';
+  const isRealWorld = assetTypeRoute === 'real_world';
+  // Map to AssetTypeV17 for filters
+  const assetTypeV17 = toAssetTypeV17(assetTypeRoute)!;
 
-  // Map track to asset type filter
-  const assetTypeFilter = normalizedTrack === 'operational' ? 'Operational' : 'Digital';
-
-  // --- START TRANSLATION LAYER ---
-  // 1. Asset Type is already set from URL path
-  // 2. Normalize Prices
-  const minPrice = sp.min_price ? Number(sp.min_price) : undefined;
-  const maxPrice = sp.max_price ? Number(sp.max_price) : undefined;
-
-  // 3. Resolve category/subcategory codes to UUIDs (fail-soft - never throw)
-  let categoryId: string | undefined = undefined;
-  let subcategoryId: string | undefined = undefined;
+  // 2. FILTER TRANSLATION (URL -> V17 Filters)
   const categoryCode = sp.category as string | undefined;
   const subcategoryCode = sp.subcategory as string | undefined;
-  
-  // Try to resolve category code (fail-soft: if code doesn't exist, categoryId stays undefined)
-  // NEVER throw or call notFound() - always render the page
-  if (categoryCode && typeof categoryCode === 'string') {
-    try {
-      const resolvedId = await getCategoryIdByCode(categoryCode);
-      if (resolvedId) {
-        categoryId = resolvedId;
-      }
-      // If resolvedId is null, categoryId stays undefined - this is fine
-    } catch (err) {
-      // Category code not found or error - this is fine, we'll filter by code string instead
-      // Do NOT throw - just log and continue
-      console.warn(`Category code resolution failed for "${categoryCode}":`, err);
-    }
+
+  // Resolve IDs (Legacy V16 logic, kept for safety)
+  let categoryId: string | undefined;
+  let subcategoryId: string | undefined;
+
+  if (categoryCode) {
+     try { categoryId = await getCategoryIdByCode(categoryCode) || undefined; } catch(e) {}
   }
-  if (subcategoryCode && typeof subcategoryCode === 'string') {
-    try {
-      const resolvedId = await getSubcategoryIdByCode(subcategoryCode);
-      if (resolvedId) {
-        subcategoryId = resolvedId;
-      }
-      // If resolvedId is null, subcategoryId stays undefined - this is fine
-    } catch (err) {
-      // Subcategory code not found or error - this is fine
-      // Do NOT throw - just log and continue
-      console.warn(`Subcategory code resolution failed for "${subcategoryCode}":`, err);
-    }
+  if (subcategoryCode) {
+     try { subcategoryId = await getSubcategoryIdByCode(subcategoryCode) || undefined; } catch(e) {}
   }
 
-  // 4. Build Clean Filter Object (UUID preferred, fallback to string)
-  const filters = {
-    query: sp.q as string | undefined,
-    assetType: assetTypeFilter,
-    category: categoryId ? undefined : categoryCode,
-    subcategory: subcategoryId ? undefined : subcategoryCode,
+  // Construct V17 Filters - use AssetTypeV17 (operational/digital)
+  const v17Filters: SearchFiltersV17 = {
+    query: sp.q as string,
+    asset_type: assetTypeV17, // Mapped to AssetTypeV17: 'operational' or 'digital'
+    min_price: sp.min_price ? Number(sp.min_price) : undefined,
+    max_price: sp.max_price ? Number(sp.max_price) : undefined,
+    category_id: categoryId,
+    subcategory_id: subcategoryId,
+    sort: (sp.sort as 'newest' | 'price_low' | 'price_high') || 'newest',
+    limit: 20, // Default page size
+    offset: sp.page ? (Number(sp.page) - 1) * 20 : undefined
+  };
+
+  // 3. DATA FETCHING (V17 Query)
+  let listings: any[] = [];
+  let total = 0;
+  try {
+    const result = await searchListingsV17(v17Filters);
+    listings = result.items || [];
+    total = result.total || 0;
+  } catch (err) {
+    console.warn("V17 Listing Fetch Error:", err);
+    listings = [];
+    total = 0;
+  }
+
+  // B. Facets come from V16 (Legacy)
+  // We map the V17 filters back to V16 shape for the sidebar counts
+  const v16FiltersForFacets = {
+    assetType: assetTypeRoute === 'real_world' ? 'Operational' : 'Digital', // V16 uses Capitalized
     categoryId,
     subcategoryId,
-    minPrice,
-    maxPrice,
-    sort: (sp.sort as string) || 'newest',
+    minPrice: v17Filters.min_price,
+    maxPrice: v17Filters.max_price,
+    query: v17Filters.query
   };
-  // --- END TRANSLATION LAYER ---
 
-  // Fetch listings and facets (will return empty array if no matches, not 404)
-  // NEVER throw or call notFound() - always render the page
-  let listings: any[] = [];
   let facets: any = { categoryCounts: {}, subcategoryCounts: {}, assetTypeCounts: {}, total: 0 };
-
   try {
-    listings = await searchListingsV16(filters) || [];
+    facets = await getBrowseFacetsV16(v16FiltersForFacets) || facets;
   } catch (err) {
-    // If fetch fails, show empty state (not 404)
-    // Do NOT throw - just log and continue with empty array
-    console.warn('Error fetching listings:', err);
-    listings = [];
+    console.warn("V16 Facet Fetch Error:", err);
   }
 
-  try {
-    facets = await getBrowseFacetsV16(filters) || facets;
-  } catch (err) {
-    // If facets fetch fails, use empty facets (not 404)
-    // Do NOT throw - just log and continue with empty facets
-    console.warn('Error fetching facets:', err);
-    facets = { categoryCounts: {}, subcategoryCounts: {}, assetTypeCounts: {}, total: 0 };
-  }
-
-  // Determine if we have an unknown category
-  // Unknown category = category code provided but not found in taxonomy AND no results
-  const hasCategoryFilter = Boolean(categoryCode);
-  const isUnknownCategory = hasCategoryFilter && !categoryId && listings.length === 0;
+  // 4. UI RENDER (Dark Mode to match Homepage)
+  // Theme Engine
+  const theme = {
+    accent: isRealWorld ? 'text-amber-500' : 'text-teal-400',
+    bg: isRealWorld ? 'bg-amber-500/10' : 'bg-teal-500/10',
+    icon: isRealWorld ? Briefcase : Monitor
+  };
+  const Icon = theme.icon;
+  const hasResults = listings.length > 0;
 
   return (
-    <div className="flex flex-col min-h-screen pt-20 bg-slate-50/50">
-      <div className="max-w-[1600px] mx-auto w-full px-6 py-8">
-        <div className="mb-8 border-b pb-6">
-          <h1 className="text-3xl font-bold text-slate-900">
-            {normalizedTrack === 'operational' ? '🏢 Operational Businesses' : '💻 Digital Assets'}
-          </h1>
-          <p className="text-slate-500 mt-1">
-            {normalizedTrack === 'operational' 
-              ? 'Discover physical businesses, real estate, and franchises.'
-              : 'Discover SaaS, online businesses, and digital products.'}
+    <div className="flex flex-col min-h-screen pt-24 bg-[#050505] text-slate-200">
+      <div className="max-w-[1600px] mx-auto w-full px-4 md:px-6 py-8">
+        
+        {/* HEADER */}
+        <div className="mb-8 border-b border-slate-800 pb-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className={`p-2 rounded-lg ${theme.bg} ${theme.accent}`}>
+              <Icon className="w-6 h-6" />
+            </div>
+            <h1 className="text-3xl font-bold text-white">
+              {isRealWorld ? `${ASSET_TYPE_LABEL.real_world} Acquisitions` : `${ASSET_TYPE_LABEL.digital} Assets`}
+            </h1>
+          </div>
+          <p className="text-slate-400 max-w-2xl">
+            {isRealWorld 
+              ? 'Discover verified gas stations, franchises, and industrial businesses.'
+              : 'Discover vetted SaaS, e-commerce brands, and agency opportunities.'}
           </p>
-          {isUnknownCategory && categoryCode && (
-            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-sm text-amber-800">
-                <strong>Category not found:</strong> No listings found for category "{categoryCode}". 
-                Showing all {normalizedTrack} listings instead.
-              </p>
-            </div>
-          )}
-          {hasCategoryFilter && !isUnknownCategory && listings.length === 0 && (
-            <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-              <p className="text-sm text-slate-700">
-                No listings found for this category.
-              </p>
-            </div>
-          )}
         </div>
 
         <div className="flex gap-8 items-start">
-          <aside className="w-64 flex-shrink-0 sticky top-28 h-[calc(100vh-120px)] overflow-y-auto hidden md:block">
+          {/* SIDEBAR */}
+          <aside className="w-64 shrink-0 sticky top-28 h-[calc(100vh-120px)] overflow-y-auto hidden md:block border-r border-slate-800 pr-4">
+            {/* Note: FilterSidebar might need CSS updates for Dark Mode, but data flows here */}
             <FilterSidebar categoryCounts={facets.categoryCounts} />
           </aside>
 
+          {/* MAIN GRID */}
           <main className="flex-1 min-w-0">
-            <Suspense fallback={<div className="animate-pulse space-y-4">Loading listings...</div>}>
+            <Suspense fallback={<div className="animate-pulse text-slate-500">Loading verified listings...</div>}>
               <BrowseClientShell 
-                listings={listings || []} 
-                emptyStateReason={
-                  isUnknownCategory 
-                    ? "no_results" 
-                    : listings.length === 0 
-                      ? (hasCategoryFilter ? "no_results" : null)
-                      : null
-                }
-                track={normalizedTrack as 'operational' | 'digital'}
+                listings={listings} 
+                emptyStateReason={!hasResults ? "no_results" : null}
+                track={assetTypeRoute}
               />
             </Suspense>
           </main>
@@ -165,4 +161,3 @@ export default async function BrowseTrackPage({
     </div>
   );
 }
-

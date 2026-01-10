@@ -1,8 +1,11 @@
 "use client";
 
-import { useTrack } from "@/contexts/TrackContext";
 import { ArrowRight, TrendingUp, Scale, FileText, Lock, Globe } from "lucide-react";
 import Link from "next/link";
+
+interface MarketInsightsProps {
+  viewMode?: 'real_world' | 'digital';
+}
 
 // 1. DATA STRUCTURE (The Brain)
 const INSIGHTS_DATA = [
@@ -11,22 +14,22 @@ const INSIGHTS_DATA = [
     id: "op-1",
     type: "operational",
     category: "Valuation",
-    title: "2026 Gas Station Multiples Report: Ontario & BC",
+    title: "2026 Gas Station Valuation Report",
     excerpt: "Why rural stations are trading at higher caps than metro locations this quarter.",
     date: "Jan 12, 2026",
     readTime: "5 min read",
-    slug: "gas-station-multiples-2026",
+    slug: "gas-station-valuation-report-2026",
     icon: TrendingUp
   },
   {
     id: "op-2",
     type: "operational",
     category: "Legal",
-    title: "Commercial Lease Audits: The Hidden Killer",
+    title: "Commercial Lease Guide",
     excerpt: "How to spot 'Demolition Clauses' in standard commercial leases before you sign.",
     date: "Jan 08, 2026",
     readTime: "8 min read",
-    slug: "commercial-lease-demolition-clauses",
+    slug: "commercial-lease-guide",
     icon: Scale
   },
   {
@@ -57,11 +60,11 @@ const INSIGHTS_DATA = [
     id: "dig-2",
     type: "digital",
     category: "Due Diligence",
-    title: "The Code Audit: Red Flags in Legacy PHP",
+    title: "The Code Audit Guide",
     excerpt: "What technical debt looks like in 10-year-old content sites and how to price it in.",
     date: "Jan 07, 2026",
     readTime: "7 min read",
-    slug: "technical-diligence-code-audit",
+    slug: "code-audit-guide",
     icon: Lock
   },
   {
@@ -77,12 +80,11 @@ const INSIGHTS_DATA = [
   }
 ];
 
-export default function MarketInsights() {
-  const { track } = useTrack();
-  const isOperational = track === 'operational';
+export default function MarketInsights({ viewMode = 'real_world' }: MarketInsightsProps) {
+  const isOperational = viewMode === 'real_world';
 
   // 2. FILTER LOGIC
-  // Only show articles that match the current track
+  // Only show articles that match the current viewMode
   const currentInsights = INSIGHTS_DATA.filter(
     (item) => item.type === (isOperational ? 'operational' : 'digital')
   );
@@ -95,7 +97,7 @@ export default function MarketInsights() {
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
           <div>
             <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border mb-4 ${
-              isOperational ? 'bg-amber-950/30 text-amber-500 border-amber-500/20' : 'bg-teal-950/30 text-teal-500 border-teal-500/20'
+              isOperational ? 'bg-amber-950/30 text-amber-500 border-amber-500/20' : 'bg-teal-950/30 text-teal-400 border-teal-400/20'
             }`}>
               NXTOWNER INTELLIGENCE
             </div>
@@ -126,7 +128,7 @@ export default function MarketInsights() {
             >
               <div className="flex justify-between items-start mb-6">
                 <div className={`p-3 rounded-xl ${
-                  isOperational ? 'bg-amber-500/10 text-amber-500' : 'bg-teal-500/10 text-teal-500'
+                  isOperational ? 'bg-amber-500/10 text-amber-500' : 'bg-teal-400/10 text-teal-400'
                 }`}>
                   <insight.icon className="w-5 h-5" />
                 </div>
@@ -171,7 +173,7 @@ export default function MarketInsights() {
               className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
             />
             <button className={`px-6 py-3 rounded-lg font-bold text-sm text-black whitespace-nowrap transition-transform hover:scale-105 ${
-              isOperational ? "bg-amber-500 hover:bg-amber-400" : "bg-teal-500 hover:bg-teal-400"
+              isOperational ? "bg-amber-500 hover:bg-amber-400" : "bg-teal-400 hover:bg-teal-500"
             }`}>
               Get Data &rarr;
             </button>

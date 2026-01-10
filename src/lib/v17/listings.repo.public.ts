@@ -37,8 +37,8 @@ function mapListingRow(row: ListingRow): ListingTeaserV17 | null {
   return {
     id: row.id,
     title: row.title,
-    asset_type: row.asset_type === "operational" || row.asset_type === "digital" 
-      ? row.asset_type 
+    asset_type: (row.asset_type === "operational" || row.asset_type === "digital" || row.asset_type === "real_world")
+      ? (row.asset_type === "real_world" ? "operational" : row.asset_type)
       : null,
     category_id: null, // View doesn't have category_id, only category (string)
     subcategory_id: null, // View doesn't have subcategory_id, only subcategory (string)

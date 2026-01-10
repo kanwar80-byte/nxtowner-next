@@ -14,6 +14,7 @@ import type { ListingTeaserV17 } from '@/types/v17/search';
 interface FeaturedDigitalAcquisitionsProps {
   selectedModel?: string; 
   onSelectModel?: (model: string) => void;
+  initialListings?: ListingTeaserV17[];
 }
 
 // Map Display Name -> API Code
@@ -159,7 +160,7 @@ const ListingCard = ({ listing }: { listing: Listing }) => {
   );
 };
 
-export default function FeaturedDigitalAcquisitions({ selectedModel, onSelectModel }: FeaturedDigitalAcquisitionsProps) {
+export default function FeaturedDigitalAcquisitions({ selectedModel, onSelectModel, initialListings }: FeaturedDigitalAcquisitionsProps) {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -167,22 +168,9 @@ export default function FeaturedDigitalAcquisitions({ selectedModel, onSelectMod
     async function fetchListings() {
       setLoading(true);
       try {
-        const filters: Record<string, unknown> = {
-          listing_type: 'digital',
-          page: 1,
-          page_size: 6,
-          sort: 'newest',
-        };
-        
-        if (selectedModel && selectedModel !== 'All') {
-          const code = CATEGORY_NAME_TO_CODE[selectedModel] || selectedModel.toLowerCase().replace(/\s+/g, '_');
-          filters.category = code;
-        }
-        
-        const response = await manualSearch(filters);
-        
-        if (response.items && response.items.length > 0) {
-          const adaptedItems = response.items.map((item: ListingTeaserV17) => {
+        // Use initialListings if provided and has items
+        if (initialListings && initialListings.length > 0) {
+          const adaptedItems = initialListings.map((item: ListingTeaserV17) => {
             
             // --- FORMATTING LOGIC ---
             const formatCurrency = (val: number) => {
@@ -202,7 +190,9 @@ export default function FeaturedDigitalAcquisitions({ selectedModel, onSelectMod
                netProfitVal = Math.floor(revenueVal * 0.45);
             }
 
-            let priceVal = item.listing_price || 0;
+            // Safe V17 price resolver
+            const price = item.asking_price ?? (item as any).price ?? null;
+            let priceVal = price ?? 0;
             // SaaS trades at 3-5x Profit or 2-4x Revenue
             if (priceVal === 0) {
                priceVal = netProfitVal > 0 ? netProfitVal * 3.5 : revenueVal * 2.5; 
@@ -236,10 +226,107 @@ export default function FeaturedDigitalAcquisitions({ selectedModel, onSelectMod
             const monthlyRev = formatCurrency(Math.floor(revenueVal / 12));
             const monthlyProfit = formatCurrency(Math.floor(netProfitVal / 12));
 
+            // Safe V17 description resolver
+            const desc = (item as any).summary ?? (item as any).short_description ?? "";
+
             return {
               id: item.id,
               title: item.title,
-              description: item.description || "Scalable digital asset with automated workflows and documented growth history.",
+              description: desc || "Scalable digital asset with automated workflows and documented growth history.",
+              monetization: monetizationMap[cat] || "Digital Business",
+              age: ageStr,
+              price: formatCurrency(priceVal),
+              revenue: monthlyRev,
+              netProfit: monthlyProfit,
+              multiple: multipleLabel,
+              locationOrModel: "Remote / Global", 
+              imageUrl: item.hero_image_url || item.image_url || "",
+            };
+          });
+          
+          setListings(adaptedItems as any);
+          setLoading(false);
+          return;
+        }
+
+        // Fall back to fetch logic if initialListings not provided or empty
+        const filters: Record<string, unknown> = {
+          listing_type: 'digital',
+          page: 1,
+          page_size: 6,
+          sort: 'newest',
+        };
+        
+        if (selectedModel && selectedModel !== 'All') {
+          const code = CATEGORY_NAME_TO_CODE[selectedModel] || selectedModel.toLowerCase().replace(/\s+/g, '_');
+          filters.category = code;
+        }
+        
+        const response = await manualSearch(filters);
+        
+        if (response.items && response.items.length > 0) {
+          const adaptedItems = response.items.map((item: ListingTeaserV17) => {
+            // --- FORMATTING LOGIC ---
+            const formatCurrency = (val: number) => {
+              if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
+              if (val >= 1000) return `$${(val / 1000).toFixed(0)}k`;
+              return `$${val}`;
+            };
+
+            // FORCE REALISTIC DATA (Digital Assets often have high margins)
+            let revenueVal = item.annual_revenue || 0;
+            // Digital Assets (SaaS) usually trade on MRR. If annual is 0, mock it.
+            if (revenueVal === 0) revenueVal = 120000 + Math.floor(Math.random() * 500000); 
+
+            let netProfitVal = item.annual_ebitda || item.owner_cashflow || 0;
+            // SaaS margins are high (40-60%)
+            if (netProfitVal === 0) {
+               netProfitVal = Math.floor(revenueVal * 0.45);
+            }
+
+            // Safe V17 price resolver
+            const price = item.asking_price ?? (item as any).price ?? null;
+            let priceVal = price ?? 0;
+            // SaaS trades at 3-5x Profit or 2-4x Revenue
+            if (priceVal === 0) {
+               priceVal = netProfitVal > 0 ? netProfitVal * 3.5 : revenueVal * 2.5; 
+            }
+
+            // Calculate Multiple Badge
+            let multipleLabel = "High Growth";
+            if (netProfitVal > 0 && priceVal > 0) {
+              const mult = priceVal / netProfitVal;
+              multipleLabel = `${mult.toFixed(1)}x Profit`;
+            } else if (revenueVal > 0) {
+               const mult = priceVal / revenueVal;
+               multipleLabel = `${mult.toFixed(1)}x Rev`;
+            }
+
+            // Site Age Logic (Mock if missing)
+            const foundedYear = 2020 + Math.floor(Math.random() * 4); // 2020-2023
+            const ageStr = `${new Date().getFullYear() - foundedYear} Years`;
+
+            // Monetization Type (Map category to readable tag)
+            const cat = item.category || "Digital";
+            const monetizationMap: Record<string, string> = {
+               'saas_software': 'SaaS / Subscriptions',
+               'ecommerce': 'eCommerce / FBA',
+               'content_media': 'AdSense / Affiliate',
+               'domains': 'Premium Domain',
+               'agencies': 'Agency / Service'
+            };
+
+            // Monthly figures for the grid
+            const monthlyRev = formatCurrency(Math.floor(revenueVal / 12));
+            const monthlyProfit = formatCurrency(Math.floor(netProfitVal / 12));
+
+            // Safe V17 description resolver
+            const desc = (item as any).summary ?? (item as any).short_description ?? "";
+
+            return {
+              id: item.id,
+              title: item.title,
+              description: desc || "Scalable digital asset with automated workflows and documented growth history.",
               monetization: monetizationMap[cat] || "Digital Business",
               age: ageStr,
               price: formatCurrency(priceVal),
@@ -264,7 +351,7 @@ export default function FeaturedDigitalAcquisitions({ selectedModel, onSelectMod
     }
 
     fetchListings();
-  }, [selectedModel]);
+  }, [selectedModel, initialListings]);
 
   return (
     <div className="w-full">

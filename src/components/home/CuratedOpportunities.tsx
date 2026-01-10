@@ -35,7 +35,7 @@ export default function CuratedOpportunities() {
         .from('listings')
         .select('*')
         .eq('status', 'active')          
-        .eq('deal_type', track)          
+        .eq('deal_type', track === 'real_world' ? 'operational' : 'digital')          
         .order('created_at', { ascending: false })
         .limit(6);
 
@@ -85,19 +85,19 @@ export default function CuratedOpportunities() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-3xl font-bold text-white mb-2">
-              {track === 'operational' ? 'Prime Operational Assets' : 'Trending Digital Assets'}
+              {track === 'real_world' ? 'Prime Operational Assets' : 'Trending Digital Assets'}
             </h2>
             <p className="text-slate-400">
-              {track === 'operational' 
+              {track === 'real_world'
                 ? 'Verified brick & mortar opportunities.' 
                 : 'Profitable code & communities.'}
-              <span className={track === 'operational' ? "text-amber-500 font-medium ml-1" : "text-teal-500 font-medium ml-1"}>
-                {track === 'operational' ? 'Broker Represented.' : 'Direct from Founder.'}
+              <span className={track === 'real_world' ? "text-amber-500 font-medium ml-1" : "text-teal-500 font-medium ml-1"}>
+                {track === 'real_world' ? 'Broker Represented.' : 'Direct from Founder.'}
               </span>
             </p>
           </div>
           <Button variant="outline" className="hidden md:flex border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
-            View All {track === 'operational' ? 'Real World' : 'Digital'} <ArrowRight className="ml-2 w-4 h-4" />
+            View All {track === 'real_world' ? 'Real World' : 'Digital'} <ArrowRight className="ml-2 w-4 h-4" />
           </Button>
         </div>
 

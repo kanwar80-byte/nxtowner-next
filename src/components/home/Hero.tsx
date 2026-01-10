@@ -14,7 +14,7 @@ export default function Hero() {
   const searchParams = useSearchParams();
   
   // Derive mode from track (single source of truth)
-  // Normalize 'all' to 'operational' for homepage
+  // Normalize 'all' and 'real_world' to 'operational' for homepage
   const mode: 'operational' | 'digital' = track === 'digital' ? 'digital' : 'operational';
   const isOperational = mode === "operational";
   
@@ -28,8 +28,8 @@ export default function Hero() {
 
   // Handle toggle switch - updates TrackContext (single source of truth)
   function handleToggleSwitch(newMode: "operational" | "digital") {
-    // Update TrackContext - this will trigger re-renders in all components
-    setTrack(newMode);
+    // Update TrackContext - normalize "operational" to "real_world"
+    setTrack(newMode === "operational" ? "real_world" : "digital");
   }
 
   async function handleSearch(e: FormEvent<HTMLFormElement>) {
@@ -116,8 +116,8 @@ export default function Hero() {
 
   function handleModeSwitch() {
     if (suggestedMode) {
-      // Update TrackContext (single source of truth)
-      setTrack(suggestedMode);
+      // Update TrackContext (single source of truth) - normalize "operational" to "real_world"
+      setTrack(suggestedMode === "operational" ? "real_world" : suggestedMode);
       if (pendingFilters) {
         executeSearch(pendingFilters);
       }

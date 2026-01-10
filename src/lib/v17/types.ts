@@ -1,10 +1,12 @@
 // Shared types for V17 listings (used by both server and client repos)
 
+export type AssetTypeV17 = "operational" | "digital";
+
 // V17 Listing Teaser (minimal fields for browse/featured)
 export interface ListingTeaserV17 {
   id: string;
   title: string;
-  asset_type: "operational" | "digital" | null;
+  asset_type: AssetTypeV17 | null;
   category_id: string | null;
   subcategory_id: string | null;
   city: string | null;
@@ -16,31 +18,21 @@ export interface ListingTeaserV17 {
   hero_image_url: string | null;
   status: string;
   created_at: string;
+  // Optional fields for teaser UI compatibility
+  price?: number | null;
+  summary?: string | null;
+  short_description?: string | null;
 }
 
-// V17 Search Filters
-// V17 RULE: category_id / subcategory_id are ALWAYS string | null
-// UI may hydrate category objects, but repos accept IDs only
-// Never pass category objects into repo filters
-export interface SearchFiltersV17 {
-  asset_type?: "operational" | "digital";
-  country?: string | null;
-  province?: string | null;
-  city?: string | null;
-  is_remote?: boolean;
-  min_price?: number;
-  max_price?: number;
-  min_revenue?: number;
-  max_revenue?: number;
-  // ✅ IDs ONLY (do not accept objects)
+export type SearchFiltersV17 = {
+  asset_type?: AssetTypeV17;
+  query?: string;
   category_id?: string | null;
   subcategory_id?: string | null;
-  // Optional: allow code-based filtering if you use it
-  category_code?: string | null;
-  subcategory_code?: string | null;
-  query?: string; // Full-text search
+  min_price?: number;
+  max_price?: number;
+  sort?: 'newest' | 'price_low' | 'price_high';
   limit?: number;
   offset?: number;
-  sort?: string;
-}
+};
 

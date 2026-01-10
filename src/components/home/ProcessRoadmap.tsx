@@ -1,32 +1,57 @@
 "use client";
 
-import { useTrack } from "@/contexts/TrackContext";
-import { Search, FileSearch, Activity, Handshake } from "lucide-react";
+import { Search, FileSearch, Activity, Handshake, Shield, Database } from "lucide-react";
 
-export default function ProcessRoadmap() {
-  const { track } = useTrack();
-  const isOps = track === 'operational';
+interface ProcessRoadmapProps {
+  viewMode?: 'real_world' | 'digital';
+}
 
-  const steps = [
+export default function ProcessRoadmap({ viewMode = 'real_world' }: ProcessRoadmapProps) {
+  const isOps = viewMode === 'real_world';
+
+  // Value Props: Different steps for Real World vs Digital
+  const steps = isOps ? [
     {
       title: "Smart Discovery",
-      desc: isOps ? "Filter by EBITDA, Location, and Asset Type." : "Filter by MRR, Tech Stack, and Churn.",
+      desc: "Filter by EBITDA, Location, and Asset Type.",
       icon: Search,
     },
     {
-      title: "V17 Verification",
-      desc: "Unlock real financials. Our AI audits P&L, Tax Returns, and Traffic Data instantly.",
+      title: "NDA DealRoom",
+      desc: "Unlock real financials. Our AI audits P&L, Tax Returns, and lease agreements instantly.",
       icon: FileSearch,
     },
     {
       title: "Live Deal Tracker",
       desc: "Don't get lost in emails. Track LOIs, Due Diligence, and Counter-Offers in one dashboard.",
-      icon: Activity, // The "Tracker" Feature
+      icon: Activity,
       highlight: true
     },
     {
-      title: "Supported Closing",
-      desc: isOps ? "We connect you with vetted Lawyers & Lenders." : "Escrow integration for safe code transfer.",
+      title: "Exit Planning",
+      desc: "We connect you with vetted Lawyers & Lenders for smooth transitions.",
+      icon: Handshake,
+    }
+  ] : [
+    {
+      title: "Smart Discovery",
+      desc: "Filter by MRR, Tech Stack, Churn Rate, and Revenue Model.",
+      icon: Search,
+    },
+    {
+      title: "Tech Vetting",
+      desc: "Unlock real metrics. Our AI audits Stripe data, code quality, and traffic sources instantly.",
+      icon: Shield,
+    },
+    {
+      title: "Live SaaS Data",
+      desc: "Real-time MRR, churn, and customer metrics. Track deals with verified Stripe/Baremetrics integration.",
+      icon: Database,
+      highlight: true
+    },
+    {
+      title: "Migration Support",
+      desc: "Escrow integration, code transfer, and domain handover with expert technical support.",
       icon: Handshake,
     }
   ];
@@ -57,10 +82,10 @@ export default function ProcessRoadmap() {
               <div className={`
                 w-24 h-24 rounded-full flex items-center justify-center mb-6 border-4 transition-all duration-300 bg-slate-950 z-10
                 ${step.highlight 
-                  ? (isOps ? 'border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.3)]' : 'border-teal-500 shadow-[0_0_20px_rgba(20,184,166,0.3)]')
+                  ? (isOps ? 'border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.3)]' : 'border-teal-400 shadow-[0_0_20px_rgba(45,212,191,0.3)]')
                   : 'border-slate-800 group-hover:border-slate-600'}
               `}>
-                <step.icon className={`w-10 h-10 ${isOps ? 'text-amber-500' : 'text-teal-500'}`} />
+                <step.icon className={`w-10 h-10 ${isOps ? 'text-amber-500' : 'text-teal-400'}`} />
               </div>
 
               {/* Text */}

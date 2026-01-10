@@ -1,101 +1,81 @@
 "use client";
 
-import { useTrack } from "@/contexts/TrackContext";
-import { Lock, FileCheck, CheckCircle2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import { ShieldCheck, Lock, FileText } from "lucide-react";
 
-export default function TrustSection() {
-  const { track } = useTrack();
-  const isOperational = track === 'operational';
+interface TrustSectionProps {
+  viewMode?: 'real_world' | 'digital';
+}
+
+export default function TrustSection({ viewMode = 'real_world' }: TrustSectionProps) {
+  const isDigital = viewMode === 'digital';
+
+  const theme = {
+    accent: isDigital ? 'text-teal-400' : 'text-amber-500',
+    button: isDigital ? 'text-teal-400 hover:text-teal-300' : 'text-amber-500 hover:text-amber-400',
+    glow: isDigital ? 'bg-teal-400/10' : 'bg-amber-500/10',
+  };
 
   return (
-    <section className="py-24 bg-slate-900 border-t border-slate-800">
+    <section className="py-20 bg-[#0A0A0A] border-y border-white/5">
       <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-16">
+        
+        <div className="flex flex-col md:flex-row items-center gap-12">
           
-          {/* LEFT: Copy */}
-          <div className="flex-1">
-            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold border mb-6 ${
-              isOperational ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-teal-500/10 text-teal-500 border-teal-500/20'
-            }`}>
-              <Lock className="w-3 h-3" /> TRUST THROUGH VERIFICATION
-            </div>
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 leading-tight">
-              We verify the data. <br />
-              <span className={isOperational ? "text-amber-500" : "text-teal-500"}>
-                You verify the deal.
-              </span>
-            </h2>
-            <p className="text-slate-400 text-lg mb-8">
-              {isOperational
-                ? "Stop chasing dead ends. We connect directly with tax authorities and bank APIs to verify revenue before a listing ever goes live."
-                : "Stop relying on screenshots. We connect directly with Stripe, Shopify, and Analytics APIs to verify MRR and traffic in real-time."}
-            </p>
-
-            {/* INTEGRATION LOGO ROW (Visual Trust) */}
-            <div className="space-y-4">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-                Data Verified Via
-              </p>
-              <div className="flex flex-wrap gap-4">
-                {isOperational ? (
-                  <>
-                    <Badge text="CRA / IRS Tax Data" color="amber" />
-                    <Badge text="QuickBooks Online" color="amber" />
-                    <Badge text="Lease Documents" color="amber" />
-                    <Badge text="Bank Statements" color="amber" />
-                  </>
-                ) : (
-                  <>
-                    <Badge text="Stripe API" color="teal" />
-                    <Badge text="Shopify Partners" color="teal" />
-                    <Badge text="Google Analytics 4" color="teal" />
-                    <Badge text="App Store Connect" color="teal" />
-                  </>
-                )}
-              </div>
-            </div>
+          {/* LEFT: TEXT */}
+          <div className="flex-1 space-y-6">
+             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-slate-300">
+               <Lock className="w-3 h-3" /> BANK-LEVEL SECURITY
+             </div>
+             <h2 className="text-3xl md:text-5xl font-bold text-white">
+               NDA-Gated <br />
+               NxtDealRoom™
+             </h2>
+             <p className="text-lg text-slate-400 leading-relaxed">
+               Sensitive financials (P&L, Tax Returns) are never public. 
+               Buyers must sign a legally binding NDA and verify identity before accessing 
+               {isDigital ? ' Stripe/Baremetrics data.' : ' lease agreements and tax filings.'}
+             </p>
+             <Link href="/trust" className={`text-sm font-bold flex items-center gap-2 ${theme.button}`}>
+               View Security Protocols &rarr;
+             </Link>
           </div>
 
-          {/* RIGHT: Visual Card */}
-          <div className="flex-1 w-full max-w-md">
-            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
-              <div className={`absolute top-0 left-0 right-0 h-1 ${isOperational ? 'bg-amber-500' : 'bg-teal-500'}`} />
-              
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="font-bold text-white flex items-center gap-2">
-                  {/* NEW: BRANDED REPORT TITLE */}
-                  <ShieldCheck className={`w-4 h-4 ${isOperational ? 'text-amber-500' : 'text-teal-500'}`} />
-                  NxtVerify™ Report
-                </h3>
-                <span className="text-xs text-slate-500">Live Data</span>
-              </div>
+          {/* RIGHT: UI MOCKUP */}
+          <div className="flex-1 w-full relative">
+             <div className="relative z-10 bg-[#050505] border border-slate-800 rounded-xl p-6 shadow-2xl">
+                {/* Mock Header */}
+                <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+                   <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-slate-800 flex items-center justify-center">
+                        <FileText className="w-4 h-4 text-slate-400" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-white">2024_Tax_Returns.pdf</div>
+                        <div className="text-xs text-slate-500">2.4 MB • Verified by NxtOwner</div>
+                      </div>
+                   </div>
+                   <div className="px-3 py-1 rounded bg-green-900/20 text-green-500 text-xs font-bold border border-green-900/50">
+                     VERIFIED
+                   </div>
+                </div>
 
-              <div className="space-y-4">
-                <VerificationItem 
-                  label={isOperational ? "Tax Returns (T2)" : "Stripe Revenue"} 
-                  status="Verified Match" 
-                  isOp={isOperational} 
-                />
-                <VerificationItem 
-                  label={isOperational ? "Lease Agreement" : "Traffic Source"} 
-                  status="Verified Active" 
-                  isOp={isOperational} 
-                />
-                <VerificationItem 
-                  label={isOperational ? "Incorporation Docs" : "Domain Ownership"} 
-                  status="Verified Clear" 
-                  isOp={isOperational} 
-                />
-              </div>
+                {/* Mock Form */}
+                <div className="space-y-3">
+                   <div className="h-2 w-3/4 bg-slate-800 rounded animate-pulse"></div>
+                   <div className="h-2 w-1/2 bg-slate-800 rounded animate-pulse"></div>
+                   
+                   <div className="mt-6 p-4 bg-slate-900/50 rounded border border-slate-800 flex items-center gap-3">
+                      <Lock className={`w-5 h-5 ${theme.accent}`} />
+                      <div className="text-xs text-slate-400">
+                        To view this document, you must <span className="text-white font-bold">Sign NDA</span> and connect LinkedIn.
+                      </div>
+                   </div>
+                </div>
+             </div>
 
-              <div className="mt-8 pt-6 border-t border-slate-900 text-center">
-                <p className="text-xs text-slate-500 mb-2">Confidence Score</p>
-                <p className={`text-3xl font-black ${isOperational ? 'text-amber-500' : 'text-teal-500'}`}>
-                  98/100
-                </p>
-              </div>
-            </div>
+             {/* Glow Effect */}
+             <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full ${theme.glow} blur-[80px] -z-10`}></div>
           </div>
 
         </div>
@@ -103,27 +83,3 @@ export default function TrustSection() {
     </section>
   );
 }
-
-// Sub-components for cleanliness
-function Badge({ text, color }: { text: string, color: 'amber' | 'teal' }) {
-  const styles = color === 'amber' 
-    ? "bg-amber-950/30 text-amber-200 border-amber-500/20" 
-    : "bg-teal-950/30 text-teal-200 border-teal-500/20";
-  return (
-    <span className={`px-4 py-2 rounded-lg text-sm font-semibold border ${styles}`}>
-      {text}
-    </span>
-  );
-}
-
-function VerificationItem({ label, status, isOp }: { label: string, status: string, isOp: boolean }) {
-  return (
-    <div className="flex items-center justify-between p-3 rounded-lg bg-slate-900/50 border border-slate-800">
-      <span className="text-slate-300 text-sm">{label}</span>
-      <span className={`flex items-center gap-1.5 text-xs font-bold ${isOp ? 'text-amber-500' : 'text-teal-500'}`}>
-        <CheckCircle2 className="w-3.5 h-3.5" /> {status}
-      </span>
-    </div>
-  );
-}
-

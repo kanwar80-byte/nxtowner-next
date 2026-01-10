@@ -53,7 +53,7 @@ export const EventsRequestSchema = z.object({
   path: z.string().optional(),
   referrer: z.string().optional(),
   listing_id: z.string().uuid('Listing ID must be a valid UUID').optional(),
-  properties: z.record(z.unknown()).optional(),
+  properties: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type EventsRequest = z.infer<typeof EventsRequestSchema>;

@@ -7,7 +7,7 @@ import Link from "next/link";
 
 export default function SellerCTA() {
   const { track } = useTrack();
-  const isOps = track === 'operational';
+  const isOps = track === 'real_world';
 
   return (
     <section className="relative py-24 overflow-hidden bg-slate-950">

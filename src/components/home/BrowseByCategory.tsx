@@ -26,7 +26,7 @@ const DIGITAL_CATS = [
 
 export default function BrowseByCategory() {
   const { track } = useTrack();
-  const isOperational = track === "operational";
+  const isOperational = track === "real_world";
   
   // Select the correct list based on the Toggle
   const categories = isOperational ? OPERATIONAL_CATS : DIGITAL_CATS;

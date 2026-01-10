@@ -241,7 +241,7 @@ export default async function DealRoomPage({ params, searchParams }: PageProps) 
 
   const benchmarkListings = subcategoryId
     ? await searchListingsV16({
-        subcategory: subcategoryId,
+        subcategoryId: subcategoryId,
       })
     : [];
   

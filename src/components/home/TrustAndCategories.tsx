@@ -46,7 +46,7 @@ export default function TrustAndCategories({ activeCategory, setActiveCategory }
   const { track } = useTrack();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isOperational = track === 'operational';
+  const isOperational = track === 'real_world';
   const supabase = createClient();
   
   // Dynamic categories based on mode

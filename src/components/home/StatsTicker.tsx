@@ -22,7 +22,7 @@ export default function StatsTicker() {
     ]
   };
 
-  const currentStats = track === 'operational' ? stats.operational : stats.digital;
+  const currentStats = track === 'real_world' ? stats.operational : stats.digital;
 
   return (
     <div className="w-full bg-slate-900 border-y border-slate-800">
@@ -31,7 +31,7 @@ export default function StatsTicker() {
           {currentStats.map((stat, index) => (
             <div key={index} className="py-6 flex flex-col items-center justify-center text-center group hover:bg-slate-800/50 transition-colors cursor-default">
               <div className="flex items-center space-x-2 mb-1">
-                <stat.icon className={`w-4 h-4 ${track === 'operational' ? 'text-amber-500' : 'text-teal-500'}`} />
+                <stat.icon className={`w-4 h-4 ${track === 'real_world' ? 'text-amber-500' : 'text-teal-500'}`} />
                 <span className="text-2xl font-bold text-white tracking-tight">{stat.value}</span>
               </div>
               <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{stat.label}</span>

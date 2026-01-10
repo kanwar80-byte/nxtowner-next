@@ -2,11 +2,18 @@
 
 import { Calculator } from 'lucide-react';
 import Link from 'next/link';
-import { useTrack } from '@/contexts/TrackContext';
 
-export default function CTASection() {
-  // Track is exposed for future use (e.g., track-aware CTAs)
-  const { track } = useTrack();
+interface CTASectionProps {
+  viewMode?: 'real_world' | 'digital';
+}
+
+export default function CTASection({ viewMode = 'real_world' }: CTASectionProps) {
+  const isRealWorld = viewMode === 'real_world';
+  
+  const theme = {
+    primaryButton: isRealWorld ? 'bg-amber-500 hover:bg-amber-400 shadow-amber-500/20' : 'bg-teal-500 hover:bg-teal-600 shadow-teal-500/20',
+    secondaryButton: isRealWorld ? 'border-amber-500/50 hover:border-amber-500 text-white hover:text-amber-400' : 'border-teal-500/50 hover:border-teal-500 text-white hover:text-teal-400',
+  };
   return (
     <section className="py-14 lg:py-20 bg-[#0F1623] relative overflow-hidden border-t border-white/10">
        
@@ -24,18 +31,18 @@ export default function CTASection() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-             {/* GOLD BUTTON: SELLER ACTION */}
+             {/* PRIMARY BUTTON: SELLER ACTION */}
              <Link 
                href="/seller/create" 
-               className="w-full sm:w-auto bg-[#EAB308] hover:bg-[#CA8A04] text-slate-900 px-8 py-4 rounded-full font-bold text-lg shadow-xl shadow-[#EAB308]/20 transition-all transform hover:-translate-y-1"
+               className={`w-full sm:w-auto ${theme.primaryButton} text-slate-900 px-8 py-4 rounded-full font-bold text-lg shadow-xl transition-all transform hover:-translate-y-1`}
              >
                List Your Business
              </Link>
 
-             {/* EMERALD OUTLINE: VALUATION ACTION */}
+             {/* SECONDARY OUTLINE: VALUATION ACTION */}
              <Link 
                href="/sell/valuation" 
-               className="w-full sm:w-auto flex items-center justify-center gap-2 bg-transparent border border-slate-700 hover:border-[#10B981] text-white hover:text-[#10B981] px-8 py-4 rounded-full font-bold text-lg transition-all"
+               className={`w-full sm:w-auto flex items-center justify-center gap-2 bg-transparent border ${theme.secondaryButton} px-8 py-4 rounded-full font-bold text-lg transition-all`}
              >
                <Calculator size={18} /> Free Valuation
              </Link>

@@ -10,7 +10,8 @@ import {
   ChevronDown, 
   LogOut, 
   LayoutDashboard, 
-  Briefcase 
+  Briefcase,
+  Store
 } from 'lucide-react';
 
 // --- TYPES ---
@@ -32,8 +33,8 @@ const NAV_LINKS_PUBLIC: NavLink[] = [
     href: '/browse',
     children: [
       { label: 'All Listings', href: '/browse' },
-      { label: 'Operational', href: '/browse/operational' },
-      { label: 'Digital', href: '/browse/digital' },
+      { label: 'Real World', href: '/browse?asset_type=real_world' },
+      { label: 'Digital', href: '/browse?asset_type=digital' },
     ]
   },
   { label: 'Sell', href: '/sell' },
@@ -145,6 +146,9 @@ export default function Navbar() {
                     <div className="p-2 space-y-1">
                       <Link href="/dashboard" className="flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:bg-white/5 rounded-md">
                         <LayoutDashboard size={16} /> Dashboard
+                      </Link>
+                      <Link href="/seller/dashboard" className="flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:bg-white/5 rounded-md">
+                        <Store size={16} /> Seller Dashboard
                       </Link>
                       <Link href="/billing" className="flex items-center gap-3 px-3 py-2 text-sm text-gray-300 hover:bg-white/5 rounded-md">
                         <Briefcase size={16} /> Billing

@@ -13,6 +13,7 @@ import type { ListingTeaserV17 } from '@/types/v17/search';
 interface FeaturedOperationalAcquisitionsProps {
   selectedIndustry?: string; 
   onSelectIndustry?: (industry: string) => void;
+  initialListings?: ListingTeaserV17[];
 }
 
 const INDUSTRY_NAME_TO_CODE: Record<string, string> = {
@@ -153,7 +154,7 @@ const ListingCard = ({ listing }: { listing: Listing }) => {
   );
 };
 
-export default function FeaturedOperationalAcquisitions({ selectedIndustry, onSelectIndustry }: FeaturedOperationalAcquisitionsProps) {
+export default function FeaturedOperationalAcquisitions({ selectedIndustry, onSelectIndustry, initialListings }: FeaturedOperationalAcquisitionsProps) {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -161,22 +162,9 @@ export default function FeaturedOperationalAcquisitions({ selectedIndustry, onSe
     async function fetchListings() {
       setLoading(true);
       try {
-        const filters: Record<string, unknown> = {
-          listing_type: 'operational',
-          page: 1,
-          page_size: 6,
-          sort: 'newest',
-        };
-        
-        if (selectedIndustry && selectedIndustry !== 'All') {
-          const code = INDUSTRY_NAME_TO_CODE[selectedIndustry];
-          if (code) filters.category = code;
-        }
-        
-        const response = await manualSearch(filters);
-        
-        if (response.items && response.items.length > 0) {
-          const adaptedItems = response.items.map((item: ListingTeaserV17) => {
+        // Use initialListings if provided and has items
+        if (initialListings && initialListings.length > 0) {
+          const adaptedItems = initialListings.map((item: ListingTeaserV17) => {
             
             // --- FORMATTING LOGIC ---
             const formatCurrency = (val: number) => {
@@ -198,7 +186,9 @@ export default function FeaturedOperationalAcquisitions({ selectedIndustry, onSe
                ebitdaVal = Math.floor(revenueVal * 0.18);
             }
 
-            let priceVal = item.listing_price || 0;
+            // Safe V17 price resolver
+            const price = item.asking_price ?? (item as any).price ?? null;
+            let priceVal = price ?? 0;
             // If Price is missing, estimate it at 3x Profit or 0.8x Revenue
             if (priceVal === 0) {
                priceVal = ebitdaVal > 0 ? ebitdaVal * 3.2 : revenueVal * 0.85; 
@@ -224,10 +214,102 @@ export default function FeaturedOperationalAcquisitions({ selectedIndustry, onSe
               ? `${item.location_city}, ${item.location_province || 'ON'}` 
               : "Ontario, Canada";
 
+            // Safe V17 description resolver
+            const desc = (item as any).summary ?? (item as any).short_description ?? "";
+
             return {
               id: item.id,
               title: item.title,
-              description: item.description || "Established business with consistent revenue and verified operational history.",
+              description: desc || "Established business with consistent revenue and verified operational history.",
+              category: item.category || "Real World Asset",
+              type: 'operational',
+              price: formatCurrency(priceVal),
+              revenue: formatCurrency(revenueVal),
+              cashFlow: formatCurrency(cfValue),
+              cashFlowLabel: cfLabel,
+              multiple: multipleLabel,
+              location: locationStr, 
+              imageUrl: item.hero_image_url || item.image_url || "",
+            };
+          });
+          
+          setListings(adaptedItems as any);
+          setLoading(false);
+          return;
+        }
+
+        // Fall back to fetch logic if initialListings not provided or empty
+        const filters: Record<string, unknown> = {
+          listing_type: 'operational',
+          page: 1,
+          page_size: 6,
+          sort: 'newest',
+        };
+        
+        if (selectedIndustry && selectedIndustry !== 'All') {
+          const code = INDUSTRY_NAME_TO_CODE[selectedIndustry];
+          if (code) filters.category = code;
+        }
+        
+        const response = await manualSearch(filters);
+        
+        if (response.items && response.items.length > 0) {
+          const adaptedItems = response.items.map((item: ListingTeaserV17) => {
+            // --- FORMATTING LOGIC ---
+            const formatCurrency = (val: number) => {
+              if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
+              if (val >= 1000) return `$${(val / 1000).toFixed(0)}k`;
+              return `$${val}`;
+            };
+
+            // FOUNDER HAT FIX: Force realistic data if missing
+            // If API returns 0, we calculate a logical number based on the other fields so the UI looks complete.
+            let revenueVal = item.annual_revenue || 0;
+            if (revenueVal === 0) revenueVal = 1200000 + Math.floor(Math.random() * 500000); // Mock ~$1.2M
+
+            let ebitdaVal = item.annual_ebitda || 0;
+            let cashflowVal = item.owner_cashflow || 0;
+            
+            // If Profit is missing, estimate it at 15-20% of Revenue
+            if (ebitdaVal === 0 && cashflowVal === 0) {
+               ebitdaVal = Math.floor(revenueVal * 0.18);
+            }
+
+            // Safe V17 price resolver
+            const price = item.asking_price ?? (item as any).price ?? null;
+            let priceVal = price ?? 0;
+            // If Price is missing, estimate it at 3x Profit or 0.8x Revenue
+            if (priceVal === 0) {
+               priceVal = ebitdaVal > 0 ? ebitdaVal * 3.2 : revenueVal * 0.85; 
+            }
+
+            // Determine Label (EBITDA vs SDE)
+            let cfLabel = "EBITDA";
+            let cfValue = ebitdaVal;
+            if (ebitdaVal === 0 && cashflowVal > 0) {
+              cfLabel = "SDE";
+              cfValue = cashflowVal;
+            }
+
+            // Calculate Multiple Badge
+            let multipleLabel = "Profitable";
+            if (cfValue > 0 && priceVal > 0) {
+              const mult = priceVal / cfValue;
+              multipleLabel = `${mult.toFixed(1)}x`;
+            }
+
+            // Location Logic
+            const locationStr = item.location_city 
+              ? `${item.location_city}, ${item.location_province || 'ON'}` 
+              : "Ontario, Canada";
+
+            // Safe V17 description resolver
+            const desc = (item as any).summary ?? (item as any).short_description ?? "";
+
+            return {
+              id: item.id,
+              title: item.title,
+              description: desc || "Established business with consistent revenue and verified operational history.",
               category: item.category || "Real World Asset",
               type: 'operational',
               price: formatCurrency(priceVal),
@@ -253,7 +335,7 @@ export default function FeaturedOperationalAcquisitions({ selectedIndustry, onSe
     }
 
     fetchListings();
-  }, [selectedIndustry]);
+  }, [selectedIndustry, initialListings]);
 
   return (
     <div className="w-full">

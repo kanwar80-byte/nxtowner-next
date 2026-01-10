@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export type Track = 'all' | 'operational' | 'digital';
+export type Track = 'all' | 'real_world' | 'digital';
 
 interface TrackContextType {
   track: Track;
@@ -18,36 +18,36 @@ export function TrackProvider({
   initialTrack 
 }: { 
   children: ReactNode;
-  initialTrack?: 'operational' | 'digital';
+  initialTrack?: 'real_world' | 'digital';
 }) {
   // Initialize state from initialTrack prop (passed from server via cookies)
   // This ensures SSR and client first render match
-  // Normalize 'all' to 'operational' for homepage consistency
-  const normalizeTrack = (t: Track): 'operational' | 'digital' => {
-    return t === 'digital' ? 'digital' : 'operational';
+  // Normalize 'all' to 'real_world' for homepage consistency
+  const normalizeTrack = (t: Track): 'real_world' | 'digital' => {
+    return t === 'digital' ? 'digital' : 'real_world';
   };
   
-  const [track, setTrackState] = useState<Track>(initialTrack || 'operational');
+  const [track, setTrackState] = useState<Track>(initialTrack || 'real_world');
 
   // After mount, sync with localStorage if it differs from initialTrack
   // This allows the client to pick up changes made in other tabs/sessions
-  // Normalize 'all' to 'operational' to prevent homepage desync
+  // Normalize 'all' to 'real_world' and migrate 'operational' to 'real_world' to prevent homepage desync
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored === 'operational' || stored === 'digital' || stored === 'all') {
-        // Normalize 'all' to 'operational' for homepage consistency
-        const normalizedStored = stored === 'all' ? 'operational' : stored;
-        const initialValue = initialTrack || 'operational';
+      if (stored === 'real_world' || stored === 'digital' || stored === 'all' || stored === 'operational') {
+        // Migrate 'operational' to 'real_world' and normalize 'all' to 'real_world' for homepage consistency
+        let normalizedStored: 'real_world' | 'digital' = stored === 'digital' ? 'digital' : 'real_world';
+        const initialValue = initialTrack || 'real_world';
         
         // Only update if different from initial value
         if (normalizedStored !== initialValue) {
           setTrackState(normalizedStored as Track);
-          // Update localStorage to persist normalization
-          if (stored === 'all') {
-            localStorage.setItem(STORAGE_KEY, 'operational');
+          // Update localStorage to persist normalization/migration
+          if (stored === 'all' || stored === 'operational') {
+            localStorage.setItem(STORAGE_KEY, 'real_world');
           }
         }
       }
@@ -58,17 +58,17 @@ export function TrackProvider({
   }, []); // Run only once on mount
 
   // Persist to localStorage whenever track changes
-  // Normalize 'all' to 'operational' before storing
+  // Normalize 'all' to 'real_world' before storing
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
     try {
-      // Track can be 'all' | 'operational' | 'digital', but we normalize 'all' to 'operational' for storage
-      const normalizedTrack: 'operational' | 'digital' = track === 'all' || track === 'operational' ? 'operational' : 'digital';
+      // Track can be 'all' | 'real_world' | 'digital', but we normalize 'all' to 'real_world' for storage
+      const normalizedTrack: 'real_world' | 'digital' = track === 'all' || track === 'real_world' ? 'real_world' : 'digital';
       localStorage.setItem(STORAGE_KEY, normalizedTrack);
       // Update state if normalization occurred (track was 'all')
       if (track === 'all') {
-        setTrackState('operational');
+        setTrackState('real_world');
       }
     } catch (error) {
       console.warn('Failed to save track to localStorage:', error);
@@ -76,8 +76,8 @@ export function TrackProvider({
   }, [track]);
 
   const setTrack = (newTrack: Track) => {
-    // Normalize 'all' to 'operational' for homepage consistency
-    const normalized = newTrack === 'all' ? 'operational' : newTrack;
+    // Normalize 'all' to 'real_world' for homepage consistency
+    const normalized = newTrack === 'all' ? 'real_world' : newTrack;
     setTrackState(normalized);
   };
 

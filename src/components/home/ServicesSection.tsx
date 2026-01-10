@@ -1,15 +1,17 @@
 "use client";
 
-import { useTrack } from "@/contexts/TrackContext";
 import { 
   Scale, FileSearch, HardHat, TrendingUp, 
   Code2, ServerCrash, ArrowRight, ShieldCheck 
 } from "lucide-react";
 import Link from "next/link";
 
-export default function ServicesSection() {
-  const { track } = useTrack();
-  const isOperational = track === 'operational';
+interface ServicesSectionProps {
+  viewMode?: 'real_world' | 'digital';
+}
+
+export default function ServicesSection({ viewMode = 'real_world' }: ServicesSectionProps) {
+  const isOperational = viewMode === 'real_world';
 
   // DYNAMIC SERVICES DATA
   const services = isOperational ? [
@@ -44,14 +46,14 @@ export default function ServicesSection() {
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 transition-colors ${
                 isOperational 
                   ? "bg-amber-500/10 text-amber-500 group-hover:bg-amber-500 group-hover:text-black" 
-                  : "bg-teal-500/10 text-teal-500 group-hover:bg-teal-500 group-hover:text-black"
+                  : "bg-teal-400/10 text-teal-400 group-hover:bg-teal-400 group-hover:text-black"
               }`}>
                 <service.icon className="w-6 h-6" />
               </div>
               <h3 className="text-lg font-bold text-white mb-2">{service.title}</h3>
               <p className="text-sm text-slate-400 mb-4 min-h-[40px]">{service.desc}</p>
               <Link href="/services" className={`text-sm font-bold flex items-center gap-1 ${
-                isOperational ? "text-amber-500" : "text-teal-500"
+                isOperational ? "text-amber-500" : "text-teal-400"
               }`}>
                 Book Expert <ArrowRight className="w-4 h-4" />
               </Link>

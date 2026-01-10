@@ -13,7 +13,7 @@ import { OPERATIONAL_SUGGESTIONS, DIGITAL_SUGGESTIONS, LOCATIONS } from "@/lib/s
 export default function HeroSection() {
   const { track, setTrack } = useTrack();
   const router = useRouter();
-  const isOperational = track === 'operational';
+  const isOperational = track === 'real_world';
 
   // --- STATE ---
   const [query, setQuery] = useState("");
@@ -83,7 +83,7 @@ export default function HeroSection() {
             <div className="bg-slate-900/80 p-1 rounded-full border border-slate-800 flex items-center shadow-2xl backdrop-blur-md">
               
               <button
-                onClick={() => { setTrack('operational'); setQuery(""); }}
+                onClick={() => { setTrack('real_world'); setQuery(""); }}
                 className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-bold transition-all duration-300 ${
                   isOperational 
                     ? "bg-amber-500 text-black shadow-[0_0_20px_rgba(245,158,11,0.4)] scale-105" 

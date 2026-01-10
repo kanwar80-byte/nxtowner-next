@@ -1,7 +1,6 @@
 import "server-only";
 
 import type { SearchFiltersV17, SortOption } from '@/types/v17/search';
-import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * V17 Canonical Query Builder
@@ -16,11 +15,13 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 /**
  * Apply search filters to Supabase query
  * Validates listing_type, category, subcategory before applying
+ * 
+ * Temporary typing bridge; queryBuilder currently unused; will be tightened when V17 direct-table querying is enabled.
  */
 export function applySearchFilters(
-  query: ReturnType<SupabaseClient['from']>['select'],
+  query: any,
   filters: SearchFiltersV17
-): ReturnType<SupabaseClient['from']>['select'] {
+): any {
   let q = query;
 
   // Listing type filter
@@ -92,11 +93,13 @@ export function applySearchFilters(
  * - price_low/high = asking_price ASC/DESC
  * - revenue_high = annual_revenue DESC
  * - cashflow_high = owner_cashflow DESC
+ * 
+ * Temporary typing bridge; queryBuilder currently unused; will be tightened when V17 direct-table querying is enabled.
  */
 export function applySorting(
-  query: ReturnType<SupabaseClient['from']>['select'],
+  query: any,
   sort?: SortOption
-): ReturnType<SupabaseClient['from']>['select'] {
+): any {
   let q = query;
 
   if (!sort || sort === 'relevance') {
@@ -120,12 +123,14 @@ export function applySorting(
 
 /**
  * Apply pagination to Supabase query
+ * 
+ * Temporary typing bridge; queryBuilder currently unused; will be tightened when V17 direct-table querying is enabled.
  */
 export function applyPaging(
-  query: ReturnType<SupabaseClient['from']>['select'],
+  query: any,
   page?: number,
   page_size?: number
-): ReturnType<SupabaseClient['from']>['select'] {
+): any {
   let q = query;
 
   const pageNum = page && page > 0 ? page : 1;

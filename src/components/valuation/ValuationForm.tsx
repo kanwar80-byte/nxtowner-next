@@ -1,7 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import type { ValuationRequest, ValuationResponse } from "@/app/api/valuation/route";
+import type { ValuationResponse } from "@/app/api/valuation/route";
+
+// Local type definition for valuation request (based on fields used in this form)
+type ValuationRequest = {
+  asset_type: string;
+  location: string;
+  annual_revenue: number;
+  annual_profit: number;
+  years_in_operation: number;
+  key_highlights: string;
+  asking_price?: number;
+  risk_flags?: string;
+};
 
 const ASSET_TYPES = [
   { value: "physical-gas-station", label: "Physical – Gas Station" },
@@ -36,12 +48,12 @@ export function ValuationForm() {
     const { name, value } = e.target;
 
     if (name === "annual_revenue" || name === "annual_profit" || name === "asking_price" || name === "years_in_operation") {
-      setFormData((prev) => ({
+      setFormData((prev: ValuationRequest) => ({
         ...prev,
         [name]: value === "" ? 0 : parseFloat(value),
       }));
     } else {
-      setFormData((prev) => ({
+      setFormData((prev: ValuationRequest) => ({
         ...prev,
         [name]: value,
       }));

@@ -80,6 +80,7 @@ export default function Footer() {
                 <li><Link href="/careers" className="hover:text-white transition-colors">Careers</Link></li>
                 <li><Link href="/contact" className="hover:text-white transition-colors">Contact Support</Link></li>
                 <li><Link href="/partners" className="hover:text-white transition-colors">Partner Program</Link></li>
+                <li><Link href="/trust/verification" className="hover:text-white transition-colors">Trust & Verification</Link></li>
               </ul>
             </div>
 

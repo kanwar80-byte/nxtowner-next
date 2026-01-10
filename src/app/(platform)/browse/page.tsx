@@ -1,159 +1,150 @@
-﻿import BrowseClientShell from "@/components/platform/BrowseClientShell";
+﻿import { Suspense } from "react";
+import { Monitor, Briefcase } from "lucide-react";
+
+// --- V17 BRAIN (New Database Connection) ---
+import { searchListingsV17, type SearchFiltersV17 } from "@/lib/v17/listings.repo";
+import type { AssetTypeV17 } from "@/lib/v17/types";
+
+// Mapper: Convert Track/route values to AssetTypeV17 (real_world => operational)
+const toAssetTypeV17 = (trackOrAsset?: string): AssetTypeV17 | undefined => {
+  if (!trackOrAsset) return undefined;
+  if (trackOrAsset === "real_world") return "operational";
+  if (trackOrAsset === "operational") return "operational";
+  if (trackOrAsset === "digital") return "digital";
+  return undefined;
+};
+
+// --- V16 FALLBACK (Facets Only - Keep until V17 Facets are ready) ---
+import { getBrowseFacetsV16 } from "@/lib/v16/facets.repo";
+import { getCategoryIdByCode, getSubcategoryIdByCode } from "@/lib/v16/taxonomy.repo";
+
+// --- UI COMPONENTS ---
+import BrowseClientShell from "@/components/platform/BrowseClientShell";
 import FilterSidebar from "@/components/platform/FilterSidebar";
-import { getBrowseFacetsV16, type BrowseFacetsV16 } from "@/lib/v16/facets.repo";
-import { searchListingsV16, normalizeAssetType } from "@/lib/v16/listings.repo";
-import { getCategoryIdByCode, getSubcategoryIdByCode, getCategoryIdByName } from "@/lib/v16/taxonomy.repo";
-import type { ListingTeaserV16 } from "@/lib/v16/types";
-import { Suspense } from "react";
-
-
 
 export default async function BrowsePage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  // --- START TRANSLATION LAYER ---
-  const sp = searchParams || {};
+  // 1. Await Params (Next.js 16)
+  const sp = (await searchParams) || {};
 
-  // 1. Normalize Asset Type (read from listing_type, assetType, type, asset_type params)
-  // Priority: listing_type (V17 canonical) > assetType > type > asset_type
-  const rawType = (sp.listing_type || sp.assetType || sp.type || sp.asset_type) as string | undefined;
-  const assetTypeFilter = normalizeAssetType(rawType); // Returns "operational" | "digital" | undefined
-
-  // 2. Normalize Prices
-  const minPrice = sp.min_price ? Number(sp.min_price) : undefined;
-  const maxPrice = sp.max_price ? Number(sp.max_price) : undefined;
-
-  // 3. Read categoryId/subcategoryId from URL (UUIDs) or resolve category/subcategory codes to UUIDs
-  let categoryId: string | undefined = undefined;
-  let subcategoryId: string | undefined = undefined;
+  // 2. Parse Asset Type (No default - undefined means show ALL assets)
+  // Keep raw value for UI logic, map to AssetTypeV17 for filters
+  const rawType = sp.asset_type as string | undefined;
+  const assetTypeFilterRoute: 'real_world' | 'digital' | undefined = 
+    rawType === 'real_world' ? 'real_world' 
+    : rawType === 'digital' ? 'digital' 
+    : undefined; // undefined = show all assets
   
-  // Priority 1: Use categoryId/subcategoryId if provided directly (UUIDs)
-  const categoryIdParam = sp.categoryId as string | undefined;
-  const subcategoryIdParam = sp.subcategoryId as string | undefined;
-  if (categoryIdParam) categoryId = categoryIdParam;
-  if (subcategoryIdParam) subcategoryId = subcategoryIdParam;
-  
-  // Priority 2: If not provided, try to resolve category/subcategory codes or canonical names to UUIDs
+  const assetTypeFilterV17 = toAssetTypeV17(assetTypeFilterRoute);
+  const isRealWorld = assetTypeFilterRoute === 'real_world';
+  const isDigital = assetTypeFilterRoute === 'digital';
+  const showAllAssets = assetTypeFilterRoute === undefined;
+
+  // 3. Resolve Categories (V16 Taxonomy Bridge)
   const categoryCode = sp.category as string | undefined;
   const subcategoryCode = sp.subcategory as string | undefined;
-  if (!categoryId && categoryCode && typeof categoryCode === 'string') {
-    try {
-      // Try resolving as code first (e.g., "saas_software")
-      let resolvedId = await getCategoryIdByCode(categoryCode);
-      // If code resolution fails, try resolving as canonical name (e.g., "SaaS", "E-Commerce")
-      if (!resolvedId) {
-        resolvedId = await getCategoryIdByName(categoryCode);
-      }
-      if (resolvedId) {
-        categoryId = resolvedId;
-      }
-    } catch (err) {
-      // Category code/name resolution failed - this is fine
-      console.warn(`Category resolution failed for "${categoryCode}":`, err);
-    }
+  let categoryId: string | undefined;
+  let subcategoryId: string | undefined;
+
+  // Fail-soft ID resolution
+  if (categoryCode) {
+     try { categoryId = await getCategoryIdByCode(categoryCode) || undefined; } catch(e) {}
   }
-  if (!subcategoryId && subcategoryCode && typeof subcategoryCode === 'string') {
-    try {
-      const resolvedId = await getSubcategoryIdByCode(subcategoryCode);
-      if (resolvedId) {
-        subcategoryId = resolvedId;
-      }
-    } catch (err) {
-      // Subcategory code not found or error - this is fine
-      console.warn(`Subcategory code resolution failed for "${subcategoryCode}":`, err);
-    }
+  if (subcategoryCode) {
+     try { subcategoryId = await getSubcategoryIdByCode(subcategoryCode) || undefined; } catch(e) {}
   }
 
-  // 4. Build Clean Filter Object (UUID preferred)
-  const filters = {
-    query: sp.q as string | undefined,
-    assetType: assetTypeFilter,
+  // 4. Construct V17 Filters
+  const v17Filters: SearchFiltersV17 = {
+    query: sp.q as string,
+    asset_type: assetTypeFilterV17, // Mapped to AssetTypeV17: 'operational' or 'digital' or undefined
+    min_price: sp.min_price ? Number(sp.min_price) : undefined,
+    max_price: sp.max_price ? Number(sp.max_price) : undefined,
+    category_id: categoryId,
+    subcategory_id: subcategoryId,
+    sort: (sp.sort as 'newest' | 'price_low' | 'price_high') || 'newest',
+    limit: 20,
+    offset: sp.page ? (Number(sp.page) - 1) * 20 : undefined
+  };
+
+  // 5. FETCH DATA (V17 Engine) - Returns paginated shape
+  let listings: any[] = [];
+  let total = 0;
+  try {
+    const result = await searchListingsV17(v17Filters);
+    listings = result.items || [];
+    total = result.total || 0;
+  } catch (err) {
+    console.warn("V17 Fetch Error:", err);
+    listings = [];
+    total = 0;
+  }
+
+  // 6. FETCH FACETS (V16 Bridge)
+  // We map V17 filters back to V16 shape for the sidebar counts
+  // Note: When showing all assets, don't filter facets by asset type
+  const v16FiltersForFacets = {
+    assetType: showAllAssets ? undefined : (isRealWorld ? 'Operational' : 'Digital'), // V16 uses Capitalized
     categoryId,
     subcategoryId,
-    minPrice,
-    maxPrice,
-    sort: (sp.sort as string) || 'newest',
-  };
-  // --- END TRANSLATION LAYER ---
-
-  // Debug: Log filters (only in debug mode)
-  if (process.env.NEXT_PUBLIC_DEBUG_LISTINGS === "1") {
-    console.log('[browse/page] searchListingsV16 filters:', JSON.stringify(filters, null, 2));
-  }
-
-  // Fetch listings and facets (will return empty array if no matches, not 404)
-  // NEVER throw or call notFound() - always render the page
-  let listings: ListingTeaserV16[] = [];
-  let facets: BrowseFacetsV16 = { 
-    categoryCounts: {}, 
-    subcategoryCounts: {}, 
-    assetTypeCounts: {}, 
-    total: 0 
+    minPrice: v17Filters.min_price,
+    maxPrice: v17Filters.max_price,
+    query: v17Filters.query
   };
 
+  let facets: any = { categoryCounts: {}, subcategoryCounts: {}, assetTypeCounts: {}, total: 0 };
   try {
-    listings = await searchListingsV16(filters) || [];
-  } catch (err) {
-    // If fetch fails, show empty state (not 404)
-    console.warn('Error fetching listings:', err);
-    listings = [];
-  }
+    facets = await getBrowseFacetsV16(v16FiltersForFacets) || facets;
+  } catch (err) { console.warn("Facet Fetch Error:", err); }
 
-  try {
-    facets = await getBrowseFacetsV16(filters) || facets;
-  } catch (err) {
-    // If facets fetch fails, use empty facets (not 404)
-    console.warn('Error fetching facets:', err);
-    facets = { categoryCounts: {}, subcategoryCounts: {}, assetTypeCounts: {}, total: 0 };
-  }
-
-  // Determine if we have an unknown category
-  const hasCategoryFilter = Boolean(categoryCode);
-  const isUnknownCategory = hasCategoryFilter && !categoryId && listings.length === 0;
+  // 7. THEME ENGINE (Dark Mode)
+  // When showing all assets, use a neutral theme (default to amber for consistency)
+  const theme = {
+    accent: showAllAssets ? 'text-slate-300' : (isRealWorld ? 'text-amber-500' : 'text-teal-400'),
+    bg: showAllAssets ? 'bg-slate-500/10' : (isRealWorld ? 'bg-amber-500/10' : 'bg-teal-400/10'),
+    icon: showAllAssets ? Briefcase : (isRealWorld ? Briefcase : Monitor)
+  };
+  const Icon = theme.icon;
 
   return (
-    <div className="flex flex-col min-h-screen pt-20 bg-slate-50/50">
-      <div className="max-w-[1600px] mx-auto w-full px-6 py-8">
-        <div className="mb-8 border-b pb-6">
-          <h1 className="text-3xl font-bold text-slate-900">Marketplace</h1>
-          <p className="text-slate-500 mt-1">
-            Discover and acquire vetted business opportunities.
+    <div className="flex flex-col min-h-screen pt-24 bg-[#050505] text-slate-200">
+      <div className="max-w-[1600px] mx-auto w-full px-4 md:px-6 py-8">
+        
+        {/* HEADER */}
+        <div className="mb-8 border-b border-slate-800 pb-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className={`p-2 rounded-lg ${theme.bg} ${theme.accent}`}>
+              <Icon className="w-6 h-6" />
+            </div>
+            <h1 className="text-3xl font-bold text-white">
+              {showAllAssets 
+                ? 'All Assets' 
+                : (isRealWorld ? 'Real World Acquisitions' : 'Digital Assets')}
+            </h1>
+          </div>
+          <p className="text-slate-400 max-w-2xl">
+            {showAllAssets
+              ? 'Browse all verified businesses across Real World and Digital assets.'
+              : (isRealWorld 
+                  ? 'Discover verified gas stations, franchises, and industrial businesses.'
+                  : 'Discover vetted SaaS, e-commerce brands, and agency opportunities.')}
           </p>
-          {isUnknownCategory && categoryCode && (
-            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-sm text-amber-800">
-                <strong>Category not found:</strong> No listings found for category &quot;{categoryCode}&quot;. 
-                Showing all listings instead.
-              </p>
-            </div>
-          )}
-          {hasCategoryFilter && !isUnknownCategory && listings.length === 0 && (
-            <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-              <p className="text-sm text-slate-700">
-                No listings found for this category.
-              </p>
-            </div>
-          )}
         </div>
 
         <div className="flex gap-8 items-start">
-          <aside className="w-64 flex-shrink-0 sticky top-28 h-[calc(100vh-120px)] overflow-y-auto hidden md:block">
+          <aside className="w-64 shrink-0 sticky top-28 h-[calc(100vh-120px)] overflow-y-auto hidden md:block border-r border-slate-800 pr-4">
             <FilterSidebar categoryCounts={facets.categoryCounts} />
           </aside>
 
           <main className="flex-1 min-w-0">
-            <Suspense fallback={<div className="animate-pulse space-y-4">Loading listings...</div>}>
+            <Suspense fallback={<div className="animate-pulse text-slate-500">Loading listings...</div>}>
               <BrowseClientShell 
-                listings={listings || []} 
-                emptyStateReason={
-                  isUnknownCategory 
-                    ? "no_results" 
-                    : listings.length === 0 
-                      ? (hasCategoryFilter ? "no_results" : null)
-                      : null
-                }
+                listings={listings} 
+                emptyStateReason={listings.length === 0 ? "no_results" : null}
+                track={assetTypeFilterRoute || null}
               />
             </Suspense>
           </main>

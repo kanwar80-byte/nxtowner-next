@@ -1,227 +1,358 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useTrack, TrackProvider } from "@/contexts/TrackContext";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Lock, Calculator, FileCheck, ShieldCheck } from "lucide-react";
+import { Briefcase, ArrowRight } from "lucide-react";
 
-// --- COMPONENTS ---
-import HeroSection from "@/components/home/HeroSection"; // <--- NEW IMPORT
-import CategoryGrid from "@/components/home/CategoryGrid"; // <--- NOW HANDLES BOTH
-import FeaturedDigitalAcquisitions from "@/components/home/FeaturedDigitalAcquisitions";
-import FeaturedOperationalAcquisitions from "@/components/home/FeaturedOperationalAcquisitions";
+// --- ENTERPRISE MODULES ---
+import HeroSearch from "@/components/home/HeroSearch";
+import CategoryGrid from "@/components/home/CategoryGrid";
+import ProcessRoadmap from "@/components/home/ProcessRoadmap";
+import TrustSection from "@/components/home/TrustSection";
 import ServicesSection from "@/components/home/ServicesSection";
-import SellerCTA from "@/components/home/SellerCTA";
+import PartnersSection from "@/components/home/PartnersSection";
+import CTASection from "@/components/home/CTASection";
 import MarketInsights from "@/components/home/MarketInsights";
+import Image from "next/image";
 
 // --- TYPES ---
 interface HomePageClientProps {
-  initialData?: any; // Replace with specific type if you have it
+  digitalData?: any; 
+  realWorldData?: any;
+  initialOperationalListings?: any[];
+  initialDigitalListings?: any[];
+  initialNewListings?: any[];
 }
 
-function HomeContent({ initialData }: HomePageClientProps) {
-  const { track } = useTrack();
-  const router = useRouter();
-  const isOperational = track === 'operational';
-  const modeParam = isOperational ? 'operational' : 'digital';
+function HomeContent({ initialOperationalListings, initialDigitalListings, initialNewListings }: HomePageClientProps) {
+  const { track, setTrack } = useTrack();
+
+  // State Management: View mode for switching between real_world and digital
+  const [viewMode, setViewMode] = useState<'real_world' | 'digital'>('real_world');
+
+  // Prevent Hydration Mismatch
+  const [mounted, setMounted] = useState(false);
+  
+  // UX UPDATE: Set default to 'real_world' (Real World) on mount if no track is set
+  // Sync viewMode with track context
+  useEffect(() => {
+    setMounted(true);
+    if (!track) {
+      setTrack('real_world');
+      setViewMode('real_world');
+    } else {
+      // Map track to viewMode
+      setViewMode(track === 'digital' ? 'digital' : 'real_world');
+    }
+  }, [track, setTrack]);
+
+  if (!mounted) return null;
+
+  // Theme configuration based on viewMode
+  // Real World: Amber-500 for all accents
+  // Digital: Teal-400 for all accents (as per original design)
+  const theme = {
+    accent: viewMode === 'real_world' ? 'amber' : 'teal',
+    accentText: viewMode === 'real_world' ? 'text-amber-500' : 'text-teal-400',
+    accentBg: viewMode === 'real_world' ? 'bg-amber-500/20' : 'bg-teal-400/20',
+    borderColor: viewMode === 'real_world' ? 'border-amber-500/50' : 'border-teal-400/50',
+    hoverBorder: viewMode === 'real_world' ? 'hover:border-amber-500/50' : 'hover:border-teal-400/50',
+    hoverText: viewMode === 'real_world' ? 'hover:text-amber-400' : 'hover:text-teal-400',
+    selectionBg: viewMode === 'real_world' ? 'selection:bg-amber-500/30' : 'selection:bg-teal-400/30',
+    badgeBg: viewMode === 'real_world' ? 'bg-amber-500/90' : 'bg-teal-400/90',
+  };
+
+  // Filter New This Week listings by viewMode
+  const filteredNewListings = initialNewListings?.filter(item => item.asset_type === viewMode) || [];
+
+  // Determine which featured listings to show
+  const featuredListings = viewMode === 'real_world' ? initialOperationalListings : initialDigitalListings;
+
+  // Update track context when viewMode changes
+  const handleViewModeChange = (mode: 'real_world' | 'digital') => {
+    setViewMode(mode);
+    setTrack(mode);
+  };
 
   return (
-    <main className="min-h-screen bg-[#050505] text-slate-200 selection:bg-teal-500/30">
+    <main className={`min-h-screen bg-[#050505] overflow-x-hidden ${theme.selectionBg}`}>
       
-      {/* 1. NEW SMART HERO (Handles Toggle & Search) */}
-      <HeroSection />
+      {/* 1. HERO SECTION - Replaced with HeroSearch */}
+      <HeroSearch mode={viewMode} setMode={handleViewModeChange} />
 
-      {/* 2. UNIFIED BROWSE GRID (Auto-switches based on track) */}
-      <section id="browse-models" className="relative z-20 -mt-10 mb-12">
-        <CategoryGrid /> 
+      {/* 2. CATEGORIES */}
+      <section className="mb-24 relative z-20">
+         <CategoryGrid /> 
       </section>
 
-      {/* 3. FEATURED LISTINGS (DUAL TRACK) */}
-      <section id="featured-listings" className="py-12 border-t border-slate-900 bg-slate-950/50">
-        <div className="container mx-auto px-4">
-          
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold text-white">
-              Featured <span className={isOperational ? "text-amber-500" : "text-teal-500"}>
-                {isOperational ? "Real World" : "Digital"}
-              </span> Listings
-            </h2>
-            <Link 
-              href={isOperational ? "/browse/operational" : "/browse/digital"} 
-              className={`font-medium flex items-center gap-1 transition-colors ${
-                isOperational ? "text-amber-500 hover:text-amber-400" : "text-teal-500 hover:text-teal-400"
-              }`}
-            >
-              View All <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          {/* Conditional Rendering based on Track */}
-          {isOperational ? (
-            <FeaturedOperationalAcquisitions />
-          ) : (
-            <FeaturedDigitalAcquisitions /> 
-          )}
-
-        </div>
-      </section>
-
-      {/* 4. VALUE PROPOSITION (Context Aware) */}
-      <section id="value-prop-section" className="py-24 bg-[#050505] relative overflow-hidden">
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
-              The Operating System for <br />
-              <span className={isOperational ? "text-amber-500" : "text-teal-500"}>
-                {isOperational ? "Real World Deals." : "Digital Deals."}
-              </span>
-            </h2>
-            <p className="text-slate-400 text-lg">
-              {isOperational 
-                ? "From Main Street to Industrial, we provide the data, verification, and deal rooms to close confidently."
-                : "From SaaS to E-commerce, we provide the metrics, code audits, and migration support to close faster."}
-            </p>
-          </div>
-          
-          {/* 3-Column Value Prop */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-             {/* Card 1 */}
-            <div className="p-8 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-slate-700 transition-colors">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 ${
-                isOperational ? "bg-amber-500/10 text-amber-500" : "bg-teal-500/10 text-teal-500"
-              }`}>
-                <FileCheck className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">Smart Discovery</h3>
-              <p className="text-slate-400">
-                {isOperational 
-                  ? "Filter by EBITDA, location, and asset type. Verified financials only."
-                  : "Filter by MRR, churn, and tech stack. API-verified metrics only."}
-              </p>
+      {/* 3. FEATURED LISTINGS - Conditionally rendered based on viewMode */}
+      {viewMode === 'real_world' && featuredListings && featuredListings.length > 0 && (
+        <section className="py-12 border-t border-slate-900 bg-slate-950/50">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl font-bold text-white">
+                Featured <span className={theme.accentText}>Real World</span> Listings
+              </h2>
+              <Link 
+                href="/browse?asset_type=real_world" 
+                className={`font-medium flex items-center gap-1 transition-colors ${theme.accentText} ${theme.hoverText}`}
+              >
+                View All <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
 
-             {/* Card 2 */}
-            <div className="p-8 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-slate-700 transition-colors">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 ${
-                isOperational ? "bg-amber-500/10 text-amber-500" : "bg-teal-500/10 text-teal-500"
-              }`}>
-                <Lock className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">NDA-Gated Rooms</h3>
-              <p className="text-slate-400">
-                Securely access P&L, tax returns, and operational data behind instant NDAs.
-              </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {featuredListings.slice(0, 8).map((listing: any) => {
+                const price = listing.asking_price 
+                  ? new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(listing.asking_price)
+                  : 'Contact for Price';
+                
+                const cashFlow = listing.cash_flow 
+                  ? new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0, notation: 'compact' }).format(listing.cash_flow)
+                  : 'N/A';
+                
+                const location = listing.city && listing.province 
+                  ? `${listing.city}, ${listing.province}` 
+                  : listing.city || listing.province || 'Canada';
+
+                return (
+                  <Link 
+                    key={listing.id} 
+                    href={`/listing/${listing.id}`} 
+                    className={`group block bg-slate-900 border border-slate-800 rounded-xl overflow-hidden ${theme.hoverBorder} transition-all shadow-lg h-full flex flex-col`}
+                  >
+                    <div className="relative h-48 w-full bg-slate-800">
+                      {listing.hero_image_url ? (
+                        <Image 
+                          src={listing.hero_image_url} 
+                          alt={listing.title || 'Listing'} 
+                          fill
+                          className="object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
+                          <Briefcase className="w-12 h-12 text-slate-600" />
+                        </div>
+                      )}
+                      <div className="absolute bottom-3 right-3 bg-slate-950/90 text-white px-3 py-1 rounded text-sm font-bold shadow-sm border border-slate-700">
+                        {price}
+                      </div>
+                    </div>
+                    <div className="p-5 flex flex-col flex-grow">
+                      <h3 className={`text-lg font-bold text-white mb-2 line-clamp-2 ${viewMode === 'real_world' ? 'group-hover:text-amber-400' : 'group-hover:text-teal-400'} transition-colors`}>
+                        {listing.title || 'Untitled Listing'}
+                      </h3>
+                      <p className="text-xs text-slate-500 mb-4">Real World Asset</p>
+                      <div className="mt-auto flex items-center justify-between pt-4 border-t border-slate-800">
+                        <div className="flex items-center gap-2 text-slate-400 text-xs">
+                          <Briefcase className={`w-3.5 h-3.5 ${theme.accentText}`}/>
+                          {location}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Cash Flow</p>
+                          <p className="text-sm font-bold text-emerald-400">{cashFlow}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* 3. FEATURED DIGITAL LISTINGS - Conditionally rendered based on viewMode */}
+      {viewMode === 'digital' && featuredListings && featuredListings.length > 0 && (
+        <section className="py-12 border-t border-slate-900 bg-slate-950/50">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl font-bold text-white">
+                Featured <span className={theme.accentText}>Digital</span> Listings
+              </h2>
+              <Link 
+                href="/browse?asset_type=digital" 
+                className={`font-medium flex items-center gap-1 transition-colors ${theme.accentText} ${theme.hoverText}`}
+              >
+                View All <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
 
-             {/* Card 3 */}
-            <div className="p-8 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-slate-700 transition-colors">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 ${
-                isOperational ? "bg-amber-500/10 text-amber-500" : "bg-teal-500/10 text-teal-500"
-              }`}>
-                <Calculator className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3">Fair Valuation</h3>
-              <p className="text-slate-400">
-                 {isOperational 
-                  ? "Market-based multiples for Main Street & Franchise assets."
-                  : "Data-driven multiples for SaaS & Digital assets."}
-              </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {featuredListings.slice(0, 8).map((listing: any) => {
+                const price = listing.asking_price 
+                  ? new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(listing.asking_price)
+                  : 'Contact for Price';
+                
+                const revenue = listing.revenue_annual 
+                  ? new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0, notation: 'compact' }).format(listing.revenue_annual)
+                  : 'N/A';
+                
+                const location = listing.city && listing.province 
+                  ? `${listing.city}, ${listing.province}` 
+                  : listing.city || listing.province || 'Remote';
+
+                return (
+                  <Link 
+                    key={listing.id} 
+                    href={`/listing/${listing.id}`} 
+                    className={`group block bg-slate-900 border border-slate-800 rounded-xl overflow-hidden ${theme.hoverBorder} transition-all shadow-lg h-full flex flex-col`}
+                  >
+                    <div className="relative h-48 w-full bg-slate-800">
+                      {listing.hero_image_url ? (
+                        <Image 
+                          src={listing.hero_image_url} 
+                          alt={listing.title || 'Listing'} 
+                          fill
+                          className="object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
+                          <Briefcase className="w-12 h-12 text-slate-600" />
+                        </div>
+                      )}
+                      <div className="absolute bottom-3 right-3 bg-slate-950/90 text-white px-3 py-1 rounded text-sm font-bold shadow-sm border border-slate-700">
+                        {price}
+                      </div>
+                    </div>
+                    <div className="p-5 flex flex-col flex-grow">
+                      <h3 className={`text-lg font-bold text-white mb-2 line-clamp-2 ${viewMode === 'digital' ? 'group-hover:text-teal-400' : 'group-hover:text-amber-400'} transition-colors`}>
+                        {listing.title || 'Untitled Listing'}
+                      </h3>
+                      <p className="text-xs text-slate-500 mb-4">Digital Asset</p>
+                      <div className="mt-auto flex items-center justify-between pt-4 border-t border-slate-800">
+                        <div className="flex items-center gap-2 text-slate-400 text-xs">
+                          <Briefcase className={`w-3.5 h-3.5 ${theme.accentText}`}/>
+                          {location}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Revenue</p>
+                          <p className="text-sm font-bold text-emerald-400">{revenue}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* 5. DEAL ROOMS / TRUST SECTION */}
-      <section id="deal-rooms-section" className="py-24 bg-slate-900 border-t border-slate-800">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-12">
-             <div className="flex-1">
-               <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border mb-4 ${
-                 isOperational ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-teal-500/10 text-teal-500 border-teal-500/20'
-               }`}>
-                 SECURE NXTDEAL™ FLOW
-               </div>
-               <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                 NDA-Gated NxtDealRoom™
-               </h2>
-               <p className="text-slate-400 text-lg mb-6">
-                 {isOperational
-                   ? "Sensitive financials and tax documents stay protected behind NDA-gated rooms."
-                   : "Source code, analytics access, and sensitive IP stay protected behind NDA-gated rooms."}
-               </p>
-               <Link href={`/how-it-works?mode=${modeParam}`} className={`font-semibold hover:opacity-80 transition-colors flex items-center gap-2 ${
-                 isOperational ? 'text-amber-500' : 'text-teal-500'
-               }`}>
-                 How verification works <ArrowRight className="w-4 h-4" />
-               </Link>
-             </div>
-             {/* Visual representation of a locked file */}
-             <div className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl p-8 shadow-2xl">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-800">
-                    <span className="text-slate-400 text-sm">Profit & Loss (2024)</span>
-                    <Lock className="w-4 h-4 text-red-400" />
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-800">
-                    <span className="text-slate-400 text-sm">Tax Returns (T2)</span>
-                    <Lock className="w-4 h-4 text-red-400" />
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-800">
-                    <span className="text-slate-400 text-sm">Bank Statements</span>
-                    <Lock className="w-4 h-4 text-red-400" />
-                  </div>
-                </div>
-             </div>
+      {/* 4. NEW THIS WEEK SECTION - Filtered by viewMode */}
+      {filteredNewListings && filteredNewListings.length > 0 && (
+        <section className="py-12 border-t border-slate-900 bg-slate-950/30">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-3xl font-bold text-white">
+                  New <span className={theme.accentText}>This Week</span>
+                </h2>
+                <p className="text-slate-400 mt-2">
+                  The latest {viewMode === 'real_world' ? 'Real World' : 'Digital'} listings added recently
+                </p>
+              </div>
+              <Link 
+                href={`/browse?asset_type=${viewMode}&sort=newest`} 
+                className={`font-medium flex items-center gap-1 transition-colors ${theme.accentText} ${theme.hoverText}`}
+              >
+                View All <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {filteredNewListings.map((listing: any) => {
+                const price = listing.asking_price 
+                  ? new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 }).format(listing.asking_price)
+                  : 'Contact for Price';
+                
+                const cashFlow = listing.cash_flow 
+                  ? new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0, notation: 'compact' }).format(listing.cash_flow)
+                  : 'N/A';
+                
+                const revenue = listing.revenue_annual 
+                  ? new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0, notation: 'compact' }).format(listing.revenue_annual)
+                  : 'N/A';
+                
+                const location = listing.city && listing.province 
+                  ? `${listing.city}, ${listing.province}` 
+                  : listing.city || listing.province || (viewMode === 'real_world' ? 'Canada' : 'Remote');
+
+                return (
+                  <Link 
+                    key={listing.id} 
+                    href={`/listing/${listing.id}`} 
+                    className={`group block bg-slate-900 border border-slate-800 rounded-xl overflow-hidden ${theme.hoverBorder} transition-all shadow-lg h-full flex flex-col`}
+                  >
+                    <div className="relative h-48 w-full bg-slate-800">
+                      {listing.hero_image_url ? (
+                        <Image 
+                          src={listing.hero_image_url} 
+                          alt={listing.title || 'Listing'} 
+                          fill
+                          className="object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
+                          <Briefcase className="w-12 h-12 text-slate-600" />
+                        </div>
+                      )}
+                      <div className="absolute top-3 left-3">
+                        <span className={`${theme.badgeBg} text-black px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide`}>
+                          New
+                        </span>
+                      </div>
+                      <div className="absolute bottom-3 right-3 bg-slate-950/90 text-white px-3 py-1 rounded text-sm font-bold shadow-sm border border-slate-700">
+                        {price}
+                      </div>
+                    </div>
+                    <div className="p-5 flex flex-col flex-grow">
+                      <h3 className={`text-lg font-bold text-white mb-2 line-clamp-2 ${viewMode === 'real_world' ? 'group-hover:text-amber-400' : 'group-hover:text-teal-400'} transition-colors`}>
+                        {listing.title || 'Untitled Listing'}
+                      </h3>
+                      <p className="text-xs text-slate-500 mb-4">
+                        {viewMode === 'real_world' ? 'Real World Asset' : 'Digital Asset'}
+                      </p>
+                      <div className="mt-auto flex items-center justify-between pt-4 border-t border-slate-800">
+                        <div className="flex items-center gap-2 text-slate-400 text-xs">
+                          <Briefcase className={`w-3.5 h-3.5 ${theme.accentText}`}/>
+                          {location}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                            {viewMode === 'real_world' ? 'Cash Flow' : 'Revenue'}
+                          </p>
+                          <p className="text-sm font-bold text-emerald-400">
+                            {viewMode === 'real_world' ? cashFlow : revenue}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
+        </section>
+      )}
+
+      {/* 5. ENTERPRISE SECTIONS */}
+      <div className="space-y-24 mt-24">
+        <ProcessRoadmap viewMode={viewMode} />
+        <TrustSection viewMode={viewMode} />
+        <ServicesSection viewMode={viewMode} />
+        <PartnersSection viewMode={viewMode} />
+        <CTASection viewMode={viewMode} />
+        <div className="mb-24">
+          <MarketInsights viewMode={viewMode} />
         </div>
-      </section>
+      </div>
 
-      {/* 6. AI TOOLS / VALUATION */}
-      <section id="ai-tools-section" className="py-24 bg-slate-950 border-t border-slate-800">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Valuation & Due Diligence Made Simple
-            </h2>
-            <p className="text-slate-400 text-lg">
-              {isOperational
-                ? "Use NxtValuation™ to estimate fair market value based on SDE and EBITDA."
-                : "Use NxtValuation™ to estimate value based on MRR multiples and growth rate."}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Link href={`/sell/valuation?mode=${modeParam}`} className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 hover:border-slate-600 transition-all group">
-              <Calculator className={`w-10 h-10 mb-4 ${isOperational ? 'text-amber-500' : 'text-teal-500'}`} />
-              <h3 className="text-xl font-bold text-white mb-2">NxtValuation™</h3>
-              <p className="text-slate-400 text-sm">Instant, data-backed price estimates.</p>
-            </Link>
-
-            <Link href={`/tools/diligence?mode=${modeParam}`} className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 hover:border-slate-600 transition-all group">
-              <FileCheck className={`w-10 h-10 mb-4 ${isOperational ? 'text-amber-500' : 'text-teal-500'}`} />
-              <h3 className="text-xl font-bold text-white mb-2">NxtAI™ Diligence</h3>
-              <p className="text-slate-400 text-sm">Automated risk checklist.</p>
-            </Link>
-
-            <Link href={`/tools/risk?mode=${modeParam}`} className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 hover:border-slate-600 transition-all group">
-              <ShieldCheck className={`w-10 h-10 mb-4 ${isOperational ? 'text-amber-500' : 'text-teal-500'}`} />
-              <h3 className="text-xl font-bold text-white mb-2">Risk Scan</h3>
-              <p className="text-slate-400 text-sm">Identify red flags early.</p>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* 7. SHARED FOOTER SECTIONS */}
-      <ServicesSection />
-      <SellerCTA />
-      <MarketInsights />
-      
     </main>
   );
 }
 
-// Wrapper to ensure Context exists
 export default function HomePageClient(props: HomePageClientProps) {
   return (
     <TrackProvider>

@@ -17,7 +17,7 @@ type EmptyStateReason = "no_public_listings" | "fetch_error" | "no_results" | nu
 interface BrowseClientShellProps {
   listings: any[];
   emptyStateReason?: EmptyStateReason;
-  track?: 'operational' | 'digital' | null;
+  track?: 'real_world' | 'digital' | null; // Use database value directly
 }
 
 export default function BrowseClientShell({ 
@@ -119,8 +119,8 @@ export default function BrowseClientShell({
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     <button
                       onClick={() => {
-                        // Reset to track-specific browse page if on track route, otherwise general browse
-                        const resetUrl = track ? `/browse/${track}` : '/browse';
+                        // Reset to track-specific browse page using query parameters
+                        const resetUrl = track ? `/browse?asset_type=${track}` : '/browse';
                         router.push(resetUrl);
                       }}
                       className="inline-flex items-center justify-center px-6 py-3 bg-[#0B1221] text-white font-semibold rounded-lg hover:bg-[#0F172A] transition-colors"
